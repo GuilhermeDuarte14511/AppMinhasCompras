@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "281917164496",
+    "project_id": "minhascompras-3abbe",
+    "storage_bucket": "minhascompras-3abbe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:281917164496:android:2900aefd61199e838cc7d5",
+        "android_client_info": {
+          "package_name": "com.example.lista_compras_material"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "281917164496-q4lb28h9t7gni57k2kqb0co5bjcsenq9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCUX3jPBSdSwRkSS8NL3jw3AlGlX6Bnpgc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "281917164496-q4lb28h9t7gni57k2kqb0co5bjcsenq9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

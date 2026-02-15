@@ -31,6 +31,20 @@ class ProductCatalogRepository implements ProductCatalogGateway {
   }
 
   @override
+  List<CatalogProduct> allProducts() {
+    if (!_loaded) {
+      return const <CatalogProduct>[];
+    }
+    return List.unmodifiable(
+      _products.map(
+        (product) => product.copyWith(
+          priceHistory: List<PriceHistoryEntry>.from(product.priceHistory),
+        ),
+      ),
+    );
+  }
+
+  @override
   void dispose() {}
 
   @override
@@ -176,6 +190,16 @@ class ProductCatalogRepository implements ProductCatalogGateway {
     if (changed) {
       await _save();
     }
+  }
+
+  @override
+  Future<void> replaceAllProducts(List<CatalogProduct> products) async {
+    _products
+      ..clear()
+      ..addAll(_mergeDuplicatedProducts(products));
+    _rebuildIndexes();
+    _loaded = true;
+    await _save();
   }
 
   Future<void> _ensureLoaded() async {

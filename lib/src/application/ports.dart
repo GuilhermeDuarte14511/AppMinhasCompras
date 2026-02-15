@@ -22,6 +22,8 @@ abstract class PurchaseHistoryStorage {
 abstract class ProductCatalogGateway {
   Future<void> load();
 
+  List<CatalogProduct> allProducts();
+
   CatalogProduct? findByName(String rawName);
 
   CatalogProduct? findByBarcode(String? rawBarcode);
@@ -33,6 +35,8 @@ abstract class ProductCatalogGateway {
   Future<void> upsertFromLookupResult(ProductLookupResult result);
 
   Future<void> ingestFromLists(Iterable<ShoppingListModel> lists);
+
+  Future<void> replaceAllProducts(List<CatalogProduct> products);
 
   void dispose();
 }

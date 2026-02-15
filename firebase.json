@@ -1,0 +1,29 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "minhascompras-3abbe",
+          "appId": "1:281917164496:android:2900aefd61199e838cc7d5",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "minhascompras-3abbe",
+          "configurations": {
+            "android": "1:281917164496:android:2900aefd61199e838cc7d5",
+            "ios": "1:281917164496:ios:b257ff81f4376aa08cc7d5",
+            "macos": "1:281917164496:ios:b257ff81f4376aa08cc7d5",
+            "web": "1:281917164496:web:5083c5dc27cbfaba8cc7d5",
+            "windows": "1:281917164496:web:e34a7fd57cf3ace58cc7d5"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}

@@ -38,6 +38,7 @@ class ShoppingListsStore extends ChangeNotifier {
 
   List<ShoppingListModel> get lists => List.unmodifiable(_lists);
   List<CompletedPurchase> get purchaseHistory => List.unmodifiable(_history);
+  List<CatalogProduct> get catalogProducts => _productCatalog.allProducts();
 
   Map<DateTime, List<CompletedPurchase>> historyGroupedByMonth() {
     final groups = <DateTime, List<CompletedPurchase>>{};
@@ -286,6 +287,10 @@ class ShoppingListsStore extends ChangeNotifier {
       'purchaseHistory': _history
           .map((entry) => entry.toJson())
           .toList(growable: false),
+      'catalog': _productCatalog
+          .allProducts()
+          .map((entry) => entry.toJson())
+          .toList(growable: false),
     };
     return jsonEncode(payload);
   }
@@ -305,6 +310,7 @@ class ShoppingListsStore extends ChangeNotifier {
     final decodedPayload = _decodeBackupPayload(rawPayload);
     final imported = decodedPayload.lists;
     final importedHistory = decodedPayload.history;
+    final importedCatalog = decodedPayload.catalog;
     final normalized = _normalizeImportedLists(
       imported,
       existingIds: replaceExisting
@@ -328,6 +334,16 @@ class ShoppingListsStore extends ChangeNotifier {
     } else {
       _lists.addAll(normalized);
       _history.addAll(normalizedHistory);
+    }
+
+    if (replaceExisting) {
+      await _productCatalog.replaceAllProducts(importedCatalog);
+    } else if (importedCatalog.isNotEmpty) {
+      final mergedCatalog = <CatalogProduct>[
+        ..._productCatalog.allProducts(),
+        ...importedCatalog,
+      ];
+      await _productCatalog.replaceAllProducts(mergedCatalog);
     }
 
     _trimHistory();
@@ -465,6 +481,11 @@ class ShoppingListsStore extends ChangeNotifier {
     await _productCatalog.upsertFromDraft(draft);
   }
 
+  Future<void> replaceCatalogProducts(List<CatalogProduct> products) async {
+    await _productCatalog.replaceAllProducts(products);
+    notifyListeners();
+  }
+
   void _sortListsByUpdatedAt() {
     _lists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
   }
@@ -552,6 +573,7 @@ class ShoppingListsStore extends ChangeNotifier {
       return _DecodedBackupPayload(
         lists: _parseLists(decoded),
         history: const <CompletedPurchase>[],
+        catalog: const <CatalogProduct>[],
       );
     }
     if (decoded is Map<String, dynamic>) {
@@ -560,9 +582,11 @@ class ShoppingListsStore extends ChangeNotifier {
         throw const FormatException('Formato de backup invalido');
       }
       final rawHistory = decoded['purchaseHistory'];
+      final rawCatalog = decoded['catalog'];
       return _DecodedBackupPayload(
         lists: _parseLists(rawLists),
         history: rawHistory is List ? _parseHistory(rawHistory) : const [],
+        catalog: rawCatalog is List ? _parseCatalog(rawCatalog) : const [],
       );
     }
     throw const FormatException('Formato de backup invalido');
@@ -587,6 +611,16 @@ class ShoppingListsStore extends ChangeNotifier {
         parsed.add(
           CompletedPurchase.fromJson(Map<String, dynamic>.from(entry)),
         );
+      }
+    }
+    return parsed;
+  }
+
+  List<CatalogProduct> _parseCatalog(List<dynamic> rawCatalog) {
+    final parsed = <CatalogProduct>[];
+    for (final entry in rawCatalog) {
+      if (entry is Map) {
+        parsed.add(CatalogProduct.fromJson(Map<String, dynamic>.from(entry)));
       }
     }
     return parsed;
@@ -703,8 +737,13 @@ class _SuggestionStats {
 }
 
 class _DecodedBackupPayload {
-  const _DecodedBackupPayload({required this.lists, required this.history});
+  const _DecodedBackupPayload({
+    required this.lists,
+    required this.history,
+    required this.catalog,
+  });
 
   final List<ShoppingListModel> lists;
   final List<CompletedPurchase> history;
+  final List<CatalogProduct> catalog;
 }

@@ -13,17 +13,23 @@ import 'dialogs_and_sheets.dart';
 import 'extensions/classification_ui_extensions.dart';
 import 'launch.dart';
 
-enum _DashboardMenuAction { options }
+enum _DashboardMenuAction { options, signOut }
 
 class AppOptionsPage extends StatefulWidget {
   const AppOptionsPage({
     super.key,
     required this.themeMode,
     required this.onThemeModeChanged,
+    this.userDisplayName,
+    this.userEmail,
+    this.onSignOut,
   });
 
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
+  final String? userDisplayName;
+  final String? userEmail;
+  final VoidCallback? onSignOut;
 
   @override
   State<AppOptionsPage> createState() => _AppOptionsPageState();
@@ -52,6 +58,17 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
+    final email = widget.userEmail?.trim();
+    final displayName = widget.userDisplayName?.trim();
+    final fallbackName = (email != null && email.contains('@'))
+        ? email.split('@').first
+        : 'Usuario';
+    final resolvedName = (displayName != null && displayName.isNotEmpty)
+        ? displayName
+        : fallbackName;
+    final avatarLabel = resolvedName.isEmpty
+        ? 'U'
+        : resolvedName[0].toUpperCase();
     return Scaffold(
       appBar: AppBar(title: const Text('Opções')),
       body: AppGradientScene(
@@ -59,6 +76,71 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 22,
+                            backgroundColor: colorScheme.primaryContainer,
+                            foregroundColor: colorScheme.onPrimaryContainer,
+                            child: Text(
+                              avatarLabel,
+                              style: textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  resolvedName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                Text(
+                                  (email != null && email.isNotEmpty)
+                                      ? email
+                                      : 'Conta conectada',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (widget.onSignOut != null) ...[
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              widget.onSignOut?.call();
+                            },
+                            icon: const Icon(Icons.logout_rounded),
+                            label: const Text('Deslogar'),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
               Card(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
@@ -129,12 +211,18 @@ class DashboardPage extends StatefulWidget {
     required this.backupService,
     required this.themeMode,
     required this.onThemeModeChanged,
+    this.userDisplayName,
+    this.userEmail,
+    this.onSignOut,
   });
 
   final ShoppingListsStore store;
   final ShoppingBackupService backupService;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
+  final String? userDisplayName;
+  final String? userEmail;
+  final VoidCallback? onSignOut;
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -169,6 +257,9 @@ class _DashboardPageState extends State<DashboardPage> {
         builder: (_) => AppOptionsPage(
           themeMode: widget.themeMode,
           onThemeModeChanged: widget.onThemeModeChanged,
+          userDisplayName: widget.userDisplayName,
+          userEmail: widget.userEmail,
+          onSignOut: widget.onSignOut,
         ),
       ),
     );
@@ -247,13 +338,21 @@ class _DashboardPageState extends State<DashboardPage> {
                 case _DashboardMenuAction.options:
                   _openOptions();
                   return;
+                case _DashboardMenuAction.signOut:
+                  widget.onSignOut?.call();
+                  return;
               }
             },
-            itemBuilder: (context) => const [
-              PopupMenuItem(
+            itemBuilder: (context) => [
+              const PopupMenuItem(
                 value: _DashboardMenuAction.options,
                 child: Text('Opções'),
               ),
+              if (widget.onSignOut != null)
+                const PopupMenuItem(
+                  value: _DashboardMenuAction.signOut,
+                  child: Text('Sair'),
+                ),
             ],
           ),
         ],
