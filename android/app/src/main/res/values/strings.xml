@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Minhas Compras</string>
+    <string name="widget_summary_label">Resumo de Compras</string>
+    <string name="widget_summary_description">Mostra listas, pendencias e total geral.</string>
+    <string name="widget_focus_label">Lista Prioritaria</string>
+    <string name="widget_focus_description">Mostra a lista em foco com total e status.</string>
+</resources>
