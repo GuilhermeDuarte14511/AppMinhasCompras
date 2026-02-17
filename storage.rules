@@ -1,0 +1,38 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function validImageContentType() {
+      return request.resource != null &&
+        request.resource.contentType.matches('image/(jpeg|jpg|png|webp)');
+    }
+
+    function validImageSize(maxMb) {
+      return request.resource != null &&
+        request.resource.size <= maxMb * 1024 * 1024;
+    }
+
+    // Foto de perfil do usuario:
+    // caminho usado no app: users/{uid}/profile/avatar_<timestamp>.<ext>
+    match /users/{uid}/profile/{fileName} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) &&
+        fileName.matches('avatar_[A-Za-z0-9._-]+\\.(jpg|jpeg|png|webp)') &&
+        validImageContentType() &&
+        validImageSize(8);
+      allow delete: if isOwner(uid);
+    }
+
+    // Bloqueio padrao para qualquer outro caminho de storage.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

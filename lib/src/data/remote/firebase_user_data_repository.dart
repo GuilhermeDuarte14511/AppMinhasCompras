@@ -20,17 +20,33 @@ class FirestoreUserProfile {
   final String? provider;
   final String? themeMode;
 
-  Map<String, dynamic> toFirestoreJson() {
+  Map<String, dynamic> toFirestoreJson({bool includeCreatedAt = true}) {
     final now = DateTime.now().toIso8601String();
-    return <String, dynamic>{
-      'displayName': _clean(displayName),
-      'email': _clean(email),
-      'photoUrl': _clean(photoUrl),
-      'provider': _clean(provider),
-      'themeMode': _clean(themeMode),
-      'updatedAt': now,
-      'createdAt': now,
-    };
+    final payload = <String, dynamic>{'updatedAt': now};
+    final cleanedDisplayName = _clean(displayName);
+    final cleanedEmail = _clean(email);
+    final cleanedPhotoUrl = _clean(photoUrl);
+    final cleanedProvider = _clean(provider);
+    final cleanedThemeMode = _clean(themeMode);
+    if (cleanedDisplayName != null) {
+      payload['displayName'] = cleanedDisplayName;
+    }
+    if (cleanedEmail != null) {
+      payload['email'] = cleanedEmail;
+    }
+    if (cleanedPhotoUrl != null) {
+      payload['photoUrl'] = cleanedPhotoUrl;
+    }
+    if (cleanedProvider != null) {
+      payload['provider'] = cleanedProvider;
+    }
+    if (cleanedThemeMode != null) {
+      payload['themeMode'] = cleanedThemeMode;
+    }
+    if (includeCreatedAt) {
+      payload['createdAt'] = now;
+    }
+    return payload;
   }
 
   String? _clean(String? value) {
@@ -346,6 +362,15 @@ class FirestoreUserDataRepository {
       }
 
       await _commitOperationsInChunks(firestore, operations);
+    });
+  }
+
+  Future<void> saveUserProfile({required FirestoreUserProfile profile}) async {
+    await _runWithDatabaseFallback((firestore) async {
+      await _userDocRef(firestore, profile.uid).set(
+        profile.toFirestoreJson(includeCreatedAt: false),
+        SetOptions(merge: true),
+      );
     });
   }
 

@@ -1,12 +1,16 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../application/ports.dart';
 import '../application/store_and_services.dart';
 import '../core/utils/format_utils.dart';
+import '../data/remote/firebase_user_data_repository.dart';
 import '../domain/classifications.dart';
 import '../domain/models_and_utils.dart';
 import 'dialogs_and_sheets.dart';
@@ -26,7 +30,9 @@ class AppOptionsPage extends StatefulWidget {
     required this.onThemeModeChanged,
     this.userDisplayName,
     this.userEmail,
+    this.userPhotoUrl,
     this.onSignOut,
+    this.onProfileUpdated,
     this.showCloudSyncStatus = false,
     this.hasInternetConnection = true,
     this.hasPendingCloudSync = false,
@@ -43,7 +49,9 @@ class AppOptionsPage extends StatefulWidget {
   final ValueChanged<ThemeMode> onThemeModeChanged;
   final String? userDisplayName;
   final String? userEmail;
+  final String? userPhotoUrl;
   final VoidCallback? onSignOut;
+  final Future<void> Function()? onProfileUpdated;
   final bool showCloudSyncStatus;
   final bool hasInternetConnection;
   final bool hasPendingCloudSync;
@@ -61,11 +69,20 @@ class AppOptionsPage extends StatefulWidget {
 
 class _AppOptionsPageState extends State<AppOptionsPage> {
   late ThemeMode _selectedThemeMode;
+  late String _resolvedName;
+  late String? _resolvedEmail;
+  String? _resolvedPhotoUrl;
 
   @override
   void initState() {
     super.initState();
     _selectedThemeMode = widget.themeMode;
+    _resolvedEmail = _cleanNullable(widget.userEmail);
+    _resolvedName = _buildResolvedName(
+      displayName: _cleanNullable(widget.userDisplayName),
+      email: _resolvedEmail,
+    );
+    _resolvedPhotoUrl = _cleanNullable(widget.userPhotoUrl);
   }
 
   void _updateThemeMode(ThemeMode mode) {
@@ -78,21 +95,57 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
     widget.onThemeModeChanged(mode);
   }
 
+  String? _cleanNullable(String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return null;
+    }
+    return trimmed;
+  }
+
+  String _buildResolvedName({String? displayName, String? email}) {
+    final fallbackName = (email != null && email.contains('@'))
+        ? email.split('@').first
+        : 'Usuario';
+    return (displayName != null && displayName.isNotEmpty)
+        ? displayName
+        : fallbackName;
+  }
+
+  Future<void> _openMyProfile() async {
+    final result = await Navigator.push<_ProfileEditorResult>(
+      context,
+      buildAppPageRoute(
+        builder: (_) => MyProfilePage(
+          initialDisplayName: _resolvedName,
+          initialEmail: _resolvedEmail,
+          initialPhotoUrl: _resolvedPhotoUrl,
+        ),
+      ),
+    );
+    if (!mounted || result == null) {
+      return;
+    }
+    setState(() {
+      _resolvedName = _buildResolvedName(
+        displayName: _cleanNullable(result.displayName),
+        email: _resolvedEmail,
+      );
+      _resolvedPhotoUrl = _cleanNullable(result.photoUrl);
+    });
+    final refresh = widget.onProfileUpdated;
+    if (refresh != null) {
+      await refresh();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
-    final email = widget.userEmail?.trim();
-    final displayName = widget.userDisplayName?.trim();
-    final fallbackName = (email != null && email.contains('@'))
-        ? email.split('@').first
-        : 'Usuário';
-    final resolvedName = (displayName != null && displayName.isNotEmpty)
-        ? displayName
-        : fallbackName;
-    final avatarLabel = resolvedName.isEmpty
+    final avatarLabel = _resolvedName.isEmpty
         ? 'U'
-        : resolvedName[0].toUpperCase();
+        : _resolvedName[0].toUpperCase();
     return Scaffold(
       appBar: AppBar(title: const Text('Opções')),
       body: AppGradientScene(
@@ -111,12 +164,17 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
                             radius: 22,
                             backgroundColor: colorScheme.primaryContainer,
                             foregroundColor: colorScheme.onPrimaryContainer,
-                            child: Text(
-                              avatarLabel,
-                              style: textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
+                            backgroundImage: _resolvedPhotoUrl != null
+                                ? NetworkImage(_resolvedPhotoUrl!)
+                                : null,
+                            child: _resolvedPhotoUrl == null
+                                ? Text(
+                                    avatarLabel,
+                                    style: textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  )
+                                : null,
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -124,7 +182,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  resolvedName,
+                                  _resolvedName,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: textTheme.titleMedium?.copyWith(
@@ -132,8 +190,9 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
                                   ),
                                 ),
                                 Text(
-                                  (email != null && email.isNotEmpty)
-                                      ? email
+                                  (_resolvedEmail != null &&
+                                          _resolvedEmail!.isNotEmpty)
+                                      ? _resolvedEmail!
                                       : 'Conta conectada',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -147,6 +206,15 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
                         ],
                       ),
                       if (widget.onSignOut != null) ...[
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: _openMyProfile,
+                            icon: const Icon(Icons.manage_accounts_rounded),
+                            label: const Text('Meus dados'),
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         SizedBox(
                           width: double.infinity,
@@ -243,6 +311,443 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
   }
 }
 
+class _ProfileEditorResult {
+  const _ProfileEditorResult({
+    required this.displayName,
+    required this.photoUrl,
+  });
+
+  final String displayName;
+  final String? photoUrl;
+}
+
+class MyProfilePage extends StatefulWidget {
+  const MyProfilePage({
+    super.key,
+    required this.initialDisplayName,
+    required this.initialEmail,
+    required this.initialPhotoUrl,
+  });
+
+  final String initialDisplayName;
+  final String? initialEmail;
+  final String? initialPhotoUrl;
+
+  @override
+  State<MyProfilePage> createState() => _MyProfilePageState();
+}
+
+class _MyProfilePageState extends State<MyProfilePage> {
+  final _formKey = GlobalKey<FormState>();
+  final _imagePicker = ImagePicker();
+  final _profileRepository = FirestoreUserDataRepository();
+  late final TextEditingController _nameController;
+  late final TextEditingController _photoUrlController;
+
+  bool _isSaving = false;
+  bool _isUploadingPhoto = false;
+  String? _photoUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    final initialPhoto = _cleanNullable(widget.initialPhotoUrl);
+    _photoUrl = initialPhoto;
+    _nameController = TextEditingController(text: widget.initialDisplayName);
+    _photoUrlController = TextEditingController(text: initialPhoto ?? '');
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _photoUrlController.dispose();
+    super.dispose();
+  }
+
+  String? _cleanNullable(String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return null;
+    }
+    return trimmed;
+  }
+
+  String _providerId(User user) {
+    for (final info in user.providerData) {
+      final providerId = info.providerId.trim();
+      if (providerId.isEmpty || providerId == 'firebase') {
+        continue;
+      }
+      return providerId;
+    }
+    return 'password';
+  }
+
+  void _showMessage(
+    String message, {
+    AppToastType type = AppToastType.info,
+    Duration duration = const Duration(seconds: 4),
+  }) {
+    AppToast.show(context, message: message, type: type, duration: duration);
+  }
+
+  Future<void> _pickAndUploadPhoto() async {
+    if (_isUploadingPhoto || _isSaving) {
+      return;
+    }
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      _showMessage(
+        'Sessão inválida. Faça login novamente.',
+        type: AppToastType.error,
+      );
+      return;
+    }
+    try {
+      final image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 90,
+      );
+      if (image == null) {
+        return;
+      }
+      setState(() {
+        _isUploadingPhoto = true;
+      });
+
+      final bytes = await image.readAsBytes();
+      final lowerName = image.name.toLowerCase();
+      final isPng = lowerName.endsWith('.png');
+      final extension = isPng ? 'png' : 'jpg';
+      final contentType = isPng ? 'image/png' : 'image/jpeg';
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('users')
+          .child(user.uid)
+          .child('profile')
+          .child('avatar_${DateTime.now().millisecondsSinceEpoch}.$extension');
+
+      await ref.putData(bytes, SettableMetadata(contentType: contentType));
+      final downloadUrl = await ref.getDownloadURL();
+
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _photoUrl = downloadUrl;
+        _photoUrlController.text = downloadUrl;
+      });
+      _showMessage('Foto enviada com sucesso.', type: AppToastType.success);
+    } on FirebaseException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      final details = (error.message ?? '').trim();
+      final suffix = details.isEmpty ? '' : ' - $details';
+      _showMessage(
+        'Falha ao enviar foto (${error.code})$suffix',
+        type: AppToastType.error,
+        duration: const Duration(seconds: 6),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showMessage(
+        'Falha ao enviar foto: $error',
+        type: AppToastType.error,
+        duration: const Duration(seconds: 6),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingPhoto = false;
+        });
+      }
+    }
+  }
+
+  void _removePhoto() {
+    setState(() {
+      _photoUrl = null;
+      _photoUrlController.clear();
+    });
+  }
+
+  Future<void> _saveProfile() async {
+    if (_isSaving || _isUploadingPhoto) {
+      return;
+    }
+    if (_formKey.currentState?.validate() != true) {
+      return;
+    }
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      _showMessage(
+        'Sessão inválida. Faça login novamente.',
+        type: AppToastType.error,
+      );
+      return;
+    }
+
+    final name = _nameController.text.trim();
+    final photoUrl = _cleanNullable(_photoUrlController.text);
+
+    setState(() {
+      _isSaving = true;
+    });
+    try {
+      await user.updateDisplayName(name);
+      await user.updatePhotoURL(photoUrl);
+      await user.reload();
+      final refreshedUser = FirebaseAuth.instance.currentUser;
+      if (refreshedUser == null) {
+        throw FirebaseAuthException(
+          code: 'user-not-found',
+          message: 'Usuario nao encontrado apos atualizar perfil.',
+        );
+      }
+
+      await _profileRepository.saveUserProfile(
+        profile: FirestoreUserProfile(
+          uid: refreshedUser.uid,
+          displayName: refreshedUser.displayName ?? name,
+          email: refreshedUser.email,
+          photoUrl: refreshedUser.photoURL,
+          provider: _providerId(refreshedUser),
+        ),
+      );
+
+      if (!mounted) {
+        return;
+      }
+      _showMessage(
+        'Perfil atualizado com sucesso.',
+        type: AppToastType.success,
+      );
+      Navigator.of(context).pop(
+        _ProfileEditorResult(
+          displayName: refreshedUser.displayName ?? name,
+          photoUrl: refreshedUser.photoURL,
+        ),
+      );
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      final details = (error.message ?? '').trim();
+      final suffix = details.isEmpty ? '' : ' - $details';
+      _showMessage(
+        'Falha ao salvar perfil (${error.code})$suffix',
+        type: AppToastType.error,
+        duration: const Duration(seconds: 6),
+      );
+    } on FirebaseException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      final details = (error.message ?? '').trim();
+      final suffix = details.isEmpty ? '' : ' - $details';
+      _showMessage(
+        'Falha ao salvar dados no banco (${error.code})$suffix',
+        type: AppToastType.error,
+        duration: const Duration(seconds: 6),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showMessage(
+        'Falha ao salvar perfil: $error',
+        type: AppToastType.error,
+        duration: const Duration(seconds: 6),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final displayEmail = _cleanNullable(widget.initialEmail);
+    final trimmedName = _nameController.text.trim();
+    final avatarLabel = trimmedName.isEmpty
+        ? 'U'
+        : trimmedName.substring(0, 1).toUpperCase();
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Meus dados')),
+      body: AppGradientScene(
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            children: [
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 38,
+                              backgroundColor: colorScheme.primaryContainer,
+                              foregroundColor: colorScheme.onPrimaryContainer,
+                              backgroundImage: _photoUrl != null
+                                  ? NetworkImage(_photoUrl!)
+                                  : null,
+                              child: _photoUrl == null
+                                  ? Text(
+                                      avatarLabel,
+                                      style: textTheme.titleLarge?.copyWith(
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Foto de perfil',
+                                    style: textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Escolha uma nova foto da galeria ou cole uma URL.',
+                                    style: textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: FilledButton.icon(
+                                onPressed: _isSaving
+                                    ? null
+                                    : _pickAndUploadPhoto,
+                                icon: _isUploadingPhoto
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(Icons.photo_library_rounded),
+                                label: Text(
+                                  _isUploadingPhoto
+                                      ? 'Enviando foto...'
+                                      : 'Escolher foto',
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            OutlinedButton.icon(
+                              onPressed: (_isSaving || _photoUrl == null)
+                                  ? null
+                                  : _removePhoto,
+                              icon: const Icon(Icons.delete_outline_rounded),
+                              label: const Text('Remover'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _photoUrlController,
+                          enabled: !_isSaving,
+                          decoration: const InputDecoration(
+                            labelText: 'URL da foto (opcional)',
+                            prefixIcon: Icon(Icons.link_rounded),
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              _photoUrl = _cleanNullable(value);
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _nameController,
+                          enabled: !_isSaving,
+                          textCapitalization: TextCapitalization.words,
+                          decoration: const InputDecoration(
+                            labelText: 'Nome',
+                            prefixIcon: Icon(Icons.person_rounded),
+                          ),
+                          validator: (value) {
+                            final trimmed = value?.trim() ?? '';
+                            if (trimmed.length < 2) {
+                              return 'Informe um nome valido.';
+                            }
+                            if (trimmed.length > 80) {
+                              return 'Nome muito longo (maximo 80).';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          initialValue: displayEmail ?? 'Sem e-mail',
+                          enabled: false,
+                          decoration: const InputDecoration(
+                            labelText: 'E-mail',
+                            prefixIcon: Icon(Icons.alternate_email_rounded),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: _isSaving ? null : _saveProfile,
+                            icon: _isSaving
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.save_rounded),
+                            label: Text(
+                              _isSaving ? 'Salvando...' : 'Salvar meus dados',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class DashboardPage extends StatefulWidget {
   const DashboardPage({
     super.key,
@@ -252,7 +757,9 @@ class DashboardPage extends StatefulWidget {
     required this.onThemeModeChanged,
     this.userDisplayName,
     this.userEmail,
+    this.userPhotoUrl,
     this.onSignOut,
+    this.onProfileUpdated,
     this.showCloudSyncStatus = false,
     this.hasInternetConnection = true,
     this.hasPendingCloudSync = false,
@@ -271,7 +778,9 @@ class DashboardPage extends StatefulWidget {
   final ValueChanged<ThemeMode> onThemeModeChanged;
   final String? userDisplayName;
   final String? userEmail;
+  final String? userPhotoUrl;
   final VoidCallback? onSignOut;
+  final Future<void> Function()? onProfileUpdated;
   final bool showCloudSyncStatus;
   final bool hasInternetConnection;
   final bool hasPendingCloudSync;
@@ -318,7 +827,9 @@ class _DashboardPageState extends State<DashboardPage> {
           onThemeModeChanged: widget.onThemeModeChanged,
           userDisplayName: widget.userDisplayName,
           userEmail: widget.userEmail,
+          userPhotoUrl: widget.userPhotoUrl,
           onSignOut: widget.onSignOut,
+          onProfileUpdated: widget.onProfileUpdated,
           showCloudSyncStatus: widget.showCloudSyncStatus,
           hasInternetConnection: widget.hasInternetConnection,
           hasPendingCloudSync: widget.hasPendingCloudSync,

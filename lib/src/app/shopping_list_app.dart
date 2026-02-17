@@ -661,6 +661,24 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     await FirebaseAuth.instance.signOut();
   }
 
+  Future<void> _refreshCurrentUserProfile() async {
+    if (widget._storage != null) {
+      return;
+    }
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return;
+    }
+    await user.reload();
+    if (!mounted) {
+      return;
+    }
+    _currentUser = FirebaseAuth.instance.currentUser;
+    _hasPendingCloudSync = true;
+    _scheduleCloudSync(immediate: true);
+    setState(() {});
+  }
+
   ThemeData _buildLightTheme() {
     final scheme = ColorScheme.fromSeed(
       seedColor: const Color(0xFF008577),
@@ -911,7 +929,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
                     onThemeModeChanged: _setThemeMode,
                     userDisplayName: user.displayName,
                     userEmail: user.email,
+                    userPhotoUrl: user.photoURL,
                     onSignOut: _signOut,
+                    onProfileUpdated: _refreshCurrentUserProfile,
                     showCloudSyncStatus: true,
                     hasInternetConnection: _hasNetworkConnection,
                     hasPendingCloudSync: _hasPendingCloudSync,
@@ -935,6 +955,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
                   onThemeModeChanged: _setThemeMode,
                   userDisplayName: null,
                   userEmail: null,
+                  userPhotoUrl: null,
                 ),
               );
             },
