@@ -88,7 +88,7 @@ class LocalNotificationsReminderService implements ShoppingReminderService {
       try {
         await androidPlugin.requestNotificationsPermission();
       } catch (error, stackTrace) {
-        _log('Falha ao solicitar permissao de notificacoes', error, stackTrace);
+        _log('Falha ao solicitar permissão de notificações', error, stackTrace);
       }
     }
 
@@ -99,7 +99,7 @@ class LocalNotificationsReminderService implements ShoppingReminderService {
       }
     } catch (error, stackTrace) {
       _log(
-        'Falha ao verificar se notificacoes estao ativas',
+        'Falha ao verificar se notificações estão ativas',
         error,
         stackTrace,
       );
@@ -116,7 +116,7 @@ class LocalNotificationsReminderService implements ShoppingReminderService {
       _canScheduleExactNotifications = canScheduleExact;
     } catch (error, stackTrace) {
       _canScheduleExactNotifications = false;
-      _log('Falha ao verificar permissao de alarme exato', error, stackTrace);
+      _log('Falha ao verificar permissão de alarme exato', error, stackTrace);
     }
 
     try {
@@ -177,7 +177,7 @@ class LocalNotificationsReminderService implements ShoppingReminderService {
       await _refreshAndroidCapabilities(requestIfNeeded: true);
       if (!_notificationsEnabled) {
         _log(
-          'Notificacoes desativadas no sistema. Lembrete nao sera agendado.',
+          'Notificações desativadas no sistema. Lembrete não será agendado.',
           null,
           null,
         );
@@ -306,7 +306,7 @@ class LocalNotificationsReminderService implements ShoppingReminderService {
       return 'Sua compra acontece hoje';
     }
     if (_sameDate(now.add(const Duration(days: 1)), when)) {
-      return 'Sua compra e amanha';
+      return 'Sua compra é amanhã';
     }
     return 'Lembrete de compras';
   }
@@ -320,9 +320,9 @@ class LocalNotificationsReminderService implements ShoppingReminderService {
 
     final now = DateTime.now();
     if (_sameDate(now, when)) {
-      return 'Nao se esqueca da lista "${list.name}" as $timeText. $itemsText • Total $totalText.';
+      return 'Não se esqueça da lista "${list.name}" às $timeText. $itemsText • Total $totalText.';
     }
-    return 'Lista "${list.name}" marcada para $dateText as $timeText. $itemsText • Total $totalText.';
+    return 'Lista "${list.name}" marcada para $dateText às $timeText. $itemsText • Total $totalText.';
   }
 
   bool _sameDate(DateTime a, DateTime b) {

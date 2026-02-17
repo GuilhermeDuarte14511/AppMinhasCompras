@@ -479,6 +479,7 @@ class ShoppingListsStore extends ChangeNotifier {
 
   Future<void> saveDraftToCatalog(ShoppingItemDraft draft) async {
     await _productCatalog.upsertFromDraft(draft);
+    notifyListeners();
   }
 
   Future<void> replaceCatalogProducts(List<CatalogProduct> products) async {
@@ -701,7 +702,11 @@ class ShoppingListsStore extends ChangeNotifier {
   Future<void> _persistAndNotify() async {
     await _storage.saveLists(_lists);
     await _historyStorage.saveHistory(_history);
-    await _homeWidgetService.updateFromLists(_lists);
+    try {
+      await _homeWidgetService.updateFromLists(_lists);
+    } catch (_) {
+      // Widget updates are optional and should not block the main flow.
+    }
     notifyListeners();
   }
 

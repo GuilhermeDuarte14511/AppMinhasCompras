@@ -1,6 +1,46 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import '../../domain/models_and_utils.dart';
+
+class FirestoreUserProfile {
+  const FirestoreUserProfile({
+    required this.uid,
+    this.displayName,
+    this.email,
+    this.photoUrl,
+    this.provider,
+    this.themeMode,
+  });
+
+  final String uid;
+  final String? displayName;
+  final String? email;
+  final String? photoUrl;
+  final String? provider;
+  final String? themeMode;
+
+  Map<String, dynamic> toFirestoreJson() {
+    final now = DateTime.now().toIso8601String();
+    return <String, dynamic>{
+      'displayName': _clean(displayName),
+      'email': _clean(email),
+      'photoUrl': _clean(photoUrl),
+      'provider': _clean(provider),
+      'themeMode': _clean(themeMode),
+      'updatedAt': now,
+      'createdAt': now,
+    };
+  }
+
+  String? _clean(String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return null;
+    }
+    return trimmed;
+  }
+}
 
 class FirestoreUserAppSettings {
   const FirestoreUserAppSettings({this.themeMode});
@@ -20,13 +60,10 @@ class FirestoreUserAppSettings {
   }
 
   Map<String, dynamic> toFirestoreJson() {
-    final payload = <String, dynamic>{
-      'updatedAt': FieldValue.serverTimestamp(),
+    return <String, dynamic>{
+      'themeMode': hasData ? themeMode : null,
+      'updatedAt': DateTime.now().toIso8601String(),
     };
-    if (hasData) {
-      payload['themeMode'] = themeMode;
-    }
-    return payload;
   }
 }
 
@@ -50,24 +87,77 @@ class FirestoreUserDataSnapshot {
 
 class FirestoreUserDataRepository {
   FirestoreUserDataRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _defaultFirestore = FirebaseFirestore.instanceFor(app: Firebase.app()),
+      _activeFirestore = firestore ?? _buildPreferredFirestore();
 
-  final FirebaseFirestore _firestore;
+  static const String _firestoreDatabaseIdFromDefine = String.fromEnvironment(
+    'FIRESTORE_DATABASE_ID',
+  );
+  static const String _firestoreDatabaseIdHardcoded = 'minhascompras';
+  static const int _maxBatchOperations = 450;
+  static const Set<String> _transientCodes = <String>{
+    'unavailable',
+    'deadline-exceeded',
+    'aborted',
+    'resource-exhausted',
+  };
 
-  CollectionReference<Map<String, dynamic>> _listsRef(String uid) {
-    return _firestore.collection('users').doc(uid).collection('lists');
+  final FirebaseFirestore _defaultFirestore;
+  FirebaseFirestore _activeFirestore;
+
+  static FirebaseFirestore _buildPreferredFirestore() {
+    final configuredId = _resolveConfiguredDatabaseId();
+    return FirebaseFirestore.instanceFor(
+      app: Firebase.app(),
+      databaseId: configuredId,
+    );
   }
 
-  CollectionReference<Map<String, dynamic>> _historyRef(String uid) {
-    return _firestore.collection('users').doc(uid).collection('history');
+  static String _resolveConfiguredDatabaseId() {
+    final fromDefine = _firestoreDatabaseIdFromDefine.trim();
+    if (fromDefine.isNotEmpty) {
+      return fromDefine;
+    }
+    final hardcoded = _firestoreDatabaseIdHardcoded.trim();
+    if (hardcoded.isNotEmpty) {
+      return hardcoded;
+    }
+    return '(default)';
   }
 
-  CollectionReference<Map<String, dynamic>> _catalogRef(String uid) {
-    return _firestore.collection('users').doc(uid).collection('catalog');
+  CollectionReference<Map<String, dynamic>> _listsRef(
+    FirebaseFirestore firestore,
+    String uid,
+  ) {
+    return firestore.collection('users').doc(uid).collection('lists');
   }
 
-  DocumentReference<Map<String, dynamic>> _settingsDocRef(String uid) {
-    return _firestore
+  CollectionReference<Map<String, dynamic>> _historyRef(
+    FirebaseFirestore firestore,
+    String uid,
+  ) {
+    return firestore.collection('users').doc(uid).collection('history');
+  }
+
+  CollectionReference<Map<String, dynamic>> _catalogRef(
+    FirebaseFirestore firestore,
+    String uid,
+  ) {
+    return firestore.collection('users').doc(uid).collection('catalog');
+  }
+
+  DocumentReference<Map<String, dynamic>> _userDocRef(
+    FirebaseFirestore firestore,
+    String uid,
+  ) {
+    return firestore.collection('users').doc(uid);
+  }
+
+  DocumentReference<Map<String, dynamic>> _settingsDocRef(
+    FirebaseFirestore firestore,
+    String uid,
+  ) {
+    return firestore
         .collection('users')
         .doc(uid)
         .collection('settings')
@@ -75,11 +165,42 @@ class FirestoreUserDataRepository {
   }
 
   Future<FirestoreUserDataSnapshot> loadUserSnapshot(String uid) async {
+    return _runWithDatabaseFallback((firestore) async {
+      try {
+        return _loadUserSnapshotWithSource(firestore, uid);
+      } on FirebaseException catch (error) {
+        if (!_isTransientError(error)) {
+          rethrow;
+        }
+        // Fallback offline-first: use local cache when backend is temporarily unavailable.
+        return _loadUserSnapshotWithSource(
+          firestore,
+          uid,
+          source: Source.cache,
+        );
+      }
+    });
+  }
+
+  Future<FirestoreUserDataSnapshot> _loadUserSnapshotWithSource(
+    FirebaseFirestore firestore,
+    String uid, {
+    Source? source,
+  }) async {
+    final getOptions = source == null ? null : GetOptions(source: source);
     final responses = await Future.wait<dynamic>([
-      _listsRef(uid).get(),
-      _historyRef(uid).get(),
-      _catalogRef(uid).get(),
-      _settingsDocRef(uid).get(),
+      getOptions == null
+          ? _listsRef(firestore, uid).get()
+          : _listsRef(firestore, uid).get(getOptions),
+      getOptions == null
+          ? _historyRef(firestore, uid).get()
+          : _historyRef(firestore, uid).get(getOptions),
+      getOptions == null
+          ? _catalogRef(firestore, uid).get()
+          : _catalogRef(firestore, uid).get(getOptions),
+      getOptions == null
+          ? _settingsDocRef(firestore, uid).get()
+          : _settingsDocRef(firestore, uid).get(getOptions),
     ]);
     final listsSnapshot = responses[0] as QuerySnapshot<Map<String, dynamic>>;
     final historySnapshot = responses[1] as QuerySnapshot<Map<String, dynamic>>;
@@ -130,62 +251,155 @@ class FirestoreUserDataRepository {
     required List<CompletedPurchase> history,
     required List<CatalogProduct> catalog,
     required FirestoreUserAppSettings settings,
+    FirestoreUserProfile? profile,
   }) async {
-    final batch = _firestore.batch();
+    await _runWithDatabaseFallback((firestore) async {
+      final listsCollection = _listsRef(firestore, uid);
+      final historyCollection = _historyRef(firestore, uid);
+      final catalogCollection = _catalogRef(firestore, uid);
 
-    final listsCollection = _listsRef(uid);
-    final historyCollection = _historyRef(uid);
-    final catalogCollection = _catalogRef(uid);
+      QuerySnapshot<Map<String, dynamic>>? remoteLists;
+      QuerySnapshot<Map<String, dynamic>>? remoteHistory;
+      QuerySnapshot<Map<String, dynamic>>? remoteCatalog;
+      try {
+        final remoteResponses = await Future.wait<dynamic>([
+          listsCollection.get(),
+          historyCollection.get(),
+          catalogCollection.get(),
+        ]);
+        remoteLists = remoteResponses[0] as QuerySnapshot<Map<String, dynamic>>;
+        remoteHistory =
+            remoteResponses[1] as QuerySnapshot<Map<String, dynamic>>;
+        remoteCatalog =
+            remoteResponses[2] as QuerySnapshot<Map<String, dynamic>>;
+      } on FirebaseException catch (error) {
+        if (!_isTransientError(error)) {
+          rethrow;
+        }
+        // Backend temporarily unavailable. Continue with upserts so local cache can
+        // queue writes and sync later. Cleanup deletes run again when reads recover.
+        remoteLists = null;
+        remoteHistory = null;
+        remoteCatalog = null;
+      }
 
-    final remoteResponses = await Future.wait<dynamic>([
-      listsCollection.get(),
-      historyCollection.get(),
-      catalogCollection.get(),
-    ]);
-    final remoteLists =
-        remoteResponses[0] as QuerySnapshot<Map<String, dynamic>>;
-    final remoteHistory =
-        remoteResponses[1] as QuerySnapshot<Map<String, dynamic>>;
-    final remoteCatalog =
-        remoteResponses[2] as QuerySnapshot<Map<String, dynamic>>;
+      final localListIds = lists.map((entry) => entry.id).toSet();
+      final localHistoryIds = history.map((entry) => entry.id).toSet();
+      final localCatalogIds = catalog.map((entry) => entry.id).toSet();
+      final operations = <void Function(WriteBatch batch)>[];
 
-    final localListIds = lists.map((entry) => entry.id).toSet();
-    final localHistoryIds = history.map((entry) => entry.id).toSet();
-    final localCatalogIds = catalog.map((entry) => entry.id).toSet();
+      if (remoteLists != null) {
+        for (final doc in remoteLists.docs) {
+          if (!localListIds.contains(doc.id)) {
+            operations.add((batch) => batch.delete(doc.reference));
+          }
+        }
+      }
+      for (final entry in lists) {
+        operations.add(
+          (batch) => batch.set(listsCollection.doc(entry.id), entry.toJson()),
+        );
+      }
 
-    for (final doc in remoteLists.docs) {
-      if (!localListIds.contains(doc.id)) {
-        batch.delete(doc.reference);
+      if (remoteHistory != null) {
+        for (final doc in remoteHistory.docs) {
+          if (!localHistoryIds.contains(doc.id)) {
+            operations.add((batch) => batch.delete(doc.reference));
+          }
+        }
+      }
+      for (final entry in history) {
+        operations.add(
+          (batch) => batch.set(historyCollection.doc(entry.id), entry.toJson()),
+        );
+      }
+
+      if (remoteCatalog != null) {
+        for (final doc in remoteCatalog.docs) {
+          if (!localCatalogIds.contains(doc.id)) {
+            operations.add((batch) => batch.delete(doc.reference));
+          }
+        }
+      }
+      for (final entry in catalog) {
+        operations.add(
+          (batch) => batch.set(catalogCollection.doc(entry.id), entry.toJson()),
+        );
+      }
+
+      operations.add(
+        (batch) => batch.set(
+          _settingsDocRef(firestore, uid),
+          settings.toFirestoreJson(),
+          SetOptions(merge: true),
+        ),
+      );
+
+      if (profile != null) {
+        operations.add(
+          (batch) => batch.set(
+            _userDocRef(firestore, uid),
+            profile.toFirestoreJson(),
+            SetOptions(merge: true),
+          ),
+        );
+      }
+
+      await _commitOperationsInChunks(firestore, operations);
+    });
+  }
+
+  Future<void> _commitOperationsInChunks(
+    FirebaseFirestore firestore,
+    List<void Function(WriteBatch batch)> operations,
+  ) async {
+    if (operations.isEmpty) {
+      return;
+    }
+
+    var batch = firestore.batch();
+    var batchSize = 0;
+
+    for (final operation in operations) {
+      operation(batch);
+      batchSize += 1;
+      if (batchSize >= _maxBatchOperations) {
+        await batch.commit();
+        batch = firestore.batch();
+        batchSize = 0;
       }
     }
-    for (final entry in lists) {
-      batch.set(listsCollection.doc(entry.id), entry.toJson());
-    }
 
-    for (final doc in remoteHistory.docs) {
-      if (!localHistoryIds.contains(doc.id)) {
-        batch.delete(doc.reference);
+    if (batchSize > 0) {
+      await batch.commit();
+    }
+  }
+
+  bool _isTransientError(FirebaseException error) {
+    return _transientCodes.contains(error.code.trim().toLowerCase());
+  }
+
+  bool _shouldFallbackToDefaultDatabase(FirebaseException error) {
+    final code = error.code.trim().toLowerCase();
+    return code == 'not-found' ||
+        code == 'failed-precondition' ||
+        code == 'invalid-argument' ||
+        code == 'unavailable' ||
+        code == 'deadline-exceeded';
+  }
+
+  Future<T> _runWithDatabaseFallback<T>(
+    Future<T> Function(FirebaseFirestore firestore) action,
+  ) async {
+    try {
+      return await action(_activeFirestore);
+    } on FirebaseException catch (error) {
+      final usingDefault = _activeFirestore.databaseId == '(default)';
+      if (usingDefault || !_shouldFallbackToDefaultDatabase(error)) {
+        rethrow;
       }
+      _activeFirestore = _defaultFirestore;
+      return action(_activeFirestore);
     }
-    for (final entry in history) {
-      batch.set(historyCollection.doc(entry.id), entry.toJson());
-    }
-
-    for (final doc in remoteCatalog.docs) {
-      if (!localCatalogIds.contains(doc.id)) {
-        batch.delete(doc.reference);
-      }
-    }
-    for (final entry in catalog) {
-      batch.set(catalogCollection.doc(entry.id), entry.toJson());
-    }
-
-    batch.set(
-      _settingsDocRef(uid),
-      settings.toFirestoreJson(),
-      SetOptions(merge: true),
-    );
-
-    await batch.commit();
   }
 }

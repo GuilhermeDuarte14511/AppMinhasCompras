@@ -370,7 +370,7 @@ Future<void> _openListEditorMenuAction(
     await tester.tap(byIcon.first);
   }
   await tester.pumpAndSettle();
-  final target = find.text(actionLabel);
+  final target = find.text(actionLabel).hitTestable();
   if (target.evaluate().isEmpty) {
     final scrollables = find.byType(Scrollable).evaluate().toList();
     if (scrollables.isNotEmpty) {

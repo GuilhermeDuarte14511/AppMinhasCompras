@@ -19,7 +19,7 @@ subprojects {
     project.evaluationDependsOn(":app")
     // Workaround for intermittent Windows file locks in lint cache during release.
     tasks.configureEach {
-        if (name == "lintVitalAnalyzeRelease") {
+        if (name.startsWith("lintVital") && name.endsWith("Release")) {
             enabled = false
         }
     }

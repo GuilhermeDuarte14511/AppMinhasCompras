@@ -176,7 +176,7 @@ extension ItemSortOptionLabels on ItemSortOption {
   String get shortLabel {
     switch (this) {
       case ItemSortOption.defaultOrder:
-        return 'Padrao';
+        return 'Padrão';
       case ItemSortOption.nameAsc:
         return 'Nome A-Z';
       case ItemSortOption.nameDesc:

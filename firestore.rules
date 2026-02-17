@@ -12,7 +12,7 @@ service cloud.firestore {
 
     // Dados privados por usuario.
     match /users/{uid} {
-      allow read, write: if false;
+      allow read, write: if isOwner(uid);
 
       match /lists/{listId} {
         allow read, write: if isOwner(uid);

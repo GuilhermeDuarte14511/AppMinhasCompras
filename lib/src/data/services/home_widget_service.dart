@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:home_widget/home_widget.dart';
 
@@ -29,9 +31,24 @@ class AndroidShoppingHomeWidgetService implements ShoppingHomeWidgetService {
   static const String _kFocusDetails = 'widget_focus_details';
   static const String _kFocusTotal = 'widget_focus_total';
   static const String _kFocusBudget = 'widget_focus_budget';
+  static const Duration _minimumUpdateInterval = Duration(milliseconds: 700);
+
+  static Future<void> _writeQueue = Future<void>.value();
+  static String? _lastPayloadSignature;
+  static DateTime? _lastUpdateAt;
 
   @override
-  Future<void> updateFromLists(List<ShoppingListModel> lists) async {
+  Future<void> updateFromLists(List<ShoppingListModel> lists) {
+    final snapshot = List<ShoppingListModel>.unmodifiable(
+      List<ShoppingListModel>.from(lists),
+    );
+    _writeQueue = _writeQueue
+        .catchError((_) {})
+        .then((_) => _performUpdate(snapshot));
+    return _writeQueue;
+  }
+
+  Future<void> _performUpdate(List<ShoppingListModel> lists) async {
     try {
       final totalLists = lists.length;
       final pendingItems = lists.fold<int>(
@@ -56,32 +73,54 @@ class AndroidShoppingHomeWidgetService implements ShoppingHomeWidgetService {
           ? formatCurrency(0)
           : 'Total: ${formatCurrency(focus.totalValue)}';
       final focusBudget = focus == null
-          ? 'Orcamento: nao definido'
+          ? 'Orçamento: não definido'
           : _formatBudgetLine(focus);
 
-      await Future.wait(<Future<dynamic>>[
-        HomeWidget.saveWidgetData<int>(_kTotalLists, totalLists),
-        HomeWidget.saveWidgetData<int>(_kPendingItems, pendingItems),
-        HomeWidget.saveWidgetData<String>(
-          _kTotalValue,
-          formatCurrency(totalValue),
-        ),
-        HomeWidget.saveWidgetData<String>(
-          _kUpdatedAt,
-          formatDateTime(DateTime.now()),
-        ),
-        HomeWidget.saveWidgetData<String>(_kFocusTitle, focusTitle),
-        HomeWidget.saveWidgetData<String>(_kFocusDetails, focusDetails),
-        HomeWidget.saveWidgetData<String>(_kFocusTotal, focusTotal),
-        HomeWidget.saveWidgetData<String>(_kFocusBudget, focusBudget),
-      ]);
+      final totalValueLabel = formatCurrency(totalValue);
+      final updatedAtLabel = formatDateTime(DateTime.now());
+      final payloadSignature = [
+        totalLists,
+        pendingItems,
+        totalValueLabel,
+        focusTitle,
+        focusDetails,
+        focusTotal,
+        focusBudget,
+      ].join('|');
+
+      if (_lastPayloadSignature == payloadSignature &&
+          _lastUpdateAt != null &&
+          DateTime.now().difference(_lastUpdateAt!) < _minimumUpdateInterval) {
+        return;
+      }
+
+      final now = DateTime.now();
+      if (_lastUpdateAt != null) {
+        final elapsed = now.difference(_lastUpdateAt!);
+        if (elapsed < _minimumUpdateInterval) {
+          await Future<void>.delayed(_minimumUpdateInterval - elapsed);
+        }
+      }
+
+      await HomeWidget.saveWidgetData<int>(_kTotalLists, totalLists);
+      await HomeWidget.saveWidgetData<int>(_kPendingItems, pendingItems);
+      await HomeWidget.saveWidgetData<String>(_kTotalValue, totalValueLabel);
+      await HomeWidget.saveWidgetData<String>(_kUpdatedAt, updatedAtLabel);
+      await HomeWidget.saveWidgetData<String>(_kFocusTitle, focusTitle);
+      await HomeWidget.saveWidgetData<String>(_kFocusDetails, focusDetails);
+      await HomeWidget.saveWidgetData<String>(_kFocusTotal, focusTotal);
+      await HomeWidget.saveWidgetData<String>(_kFocusBudget, focusBudget);
 
       await HomeWidget.updateWidget(
         qualifiedAndroidName: _summaryProviderClass,
       );
       await HomeWidget.updateWidget(qualifiedAndroidName: _focusProviderClass);
+      _lastPayloadSignature = payloadSignature;
+      _lastUpdateAt = DateTime.now();
     } on MissingPluginException {
       // Non-Android platforms and tests.
+    } on PlatformException {
+      // Best-effort update. Never block app flow on widget channel failure.
     } catch (_) {
       // Widget updates are best-effort and should never break app flow.
     }
@@ -107,11 +146,11 @@ class AndroidShoppingHomeWidgetService implements ShoppingHomeWidgetService {
 
   String _formatBudgetLine(ShoppingListModel list) {
     if (!list.hasBudget) {
-      return 'Orcamento: nao definido';
+      return 'Orçamento: não definido';
     }
     if (list.isOverBudget) {
-      return 'Acima do orcamento: ${formatCurrency(list.overBudgetAmount)}';
+      return 'Acima do orçamento: ${formatCurrency(list.overBudgetAmount)}';
     }
-    return 'Saldo do orcamento: ${formatCurrency(list.budgetRemaining)}';
+    return 'Saldo do orçamento: ${formatCurrency(list.budgetRemaining)}';
   }
 }

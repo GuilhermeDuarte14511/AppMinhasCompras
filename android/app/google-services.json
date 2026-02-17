@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "281917164496-b98brpu0dvficbbkuqee720g31lh7ncn.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.lista_compras_material",
+            "certificate_hash": "92f625be0205fe26094086cd09347f6da14d69a2"
+          }
+        },
+        {
           "client_id": "281917164496-q4lb28h9t7gni57k2kqb0co5bjcsenq9.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -29,6 +37,13 @@
             {
               "client_id": "281917164496-q4lb28h9t7gni57k2kqb0co5bjcsenq9.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "281917164496-6mhg4v7mbi8j81g4v5udufjpi4h6839s.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.listaComprasMaterial"
+              }
             }
           ]
         }

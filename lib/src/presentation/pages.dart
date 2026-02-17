@@ -12,8 +12,12 @@ import '../domain/models_and_utils.dart';
 import 'dialogs_and_sheets.dart';
 import 'extensions/classification_ui_extensions.dart';
 import 'launch.dart';
+import 'theme/app_tokens.dart';
+import 'utils/app_modal.dart';
+import 'utils/app_page_route.dart';
+import 'utils/app_toast.dart';
 
-enum _DashboardMenuAction { options, signOut }
+enum _DashboardMenuAction { options, catalog, signOut }
 
 class AppOptionsPage extends StatefulWidget {
   const AppOptionsPage({
@@ -23,6 +27,16 @@ class AppOptionsPage extends StatefulWidget {
     this.userDisplayName,
     this.userEmail,
     this.onSignOut,
+    this.showCloudSyncStatus = false,
+    this.hasInternetConnection = true,
+    this.hasPendingCloudSync = false,
+    this.isCloudSyncing = false,
+    this.lastCloudSyncAt,
+    this.totalSyncRecords = 0,
+    this.pendingSyncRecords = 0,
+    this.listRecords = 0,
+    this.historyRecords = 0,
+    this.catalogRecords = 0,
   });
 
   final ThemeMode themeMode;
@@ -30,6 +44,16 @@ class AppOptionsPage extends StatefulWidget {
   final String? userDisplayName;
   final String? userEmail;
   final VoidCallback? onSignOut;
+  final bool showCloudSyncStatus;
+  final bool hasInternetConnection;
+  final bool hasPendingCloudSync;
+  final bool isCloudSyncing;
+  final DateTime? lastCloudSyncAt;
+  final int totalSyncRecords;
+  final int pendingSyncRecords;
+  final int listRecords;
+  final int historyRecords;
+  final int catalogRecords;
 
   @override
   State<AppOptionsPage> createState() => _AppOptionsPageState();
@@ -62,7 +86,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
     final displayName = widget.userDisplayName?.trim();
     final fallbackName = (email != null && email.contains('@'))
         ? email.split('@').first
-        : 'Usuario';
+        : 'Usuário';
     final resolvedName = (displayName != null && displayName.isNotEmpty)
         ? displayName
         : fallbackName;
@@ -140,6 +164,21 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
                   ),
                 ),
               ),
+              if (widget.showCloudSyncStatus) ...[
+                const SizedBox(height: 10),
+                _CloudSyncStatusCard(
+                  hasInternetConnection: widget.hasInternetConnection,
+                  hasPendingCloudSync: widget.hasPendingCloudSync,
+                  isCloudSyncing: widget.isCloudSyncing,
+                  lastCloudSyncAt: widget.lastCloudSyncAt,
+                  totalRecords: widget.totalSyncRecords,
+                  pendingRecords: widget.pendingSyncRecords,
+                  listRecords: widget.listRecords,
+                  historyRecords: widget.historyRecords,
+                  catalogRecords: widget.catalogRecords,
+                  compact: false,
+                ),
+              ],
               const SizedBox(height: 10),
               Card(
                 child: Padding(
@@ -214,6 +253,16 @@ class DashboardPage extends StatefulWidget {
     this.userDisplayName,
     this.userEmail,
     this.onSignOut,
+    this.showCloudSyncStatus = false,
+    this.hasInternetConnection = true,
+    this.hasPendingCloudSync = false,
+    this.isCloudSyncing = false,
+    this.lastCloudSyncAt,
+    this.totalSyncRecords = 0,
+    this.pendingSyncRecords = 0,
+    this.listRecords = 0,
+    this.historyRecords = 0,
+    this.catalogRecords = 0,
   });
 
   final ShoppingListsStore store;
@@ -223,6 +272,16 @@ class DashboardPage extends StatefulWidget {
   final String? userDisplayName;
   final String? userEmail;
   final VoidCallback? onSignOut;
+  final bool showCloudSyncStatus;
+  final bool hasInternetConnection;
+  final bool hasPendingCloudSync;
+  final bool isCloudSyncing;
+  final DateTime? lastCloudSyncAt;
+  final int totalSyncRecords;
+  final int pendingSyncRecords;
+  final int listRecords;
+  final int historyRecords;
+  final int catalogRecords;
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -232,7 +291,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Future<void> _openMyLists() async {
     await Navigator.push<void>(
       context,
-      MaterialPageRoute(
+      buildAppPageRoute(
         builder: (_) => MyListsPage(
           store: widget.store,
           backupService: widget.backupService,
@@ -244,7 +303,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Future<void> _openPurchaseHistory() async {
     await Navigator.push<void>(
       context,
-      MaterialPageRoute(
+      buildAppPageRoute(
         builder: (_) => PurchaseHistoryPage(store: widget.store),
       ),
     );
@@ -253,14 +312,33 @@ class _DashboardPageState extends State<DashboardPage> {
   Future<void> _openOptions() async {
     await Navigator.push<void>(
       context,
-      MaterialPageRoute(
+      buildAppPageRoute(
         builder: (_) => AppOptionsPage(
           themeMode: widget.themeMode,
           onThemeModeChanged: widget.onThemeModeChanged,
           userDisplayName: widget.userDisplayName,
           userEmail: widget.userEmail,
           onSignOut: widget.onSignOut,
+          showCloudSyncStatus: widget.showCloudSyncStatus,
+          hasInternetConnection: widget.hasInternetConnection,
+          hasPendingCloudSync: widget.hasPendingCloudSync,
+          isCloudSyncing: widget.isCloudSyncing,
+          lastCloudSyncAt: widget.lastCloudSyncAt,
+          totalSyncRecords: widget.totalSyncRecords,
+          pendingSyncRecords: widget.pendingSyncRecords,
+          listRecords: widget.listRecords,
+          historyRecords: widget.historyRecords,
+          catalogRecords: widget.catalogRecords,
         ),
+      ),
+    );
+  }
+
+  Future<void> _openCatalog() async {
+    await Navigator.push<void>(
+      context,
+      buildAppPageRoute(
+        builder: (_) => CatalogProductsPage(store: widget.store),
       ),
     );
   }
@@ -286,7 +364,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
     await Navigator.push<void>(
       context,
-      MaterialPageRoute(
+      buildAppPageRoute(
         builder: (_) =>
             ShoppingListEditorPage(store: widget.store, listId: created.id),
       ),
@@ -312,11 +390,12 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _showSnack(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(behavior: SnackBarBehavior.floating, content: Text(message)),
-      );
+    AppToast.show(
+      context,
+      message: message,
+      type: AppToastType.info,
+      duration: const Duration(seconds: 4),
+    );
   }
 
   @override
@@ -338,6 +417,9 @@ class _DashboardPageState extends State<DashboardPage> {
                 case _DashboardMenuAction.options:
                   _openOptions();
                   return;
+                case _DashboardMenuAction.catalog:
+                  _openCatalog();
+                  return;
                 case _DashboardMenuAction.signOut:
                   widget.onSignOut?.call();
                   return;
@@ -347,6 +429,10 @@ class _DashboardPageState extends State<DashboardPage> {
               const PopupMenuItem(
                 value: _DashboardMenuAction.options,
                 child: Text('Opções'),
+              ),
+              const PopupMenuItem(
+                value: _DashboardMenuAction.catalog,
+                child: Text('Catálogo de produtos'),
               ),
               if (widget.onSignOut != null)
                 const PopupMenuItem(
@@ -362,71 +448,115 @@ class _DashboardPageState extends State<DashboardPage> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
             children: [
-              _HomeSummaryCard(
-                totalLists: lists.length,
-                totalItems: totalItems,
-                totalValue: totalValue,
+              _EntryAnimation(
+                key: const ValueKey('dash_summary'),
+                delay: Duration.zero,
+                child: _HomeSummaryCard(
+                  totalLists: lists.length,
+                  totalItems: totalItems,
+                  totalValue: totalValue,
+                ),
               ),
               const SizedBox(height: 14),
-              _ActionTile(
-                title: 'Começar nova lista de compras',
-                subtitle: 'Crie uma lista do zero e adicione os produtos.',
-                icon: Icons.playlist_add_rounded,
-                onTap: _createNewList,
+              _EntryAnimation(
+                key: const ValueKey('dash_action_new'),
+                delay: const Duration(milliseconds: 40),
+                child: _ActionTile(
+                  title: 'Começar nova lista de compras',
+                  subtitle: 'Crie uma lista do zero e adicione os produtos.',
+                  icon: Icons.playlist_add_rounded,
+                  onTap: _createNewList,
+                ),
               ),
               const SizedBox(height: 10),
-              _ActionTile(
-                title: 'Minhas listas de compras',
-                subtitle: 'Abra, edite e exclua suas listas salvas.',
-                icon: Icons.inventory_2_rounded,
-                onTap: _openMyLists,
+              _EntryAnimation(
+                key: const ValueKey('dash_action_lists'),
+                delay: const Duration(milliseconds: 70),
+                child: _ActionTile(
+                  title: 'Minhas listas de compras',
+                  subtitle: 'Abra, edite e exclua suas listas salvas.',
+                  icon: Icons.inventory_2_rounded,
+                  onTap: _openMyLists,
+                ),
               ),
               const SizedBox(height: 10),
-              _ActionTile(
-                title: 'Histórico mensal',
-                subtitle: 'Revise fechamentos e totais por mês.',
-                icon: Icons.event_note_rounded,
-                onTap: _openPurchaseHistory,
+              _EntryAnimation(
+                key: const ValueKey('dash_action_history'),
+                delay: const Duration(milliseconds: 100),
+                child: _ActionTile(
+                  title: 'Histórico mensal',
+                  subtitle: 'Revise fechamentos e totais por mês.',
+                  icon: Icons.event_note_rounded,
+                  onTap: _openPurchaseHistory,
+                ),
               ),
               const SizedBox(height: 10),
-              _ActionTile(
-                title: 'Nova lista baseada em antiga',
-                subtitle: 'Use outra lista como modelo e acelere a compra.',
-                icon: Icons.copy_all_rounded,
-                onTap: _createBasedOnOld,
+              _EntryAnimation(
+                key: const ValueKey('dash_action_template'),
+                delay: const Duration(milliseconds: 130),
+                child: _ActionTile(
+                  title: 'Catálogo de produtos',
+                  subtitle:
+                      'Gerencie produtos salvos localmente e/ou sincronizados.',
+                  icon: Icons.local_offer_rounded,
+                  onTap: _openCatalog,
+                ),
+              ),
+              const SizedBox(height: 10),
+              _EntryAnimation(
+                key: const ValueKey('dash_action_based'),
+                delay: const Duration(milliseconds: 160),
+                child: _ActionTile(
+                  title: 'Nova lista baseada em antiga',
+                  subtitle: 'Use outra lista como modelo e acelere a compra.',
+                  icon: Icons.copy_all_rounded,
+                  onTap: _createBasedOnOld,
+                ),
               ),
               const SizedBox(height: 20),
-              Text(
-                'Listas recentes',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              _EntryAnimation(
+                key: const ValueKey('dash_recent_title'),
+                delay: const Duration(milliseconds: 160),
+                child: Text(
+                  'Listas recentes',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                ),
               ),
               const SizedBox(height: 10),
               if (lists.isEmpty)
-                const _EmptyRecentListsCard()
+                _EntryAnimation(
+                  key: const ValueKey('dash_recent_empty'),
+                  delay: const Duration(milliseconds: 190),
+                  child: const _EmptyRecentListsCard(),
+                )
               else
-                ...lists
-                    .take(3)
-                    .map(
-                      (list) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _RecentListCard(
-                          list: list,
-                          onTap: () {
-                            Navigator.push<void>(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ShoppingListEditorPage(
-                                  store: widget.store,
-                                  listId: list.id,
-                                ),
+                ...lists.take(3).toList().asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final list = entry.value;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _EntryAnimation(
+                      key: ValueKey('dash_recent_${list.id}'),
+                      delay: Duration(milliseconds: 190 + min(120, index * 35)),
+                      child: _RecentListCard(
+                        list: list,
+                        onTap: () {
+                          Navigator.push<void>(
+                            context,
+                            buildAppPageRoute(
+                              builder: (_) => ShoppingListEditorPage(
+                                store: widget.store,
+                                listId: list.id,
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
                       ),
                     ),
+                  );
+                }),
             ],
           ),
         ),
@@ -435,6 +565,647 @@ class _DashboardPageState extends State<DashboardPage> {
         onPressed: _createNewList,
         icon: const Icon(Icons.add_rounded),
         label: const Text('Nova lista'),
+      ),
+    );
+  }
+}
+
+enum _CatalogSortOption { updatedAt, name, usage, price }
+
+enum _CatalogProductAction { edit, updatePrice, delete }
+
+class CatalogProductsPage extends StatefulWidget {
+  const CatalogProductsPage({super.key, required this.store});
+
+  final ShoppingListsStore store;
+
+  @override
+  State<CatalogProductsPage> createState() => _CatalogProductsPageState();
+}
+
+class _CatalogProductsPageState extends State<CatalogProductsPage> {
+  final TextEditingController _searchController = TextEditingController();
+  _CatalogSortOption _sortOption = _CatalogSortOption.updatedAt;
+
+  String get _searchQuery => _searchController.text.trim();
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_handleSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController
+      ..removeListener(_handleSearchChanged)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _handleSearchChanged() {
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
+  }
+
+  void _showSnack(String message, {AppToastType type = AppToastType.info}) {
+    AppToast.show(
+      context,
+      message: message,
+      type: type,
+      duration: const Duration(seconds: 4),
+    );
+  }
+
+  String _sortLabel(_CatalogSortOption option) {
+    switch (option) {
+      case _CatalogSortOption.updatedAt:
+        return 'Atualização';
+      case _CatalogSortOption.name:
+        return 'Nome';
+      case _CatalogSortOption.usage:
+        return 'Uso';
+      case _CatalogSortOption.price:
+        return 'Preço';
+    }
+  }
+
+  IconData _sortIcon(_CatalogSortOption option) {
+    switch (option) {
+      case _CatalogSortOption.updatedAt:
+        return Icons.update_rounded;
+      case _CatalogSortOption.name:
+        return Icons.sort_by_alpha_rounded;
+      case _CatalogSortOption.usage:
+        return Icons.bar_chart_rounded;
+      case _CatalogSortOption.price:
+        return Icons.attach_money_rounded;
+    }
+  }
+
+  List<CatalogProduct> _visibleProducts(List<CatalogProduct> source) {
+    final normalizedQuery = normalizeQuery(_searchQuery);
+    final filtered = source
+        .where((product) {
+          if (normalizedQuery.isEmpty) {
+            return true;
+          }
+          final searchable = normalizeQuery(
+            [
+              product.name,
+              product.barcode ?? '',
+              product.category.label,
+            ].join(' '),
+          );
+          return searchable.contains(normalizedQuery);
+        })
+        .toList(growable: false);
+
+    filtered.sort((a, b) {
+      switch (_sortOption) {
+        case _CatalogSortOption.updatedAt:
+          return b.updatedAt.compareTo(a.updatedAt);
+        case _CatalogSortOption.name:
+          return normalizeQuery(a.name).compareTo(normalizeQuery(b.name));
+        case _CatalogSortOption.usage:
+          return b.usageCount.compareTo(a.usageCount);
+        case _CatalogSortOption.price:
+          final aPrice = a.unitPrice ?? 0;
+          final bPrice = b.unitPrice ?? 0;
+          return bPrice.compareTo(aPrice);
+      }
+    });
+
+    return filtered;
+  }
+
+  ShoppingItem _editableItemFromCatalog(CatalogProduct product) {
+    return ShoppingItem(
+      id: product.id,
+      name: product.name,
+      quantity: 1,
+      unitPrice: product.unitPrice ?? 0,
+      barcode: product.barcode,
+      category: product.category,
+      priceHistory: product.priceHistory,
+    );
+  }
+
+  List<PriceHistoryEntry> _buildUpdatedPriceHistory({
+    required CatalogProduct original,
+    required double newPrice,
+    required DateTime recordedAt,
+  }) {
+    final history = [...original.priceHistory];
+    final currentPrice = original.unitPrice ?? 0;
+    if (history.isEmpty && currentPrice > 0) {
+      history.add(
+        PriceHistoryEntry(price: currentPrice, recordedAt: original.updatedAt),
+      );
+    }
+    final shouldAppend =
+        history.isEmpty || (history.last.price - newPrice).abs() > 0.0001;
+    if (shouldAppend) {
+      history.add(PriceHistoryEntry(price: newPrice, recordedAt: recordedAt));
+    }
+    return history;
+  }
+
+  Future<void> _createCatalogProduct() async {
+    final blockedNames = widget.store.catalogProducts
+        .map((product) => normalizeQuery(product.name))
+        .toSet();
+    final draft = await showShoppingItemEditorSheet(
+      context,
+      blockedNormalizedNames: blockedNames,
+      suggestionCatalog: widget.store.suggestProductNames(limit: 30),
+      onLookupBarcode: widget.store.lookupProductByBarcode,
+      onLookupCatalogByName: widget.store.lookupCatalogProductByName,
+    );
+    if (!mounted || draft == null) {
+      return;
+    }
+    await widget.store.saveDraftToCatalog(draft);
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
+    _showSnack('Produto adicionado ao catálogo.', type: AppToastType.success);
+  }
+
+  Future<void> _editCatalogProduct(CatalogProduct product) async {
+    final blockedNames = widget.store.catalogProducts
+        .where((entry) => entry.id != product.id)
+        .map((entry) => normalizeQuery(entry.name))
+        .toSet();
+    final draft = await showShoppingItemEditorSheet(
+      context,
+      existingItem: _editableItemFromCatalog(product),
+      blockedNormalizedNames: blockedNames,
+      suggestionCatalog: widget.store.suggestProductNames(limit: 30),
+      onLookupBarcode: widget.store.lookupProductByBarcode,
+      onLookupCatalogByName: widget.store.lookupCatalogProductByName,
+    );
+    if (!mounted || draft == null) {
+      return;
+    }
+
+    final now = DateTime.now();
+    final updated = product.copyWith(
+      name: draft.name,
+      category: draft.category,
+      unitPrice: draft.unitPrice,
+      barcode: draft.barcode,
+      clearBarcode: draft.barcode == null || draft.barcode!.trim().isEmpty,
+      updatedAt: now,
+      priceHistory: _buildUpdatedPriceHistory(
+        original: product,
+        newPrice: draft.unitPrice,
+        recordedAt: now,
+      ),
+    );
+    final products = widget.store.catalogProducts
+        .map((entry) => entry.id == product.id ? updated : entry)
+        .toList(growable: false);
+    await widget.store.replaceCatalogProducts(products);
+    if (!mounted) {
+      return;
+    }
+    _showSnack('Produto atualizado.', type: AppToastType.success);
+  }
+
+  Future<void> _updateCatalogPrice(CatalogProduct product) async {
+    final formatter = BrlCurrencyInputFormatter();
+    final initialPrice = product.unitPrice ?? 0;
+    final controller = TextEditingController(
+      text: formatter.formatValue(initialPrice > 0 ? initialPrice : 0),
+    );
+    final formKey = GlobalKey<FormState>();
+
+    final price = await showAppDialog<double>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Atualizar preço'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: controller,
+              autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [formatter],
+              decoration: const InputDecoration(
+                labelText: 'Novo preço',
+                prefixIcon: Icon(Icons.attach_money_rounded),
+              ),
+              validator: (value) {
+                final parsed = BrlCurrencyInputFormatter.tryParse(value ?? '');
+                if (parsed == null || parsed <= 0) {
+                  return 'Informe um preço válido.';
+                }
+                return null;
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (formKey.currentState?.validate() != true) {
+                  return;
+                }
+                final parsed = BrlCurrencyInputFormatter.tryParse(
+                  controller.text,
+                );
+                Navigator.pop(context, parsed);
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted || price == null || price <= 0) {
+      return;
+    }
+
+    final now = DateTime.now();
+    final updated = product.copyWith(
+      unitPrice: price,
+      updatedAt: now,
+      priceHistory: _buildUpdatedPriceHistory(
+        original: product,
+        newPrice: price,
+        recordedAt: now,
+      ),
+    );
+    final products = widget.store.catalogProducts
+        .map((entry) => entry.id == product.id ? updated : entry)
+        .toList(growable: false);
+    await widget.store.replaceCatalogProducts(products);
+    if (!mounted) {
+      return;
+    }
+    _showSnack('Preço atualizado.', type: AppToastType.success);
+  }
+
+  Future<void> _deleteCatalogProduct(CatalogProduct product) async {
+    final shouldDelete = await showAppDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir produto?'),
+        content: Text('Deseja excluir "${product.name}" do catálogo?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || shouldDelete != true) {
+      return;
+    }
+
+    final products = widget.store.catalogProducts
+        .where((entry) => entry.id != product.id)
+        .toList(growable: false);
+    await widget.store.replaceCatalogProducts(products);
+    if (!mounted) {
+      return;
+    }
+    _showSnack('Produto removido do catálogo.', type: AppToastType.success);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Catálogo de produtos')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _createCatalogProduct,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Adicionar produto'),
+      ),
+      body: AppGradientScene(
+        child: SafeArea(
+          child: AnimatedBuilder(
+            animation: widget.store,
+            builder: (context, _) {
+              final allProducts = widget.store.catalogProducts;
+              final visibleProducts = _visibleProducts(allProducts);
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                    child: Column(
+                      children: [
+                        TextField(
+                          controller: _searchController,
+                          decoration: const InputDecoration(
+                            prefixIcon: Icon(Icons.search_rounded),
+                            hintText: 'Buscar no catálogo por nome ou código',
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Text(
+                              '${visibleProducts.length} de ${allProducts.length} produto(s)',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const Spacer(),
+                            PopupMenuButton<_CatalogSortOption>(
+                              onSelected: (value) {
+                                setState(() {
+                                  _sortOption = value;
+                                });
+                              },
+                              itemBuilder: (context) => _CatalogSortOption
+                                  .values
+                                  .map(
+                                    (value) =>
+                                        PopupMenuItem<_CatalogSortOption>(
+                                          value: value,
+                                          child: Row(
+                                            children: [
+                                              Icon(_sortIcon(value), size: 18),
+                                              const SizedBox(width: 8),
+                                              Text(_sortLabel(value)),
+                                            ],
+                                          ),
+                                        ),
+                                  )
+                                  .toList(growable: false),
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surfaceContainerHighest
+                                      .withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: colorScheme.outlineVariant
+                                        .withValues(alpha: 0.45),
+                                  ),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(_sortIcon(_sortOption), size: 18),
+                                      const SizedBox(width: 6),
+                                      Text(_sortLabel(_sortOption)),
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.arrow_drop_down_rounded),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: visibleProducts.isEmpty
+                        ? _CatalogEmptyState(
+                            hasQuery: _searchQuery.isNotEmpty,
+                            onCreateProduct: _createCatalogProduct,
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                            itemCount: visibleProducts.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 10),
+                            itemBuilder: (context, index) {
+                              final product = visibleProducts[index];
+                              return Card(
+                                clipBehavior: Clip.antiAlias,
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    12,
+                                    10,
+                                    8,
+                                    10,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  product.name,
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: textTheme.titleMedium
+                                                      ?.copyWith(
+                                                        fontWeight:
+                                                            FontWeight.w800,
+                                                      ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Wrap(
+                                                  spacing: 8,
+                                                  runSpacing: 6,
+                                                  children: [
+                                                    _SummaryPill(
+                                                      icon:
+                                                          product.category.icon,
+                                                      label: 'Categoria',
+                                                      value: product
+                                                          .category
+                                                          .label,
+                                                    ),
+                                                    _SummaryPill(
+                                                      icon: Icons
+                                                          .history_toggle_off_rounded,
+                                                      label: 'Uso',
+                                                      value:
+                                                          '${product.usageCount}',
+                                                    ),
+                                                    if (product.barcode !=
+                                                            null &&
+                                                        product
+                                                            .barcode!
+                                                            .isNotEmpty)
+                                                      _SummaryPill(
+                                                        icon: Icons
+                                                            .qr_code_2_rounded,
+                                                        label: 'Código',
+                                                        value: product.barcode!,
+                                                      ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          PopupMenuButton<
+                                            _CatalogProductAction
+                                          >(
+                                            onSelected: (action) {
+                                              switch (action) {
+                                                case _CatalogProductAction.edit:
+                                                  _editCatalogProduct(product);
+                                                  return;
+                                                case _CatalogProductAction
+                                                    .updatePrice:
+                                                  _updateCatalogPrice(product);
+                                                  return;
+                                                case _CatalogProductAction
+                                                    .delete:
+                                                  _deleteCatalogProduct(
+                                                    product,
+                                                  );
+                                                  return;
+                                              }
+                                            },
+                                            itemBuilder: (context) => const [
+                                              PopupMenuItem(
+                                                value:
+                                                    _CatalogProductAction.edit,
+                                                child: Text('Editar produto'),
+                                              ),
+                                              PopupMenuItem(
+                                                value: _CatalogProductAction
+                                                    .updatePrice,
+                                                child: Text('Atualizar preço'),
+                                              ),
+                                              PopupMenuItem(
+                                                value: _CatalogProductAction
+                                                    .delete,
+                                                child: Text('Excluir produto'),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            product.unitPrice == null
+                                                ? 'Sem preço'
+                                                : formatCurrency(
+                                                    product.unitPrice!,
+                                                  ),
+                                            style: textTheme.titleMedium
+                                                ?.copyWith(
+                                                  color: colorScheme.primary,
+                                                  fontWeight: FontWeight.w900,
+                                                ),
+                                          ),
+                                          const Spacer(),
+                                          Text(
+                                            'Atualizado em ${formatShortDate(product.updatedAt)}',
+                                            style: textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color: colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CatalogEmptyState extends StatelessWidget {
+  const _CatalogEmptyState({
+    required this.hasQuery,
+    required this.onCreateProduct,
+  });
+
+  final bool hasQuery;
+  final VoidCallback onCreateProduct;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              hasQuery ? Icons.search_off_rounded : Icons.local_offer_outlined,
+              size: 52,
+              color: colorScheme.primary,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              hasQuery
+                  ? 'Nenhum produto encontrado.'
+                  : 'Seu catálogo ainda está vazio.',
+              textAlign: TextAlign.center,
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              hasQuery
+                  ? 'Tente outro termo de busca.'
+                  : 'Adicione produtos para reaproveitar preços e dados nas próximas compras.',
+              textAlign: TextAlign.center,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            if (!hasQuery) ...[
+              const SizedBox(height: 14),
+              FilledButton.icon(
+                onPressed: onCreateProduct,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Adicionar produto'),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -461,7 +1232,7 @@ class _MyListsPageState extends State<MyListsPage> {
   Future<void> _openPurchaseHistory() async {
     await Navigator.push<void>(
       context,
-      MaterialPageRoute(
+      buildAppPageRoute(
         builder: (_) => PurchaseHistoryPage(store: widget.store),
       ),
     );
@@ -470,7 +1241,7 @@ class _MyListsPageState extends State<MyListsPage> {
   Future<void> _openList(ShoppingListModel list) async {
     await Navigator.push<void>(
       context,
-      MaterialPageRoute(
+      buildAppPageRoute(
         builder: (_) =>
             ShoppingListEditorPage(store: widget.store, listId: list.id),
       ),
@@ -534,7 +1305,7 @@ class _MyListsPageState extends State<MyListsPage> {
   }
 
   Future<void> _deleteList(ShoppingListModel list) async {
-    final shouldDelete = await showDialog<bool>(
+    final shouldDelete = await showAppDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Excluir lista?'),
@@ -613,7 +1384,7 @@ class _MyListsPageState extends State<MyListsPage> {
     required int count,
     required bool clearAll,
   }) async {
-    final result = await showDialog<bool>(
+    final result = await showAppDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(clearAll ? 'Limpar todas as listas?' : 'Excluir listas?'),
@@ -716,7 +1487,7 @@ class _MyListsPageState extends State<MyListsPage> {
       return true;
     }
 
-    return showDialog<bool>(
+    return showAppDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Importar backup'),
@@ -781,11 +1552,12 @@ class _MyListsPageState extends State<MyListsPage> {
   }
 
   void _showSnack(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(behavior: SnackBarBehavior.floating, content: Text(message)),
-      );
+    AppToast.show(
+      context,
+      message: message,
+      type: AppToastType.info,
+      duration: const Duration(seconds: 4),
+    );
   }
 
   @override
@@ -992,7 +1764,7 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
   }
 
   Future<void> _showPurchaseDetails(CompletedPurchase purchase) async {
-    await showModalBottomSheet<void>(
+    await showAppModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       useSafeArea: true,
@@ -1001,7 +1773,7 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
   }
 
   Future<void> _deletePurchase(CompletedPurchase purchase) async {
-    final confirm = await showDialog<bool>(
+    final confirm = await showAppDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Excluir fechamento?'),
@@ -1027,21 +1799,19 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text('Fechamento removido do histórico.'),
-        ),
-      );
+    AppToast.show(
+      context,
+      message: 'Fechamento removido do histórico.',
+      type: AppToastType.success,
+      duration: const Duration(seconds: 4),
+    );
   }
 
   Future<void> _clearHistory() async {
     if (widget.store.purchaseHistory.isEmpty) {
       return;
     }
-    final confirm = await showDialog<bool>(
+    final confirm = await showAppDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Limpar histórico mensal?'),
@@ -1067,14 +1837,12 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text('Histórico mensal limpo com sucesso.'),
-        ),
-      );
+    AppToast.show(
+      context,
+      message: 'Histórico mensal limpo com sucesso.',
+      type: AppToastType.success,
+      duration: const Duration(seconds: 4),
+    );
   }
 
   @override
@@ -1659,6 +2427,7 @@ enum _ListEditorMenuAction {
   importFiscalReceipt,
   finalizePurchase,
   openMarketMode,
+  openCatalog,
   viewHistory,
   editReminder,
   editBudget,
@@ -1698,9 +2467,11 @@ class _ListEditorActionsSheet extends StatelessWidget {
         _ListEditorMenuAction.importFiscalReceipt,
         _ListEditorMenuAction.finalizePurchase,
         _ListEditorMenuAction.openMarketMode,
+        _ListEditorMenuAction.openCatalog,
         if (hasPurchasedItems) _ListEditorMenuAction.clearPurchased,
       ],
       if (isReadOnly) _ListEditorMenuAction.reopenList,
+      if (isReadOnly) _ListEditorMenuAction.openCatalog,
       _ListEditorMenuAction.viewHistory,
     ];
     final settingsActions = isReadOnly
@@ -1742,6 +2513,13 @@ class _ListEditorActionsSheet extends StatelessWidget {
             shortLabel: 'Modo compra',
             icon: Icons.shopping_cart_checkout_rounded,
             color: const Color(0xFF00897B),
+          );
+        case _ListEditorMenuAction.openCatalog:
+          return _ListEditorActionMeta(
+            label: 'Abrir catálogo de produtos',
+            shortLabel: 'Catálogo',
+            icon: Icons.local_offer_rounded,
+            color: const Color(0xFF0277BD),
           );
         case _ListEditorMenuAction.viewHistory:
           return _ListEditorActionMeta(
@@ -2372,7 +3150,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     if (!_ensureEditable()) {
       return;
     }
-    final shouldDelete = await showDialog<bool>(
+    final shouldDelete = await showAppDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Excluir item?'),
@@ -2402,7 +3180,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   }
 
   Future<void> _showPriceHistory(ShoppingItem item) async {
-    await showModalBottomSheet<void>(
+    await showAppModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       useSafeArea: true,
@@ -2420,7 +3198,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       return;
     }
 
-    final shouldClear = await showDialog<bool>(
+    final shouldClear = await showAppDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Limpar comprados?'),
@@ -2455,11 +3233,12 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   }
 
   void _showSnack(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(behavior: SnackBarBehavior.floating, content: Text(message)),
-      );
+    AppToast.show(
+      context,
+      message: message,
+      type: AppToastType.info,
+      duration: const Duration(seconds: 4),
+    );
   }
 
   void _maybeWarnBudgetExceeded(ShoppingListModel updatedList) {
@@ -2512,6 +3291,8 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     if (!_ensureEditable()) {
       return;
     }
+    final previousBalancesTotal = _list.paymentBalancesTotal;
+    final previousBudget = _list.budget;
     final result = await showPaymentBalancesEditorDialog(
       context,
       initialValues: _list.paymentBalances,
@@ -2528,9 +3309,20 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       return;
     }
 
+    final updatedBalances = result.value ?? const <PaymentBalance>[];
+    final updatedBalancesTotal = updatedBalances.fold<double>(
+      0,
+      (sum, entry) => sum + entry.amount,
+    );
+    final delta = updatedBalancesTotal - previousBalancesTotal;
+    final double nextBudget = previousBudget == null
+        ? updatedBalancesTotal
+        : max<double>(0, previousBudget + delta);
+
     _updateList(
-      _list.copyWith(paymentBalances: result.value),
-      message: 'Saldos de pagamento atualizados.',
+      _list.copyWith(paymentBalances: updatedBalances, budget: nextBudget),
+      message:
+          'Saldos atualizados. Orçamento ajustado para ${formatCurrency(nextBudget)}.',
     );
   }
 
@@ -2573,7 +3365,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
 
     final updated = await Navigator.push<ShoppingListModel>(
       context,
-      MaterialPageRoute(
+      buildAppPageRoute(
         builder: (_) => ShoppingMarketModePage(initialList: _list),
       ),
     );
@@ -2588,8 +3380,17 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   Future<void> _openPurchaseHistory() async {
     await Navigator.push<void>(
       context,
-      MaterialPageRoute(
+      buildAppPageRoute(
         builder: (_) => PurchaseHistoryPage(store: widget.store),
+      ),
+    );
+  }
+
+  Future<void> _openCatalogPage() async {
+    await Navigator.push<void>(
+      context,
+      buildAppPageRoute(
+        builder: (_) => CatalogProductsPage(store: widget.store),
       ),
     );
   }
@@ -2657,6 +3458,9 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       case _ListEditorMenuAction.openMarketMode:
         _openMarketShoppingMode();
         return;
+      case _ListEditorMenuAction.openCatalog:
+        _openCatalogPage();
+        return;
       case _ListEditorMenuAction.viewHistory:
         _openPurchaseHistory();
         return;
@@ -2684,7 +3488,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   }
 
   Future<void> _showListActionsSheet() async {
-    final selected = await showModalBottomSheet<_ListEditorMenuAction>(
+    final selected = await showAppModalBottomSheet<_ListEditorMenuAction>(
       context: context,
       showDragHandle: true,
       useSafeArea: true,
@@ -2742,7 +3546,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
                 child: _ListSummaryPanel(
                   list: _list,
                   collapsed: _summaryCollapsed,
@@ -2764,7 +3568,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: _ItemsToolsBar(
                   controller: _searchController,
                   selectedSort: _sortOption,
@@ -3033,37 +3837,43 @@ class _ShoppingMarketModePageState extends State<ShoppingMarketModePage> {
                               const SizedBox(height: 10),
                           itemBuilder: (context, index) {
                             final item = visibleItems[index];
-                            return Dismissible(
-                              key: ValueKey('market_${item.id}'),
-                              direction: DismissDirection.horizontal,
-                              confirmDismiss: (_) async {
-                                _togglePurchased(item, !item.isPurchased);
-                                return false;
-                              },
-                              background: _MarketSwipeBackground(
-                                icon: item.isPurchased
-                                    ? Icons.undo_rounded
-                                    : Icons.check_rounded,
-                                label: item.isPurchased
-                                    ? 'Marcar pendente'
-                                    : 'Marcar comprado',
-                                alignRight: false,
+                            return _EntryAnimation(
+                              key: ValueKey('market_entry_${item.id}'),
+                              delay: Duration(
+                                milliseconds: min(140, index * 20),
                               ),
-                              secondaryBackground: _MarketSwipeBackground(
-                                icon: item.isPurchased
-                                    ? Icons.undo_rounded
-                                    : Icons.check_rounded,
-                                label: item.isPurchased
-                                    ? 'Marcar pendente'
-                                    : 'Marcar comprado',
-                                alignRight: true,
-                              ),
-                              child: _MarketModeItemCard(
-                                item: item,
-                                onTogglePurchased: () =>
-                                    _togglePurchased(item, !item.isPurchased),
-                                onIncrement: () => _changeQuantity(item, 1),
-                                onDecrement: () => _changeQuantity(item, -1),
+                              child: Dismissible(
+                                key: ValueKey('market_${item.id}'),
+                                direction: DismissDirection.horizontal,
+                                confirmDismiss: (_) async {
+                                  _togglePurchased(item, !item.isPurchased);
+                                  return false;
+                                },
+                                background: _MarketSwipeBackground(
+                                  icon: item.isPurchased
+                                      ? Icons.undo_rounded
+                                      : Icons.check_rounded,
+                                  label: item.isPurchased
+                                      ? 'Marcar pendente'
+                                      : 'Marcar comprado',
+                                  alignRight: false,
+                                ),
+                                secondaryBackground: _MarketSwipeBackground(
+                                  icon: item.isPurchased
+                                      ? Icons.undo_rounded
+                                      : Icons.check_rounded,
+                                  label: item.isPurchased
+                                      ? 'Marcar pendente'
+                                      : 'Marcar comprado',
+                                  alignRight: true,
+                                ),
+                                child: _MarketModeItemCard(
+                                  item: item,
+                                  onTogglePurchased: () =>
+                                      _togglePurchased(item, !item.isPurchased),
+                                  onIncrement: () => _changeQuantity(item, 1),
+                                  onDecrement: () => _changeQuantity(item, -1),
+                                ),
                               ),
                             );
                           },
@@ -3226,7 +4036,7 @@ class _MarketModeItemCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${item.category.label} â€¢ ${formatCurrency(item.unitPrice)}',
+                        '${item.category.label} • ${formatCurrency(item.unitPrice)}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -3418,16 +4228,18 @@ class _HomeSummaryCard extends StatelessWidget {
           children: [
             Text(
               'Centro de controle',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
+              style: textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.2,
                 color: colorScheme.onPrimaryContainer,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               'Gerencie listas, acompanhe valores e reutilize compras antigas.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onPrimaryContainer.withValues(alpha: 0.86),
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
+                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 14),
@@ -3435,17 +4247,17 @@ class _HomeSummaryCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _MetricTag(
+                _SummaryPill(
                   icon: Icons.list_alt_rounded,
                   label: 'Listas',
                   value: '$totalLists',
                 ),
-                _MetricTag(
+                _SummaryPill(
                   icon: Icons.shopping_basket_rounded,
                   label: 'Produtos',
                   value: '$totalItems',
                 ),
-                _MetricTag(
+                _SummaryPill(
                   icon: Icons.attach_money_rounded,
                   label: 'Valor total',
                   value: formatCurrency(totalValue),
@@ -3453,6 +4265,322 @@ class _HomeSummaryCard extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CloudSyncStatusCard extends StatelessWidget {
+  const _CloudSyncStatusCard({
+    required this.hasInternetConnection,
+    required this.hasPendingCloudSync,
+    required this.isCloudSyncing,
+    required this.lastCloudSyncAt,
+    required this.totalRecords,
+    required this.pendingRecords,
+    required this.listRecords,
+    required this.historyRecords,
+    required this.catalogRecords,
+    required this.compact,
+  });
+
+  final bool hasInternetConnection;
+  final bool hasPendingCloudSync;
+  final bool isCloudSyncing;
+  final DateTime? lastCloudSyncAt;
+  final int totalRecords;
+  final int pendingRecords;
+  final int listRecords;
+  final int historyRecords;
+  final int catalogRecords;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final safeTotal = max(0, totalRecords);
+    final safePending = min(max(0, pendingRecords), safeTotal);
+    final safeSynced = max(0, safeTotal - safePending);
+    final progress = safeTotal == 0 ? 1.0 : safeSynced / safeTotal;
+    final status = _resolveStatus(context, pending: safePending);
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    final backgroundGradient = LinearGradient(
+      colors: [
+        status.color.withValues(alpha: 0.2),
+        status.secondaryColor.withValues(alpha: 0.16),
+      ],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+    final lastSyncLabel = lastCloudSyncAt == null
+        ? 'Nunca sincronizado'
+        : 'Ultima sync: ${DateFormat('dd/MM HH:mm').format(lastCloudSyncAt!.toLocal())}';
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: backgroundGradient,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: status.color.withValues(alpha: 0.35)),
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          compact ? 14 : 16,
+          compact ? 12 : 14,
+          compact ? 14 : 16,
+          compact ? 12 : 14,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                SizedBox(
+                  width: compact ? 42 : 46,
+                  height: compact ? 42 : 46,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        value: progress,
+                        strokeWidth: compact ? 3.0 : 3.4,
+                        backgroundColor: colorScheme.surface.withValues(
+                          alpha: 0.45,
+                        ),
+                        color: status.color,
+                      ),
+                      Icon(
+                        status.icon,
+                        color: status.color,
+                        size: compact ? 20 : 22,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    status.title,
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                if (status.showLoading)
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      color: status.color,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              status.description,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _SyncMetricPill(label: 'Total', value: '$safeTotal'),
+                _SyncMetricPill(label: 'Sincronizados', value: '$safeSynced'),
+                _SyncMetricPill(label: 'Faltando', value: '$safePending'),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (compact)
+              Text(
+                '$lastSyncLabel • Listas: $listRecords • Histórico: $historyRecords • Catálogo: $catalogRecords',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              )
+            else
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colorScheme.surface.withValues(alpha: 0.65),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Listas: $listRecords',
+                          style: textTheme.bodySmall,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          'Histórico: $historyRecords',
+                          style: textTheme.bodySmall,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          'Catálogo: $catalogRecords',
+                          style: textTheme.bodySmall,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            const SizedBox(height: 4),
+            Text(
+              lastSyncLabel,
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            if (status.showLoading) ...[
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  minHeight: 6,
+                  color: status.color,
+                  backgroundColor: colorScheme.surface.withValues(alpha: 0.45),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  _CloudSyncPresentation _resolveStatus(
+    BuildContext context, {
+    required int pending,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    if (isCloudSyncing) {
+      return _CloudSyncPresentation(
+        icon: Icons.cloud_upload_rounded,
+        color: colorScheme.primary,
+        secondaryColor: colorScheme.tertiary,
+        title: 'Sincronizando online',
+        description: pending > 0
+            ? 'Enviando dados para nuvem. Faltam $pending registros.'
+            : 'Enviando dados para nuvem.',
+        showLoading: true,
+      );
+    }
+
+    if (!hasInternetConnection) {
+      return _CloudSyncPresentation(
+        icon: Icons.cloud_off_rounded,
+        color: colorScheme.error,
+        secondaryColor: colorScheme.errorContainer,
+        title: 'Modo offline',
+        description: pending > 0
+            ? 'Sem internet. $pending registros aguardam conexão.'
+            : 'Sem internet. Alterações continuam salvas no aparelho.',
+        showLoading: false,
+      );
+    }
+
+    if (hasPendingCloudSync || pending > 0) {
+      return _CloudSyncPresentation(
+        icon: Icons.sync_rounded,
+        color: colorScheme.primary,
+        secondaryColor: colorScheme.secondary,
+        title: 'Alterações pendentes',
+        description: '$pending registros aguardando sincronização.',
+        showLoading: true,
+      );
+    }
+
+    if (lastCloudSyncAt != null) {
+      final formatted = DateFormat(
+        'dd/MM HH:mm',
+      ).format(lastCloudSyncAt!.toLocal());
+      return _CloudSyncPresentation(
+        icon: Icons.cloud_done_rounded,
+        color: colorScheme.tertiary,
+        secondaryColor: colorScheme.primary,
+        title: 'Tudo sincronizado',
+        description: 'Dados online atualizados em $formatted.',
+        showLoading: false,
+      );
+    }
+
+    return _CloudSyncPresentation(
+      icon: Icons.cloud_queue_rounded,
+      color: colorScheme.primary,
+      secondaryColor: colorScheme.secondary,
+      title: 'Pronto para sincronizar',
+      description: 'Suas listas serao sincronizadas automaticamente online.',
+      showLoading: false,
+    );
+  }
+}
+
+class _CloudSyncPresentation {
+  const _CloudSyncPresentation({
+    required this.icon,
+    required this.color,
+    required this.secondaryColor,
+    required this.title,
+    required this.description,
+    required this.showLoading,
+  });
+
+  final IconData icon;
+  final Color color;
+  final Color secondaryColor;
+  final String title;
+  final String description;
+  final bool showLoading;
+}
+
+class _SyncMetricPill extends StatelessWidget {
+  const _SyncMetricPill({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withValues(alpha: 0.75),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: RichText(
+          text: TextSpan(
+            style: Theme.of(context).textTheme.bodySmall,
+            children: [
+              TextSpan(text: '$label: '),
+              TextSpan(
+                text: value,
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -3479,20 +4607,61 @@ class _MetricTag extends StatelessWidget {
     final content = DecoratedBox(
       decoration: BoxDecoration(
         color: colorScheme.surface.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
         border: Border.all(
           color: colorScheme.outlineVariant.withValues(alpha: 0.36),
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 17),
-            const SizedBox(width: 6),
-            Text('$label: $value'),
-          ],
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+        child: AnimatedSwitcher(
+          duration: AppTokens.motionMedium,
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) {
+            final offset = Tween<Offset>(
+              begin: const Offset(0, 0.08),
+              end: Offset.zero,
+            ).animate(animation);
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(position: offset, child: child),
+            );
+          },
+          child: ConstrainedBox(
+            key: ValueKey('$label|$value'),
+            constraints: const BoxConstraints(maxWidth: 260),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 17),
+                const SizedBox(width: 7),
+                Flexible(
+                  child: RichText(
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                    text: TextSpan(
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      children: [
+                        TextSpan(text: '$label: '),
+                        TextSpan(
+                          text: value,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: colorScheme.onSurface,
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -3504,10 +4673,107 @@ class _MetricTag extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
         onTap: onTap,
         child: content,
       ),
+    );
+  }
+}
+
+class _SummaryPill extends StatelessWidget {
+  const _SummaryPill({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.32),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 17),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 6),
+            AnimatedSwitcher(
+              duration: AppTokens.motionMedium,
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) {
+                final slide = Tween<Offset>(
+                  begin: const Offset(0, 0.1),
+                  end: Offset.zero,
+                ).animate(animation);
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(position: slide, child: child),
+                );
+              },
+              child: Text(
+                value,
+                key: ValueKey('$label|$value'),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickSummaryActionChip extends StatelessWidget {
+  const _QuickSummaryActionChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return ActionChip(
+      avatar: Icon(icon, size: 16),
+      label: Text(label),
+      onPressed: onTap,
+      visualDensity: VisualDensity.compact,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+        side: BorderSide(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+        ),
+      ),
+      backgroundColor: colorScheme.surface.withValues(alpha: 0.72),
     );
   }
 }
@@ -3530,41 +4796,58 @@ class _ActionTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(22),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: colorScheme.primaryContainer,
-                child: Icon(icon),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.28),
+          ),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer.withValues(alpha: 0.85),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Icon(icon),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.arrow_forward_ios_rounded, size: 16),
-            ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 15,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -3581,50 +4864,67 @@ class _RecentListCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final backgroundColor = list.isClosed
+        ? colorScheme.surfaceContainerLow.withValues(alpha: 0.84)
+        : colorScheme.surface;
+    final borderColor = list.isClosed
+        ? colorScheme.outline.withValues(alpha: 0.3)
+        : colorScheme.outlineVariant.withValues(alpha: 0.24);
 
     return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(22),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      list.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+      clipBehavior: Clip.antiAlias,
+      color: Colors.transparent,
+      elevation: 0,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: borderColor),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        list.name,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                     ),
-                  ),
-                  Text(
-                    formatShortDate(list.updatedAt),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                    Text(
+                      formatShortDate(list.updatedAt),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _PillLabel(
-                    icon: Icons.shopping_basket_rounded,
-                    text: '${list.totalItems} itens',
-                  ),
-                  _PillLabel(
-                    icon: Icons.attach_money_rounded,
-                    text: formatCurrency(list.totalValue),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _PillLabel(
+                      icon: Icons.shopping_basket_rounded,
+                      text: '${list.totalItems} itens',
+                    ),
+                    _PillLabel(
+                      icon: Icons.attach_money_rounded,
+                      text: formatCurrency(list.totalValue),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -3671,12 +4971,30 @@ class _EmptyRecentListsCard extends StatelessWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Text(
-          'Nenhuma lista encontrada. Crie a primeira para começar.',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Padding(
+                padding: EdgeInsets.all(10),
+                child: Icon(Icons.inventory_2_rounded),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Nenhuma lista recente ainda. Crie a primeira para comecar.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -3698,10 +5016,24 @@ class _EmptyListsState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.inventory_2_rounded,
-              size: 96,
-              color: colorScheme.primary.withValues(alpha: 0.72),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    colorScheme.primary.withValues(alpha: 0.24),
+                    colorScheme.primary.withValues(alpha: 0.04),
+                  ],
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Icon(
+                  Icons.inventory_2_rounded,
+                  size: 74,
+                  color: colorScheme.primary.withValues(alpha: 0.78),
+                ),
+              ),
             ),
             const SizedBox(height: 14),
             Text(
@@ -3713,7 +5045,7 @@ class _EmptyListsState extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Crie sua primeira lista e acompanhe quantidade e total automaticamente.',
+              'Crie sua primeira lista e acompanhe quantidades e totais em tempo real.',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -3758,91 +5090,113 @@ class _MyListCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isSelectedState = selectionMode && isSelected;
+    final backgroundColor = isSelectedState
+        ? colorScheme.primaryContainer.withValues(alpha: 0.55)
+        : list.isClosed
+        ? colorScheme.surfaceContainerLow.withValues(alpha: 0.85)
+        : colorScheme.surface;
+    final borderColor = isSelectedState
+        ? colorScheme.primary.withValues(alpha: 0.55)
+        : list.isClosed
+        ? colorScheme.outline.withValues(alpha: 0.3)
+        : colorScheme.outlineVariant.withValues(alpha: 0.24);
 
     return Card(
-      color: selectionMode && isSelected
-          ? colorScheme.primaryContainer.withValues(alpha: 0.55)
-          : null,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(22),
-        onTap: selectionMode ? onToggleSelection : onOpen,
-        onLongPress: onLongPress,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  if (selectionMode) ...[
-                    Checkbox(
-                      value: isSelected,
-                      onChanged: (_) => onToggleSelection(),
-                    ),
-                    const SizedBox(width: 6),
-                  ],
-                  Expanded(
-                    child: Text(
-                      list.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+      clipBehavior: Clip.antiAlias,
+      color: Colors.transparent,
+      elevation: 0,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: borderColor),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: selectionMode ? onToggleSelection : onOpen,
+          onLongPress: onLongPress,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    if (selectionMode) ...[
+                      Checkbox(
+                        value: isSelected,
+                        onChanged: (_) => onToggleSelection(),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Expanded(
+                      child: Text(
+                        list.name,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                     ),
-                  ),
-                  Text(
-                    formatShortDate(list.updatedAt),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: selectionMode
-                          ? colorScheme.primary
-                          : colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  _PillLabel(
-                    icon: Icons.shopping_basket_rounded,
-                    text: '${list.totalItems} itens',
-                  ),
-                  const SizedBox(width: 8),
-                  _PillLabel(
-                    icon: Icons.attach_money_rounded,
-                    text: formatCurrency(list.totalValue),
-                  ),
-                  if (list.isClosed) ...[
-                    const SizedBox(width: 8),
-                    const _PillLabel(icon: Icons.lock_rounded, text: 'Fechada'),
-                  ],
-                  const Spacer(),
-                  if (!selectionMode) ...[
-                    if (list.isClosed)
-                      IconButton(
-                        tooltip: 'Reabrir lista',
-                        onPressed: onReopen,
-                        icon: const Icon(Icons.lock_open_rounded),
-                      ),
-                    IconButton(
-                      tooltip: 'Criar baseada nesta',
-                      onPressed: onCreateFromThis,
-                      icon: const Icon(Icons.copy_all_rounded),
-                    ),
-                    IconButton(
-                      tooltip: 'Excluir lista',
-                      onPressed: onDelete,
-                      icon: const Icon(Icons.delete_outline_rounded),
-                    ),
-                  ] else
                     Text(
-                      isSelected ? 'Selecionada' : 'Toque para selecionar',
+                      formatShortDate(list.updatedAt),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.w600,
+                        color: selectionMode
+                            ? colorScheme.primary
+                            : colorScheme.onSurfaceVariant,
                       ),
                     ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _PillLabel(
+                      icon: Icons.shopping_basket_rounded,
+                      text: '${list.totalItems} itens',
+                    ),
+                    const SizedBox(width: 8),
+                    _PillLabel(
+                      icon: Icons.attach_money_rounded,
+                      text: formatCurrency(list.totalValue),
+                    ),
+                    if (list.isClosed) ...[
+                      const SizedBox(width: 8),
+                      const _PillLabel(
+                        icon: Icons.lock_rounded,
+                        text: 'Fechada',
+                      ),
+                    ],
+                    const Spacer(),
+                    if (!selectionMode) ...[
+                      if (list.isClosed)
+                        IconButton(
+                          tooltip: 'Reabrir lista',
+                          onPressed: onReopen,
+                          icon: const Icon(Icons.lock_open_rounded),
+                        ),
+                      IconButton(
+                        tooltip: 'Criar baseada nesta',
+                        onPressed: onCreateFromThis,
+                        icon: const Icon(Icons.copy_all_rounded),
+                      ),
+                      IconButton(
+                        tooltip: 'Excluir lista',
+                        onPressed: onDelete,
+                        icon: const Icon(Icons.delete_outline_rounded),
+                      ),
+                    ] else
+                      Text(
+                        isSelected ? 'Selecionada' : 'Toque para selecionar',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -3876,16 +5230,25 @@ class _ListSummaryPanel extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppTokens.radiusXl),
         gradient: LinearGradient(
           colors: [
-            colorScheme.primaryContainer,
-            colorScheme.secondaryContainer,
+            colorScheme.primaryContainer.withValues(alpha: 0.9),
+            colorScheme.secondaryContainer.withValues(alpha: 0.84),
           ],
+        ),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+          width: AppTokens.cardBorderWidth,
         ),
       ),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(14, collapsed ? 12 : 16, 14, 12),
+        padding: EdgeInsets.fromLTRB(
+          AppTokens.spaceMd,
+          collapsed ? AppTokens.spaceMd : AppTokens.spaceLg,
+          AppTokens.spaceMd,
+          AppTokens.spaceMd,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -3904,7 +5267,7 @@ class _ListSummaryPanel extends StatelessWidget {
                   visualDensity: VisualDensity.compact,
                   onPressed: onToggleCollapsed,
                   icon: AnimatedRotation(
-                    duration: const Duration(milliseconds: 220),
+                    duration: AppTokens.motionMedium,
                     turns: collapsed ? 0 : 0.5,
                     child: const Icon(Icons.keyboard_arrow_down_rounded),
                   ),
@@ -3916,7 +5279,7 @@ class _ListSummaryPanel extends StatelessWidget {
               DecoratedBox(
                 decoration: BoxDecoration(
                   color: colorScheme.errorContainer.withValues(alpha: 0.72),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppTokens.radiusMd),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -3951,7 +5314,7 @@ class _ListSummaryPanel extends StatelessWidget {
               const SizedBox(height: 8),
             ],
             AnimatedCrossFade(
-              duration: const Duration(milliseconds: 260),
+              duration: AppTokens.motionMedium,
               crossFadeState: collapsed
                   ? CrossFadeState.showFirst
                   : CrossFadeState.showSecond,
@@ -3962,45 +5325,54 @@ class _ListSummaryPanel extends StatelessWidget {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      _MetricTag(
+                      _SummaryPill(
                         icon: Icons.attach_money_rounded,
                         label: 'Total',
                         value: formatCurrency(list.totalValue),
                       ),
-                      _MetricTag(
+                      _SummaryPill(
                         icon: Icons.inventory_2_rounded,
                         label: 'Itens',
                         value: '${list.totalItems}',
                       ),
-                      _MetricTag(
+                      _SummaryPill(
                         icon: Icons.pending_actions_rounded,
-                        label: 'Pend.',
+                        label: 'Pendentes',
                         value: formatCurrency(list.pendingValue),
                       ),
-                      _MetricTag(
+                      _SummaryPill(
+                        icon: Icons.check_circle_rounded,
+                        label: 'Comprados',
+                        value: '${list.purchasedItemsCount}',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _QuickSummaryActionChip(
                         icon: Icons.account_balance_wallet_rounded,
-                        label: 'Orçamento',
-                        value: list.hasBudget
-                            ? formatCurrency(list.budget!)
-                            : 'Não definido',
+                        label: list.hasBudget
+                            ? 'Editar orçamento'
+                            : 'Definir orçamento',
                         onTap: onBudgetTap,
                       ),
-                      _MetricTag(
+                      _QuickSummaryActionChip(
                         icon: Icons.payments_rounded,
-                        label: 'Saldos',
-                        value: list.hasPaymentBalances
-                            ? formatCurrency(list.paymentBalancesTotal)
-                            : 'Não definido',
+                        label: list.hasPaymentBalances
+                            ? 'Editar saldos'
+                            : 'Definir saldos',
                         onTap: onPaymentBalancesTap,
                       ),
-                      _MetricTag(
+                      _QuickSummaryActionChip(
                         icon: list.reminder == null
                             ? Icons.notifications_off_rounded
                             : Icons.notifications_active_rounded,
-                        label: 'Lembrete',
-                        value: list.reminder == null
-                            ? 'Desligado'
-                            : formatDateTime(list.reminder!.scheduledAt),
+                        label: list.reminder == null
+                            ? 'Definir lembrete'
+                            : 'Editar lembrete',
                         onTap: onReminderTap,
                       ),
                     ],
@@ -4008,7 +5380,7 @@ class _ListSummaryPanel extends StatelessWidget {
                   if (list.isOverBudget) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Acima do orçamento: ${formatCurrency(list.overBudgetAmount)}',
+                      'Excesso: ${formatCurrency(list.overBudgetAmount)}',
                       style: textTheme.bodySmall?.copyWith(
                         color: colorScheme.error,
                         fontWeight: FontWeight.w700,
@@ -4056,9 +5428,9 @@ class _ListSummaryPanel extends StatelessWidget {
                       ),
                       _MetricTag(
                         icon: Icons.account_balance_wallet_rounded,
-                        label: 'Orçamento',
+                        label: 'Orçamento disponível',
                         value: list.hasBudget
-                            ? formatCurrency(list.budget!)
+                            ? formatCurrency(max(0, list.budgetRemaining))
                             : 'Não definido',
                         onTap: onBudgetTap,
                       ),
@@ -4463,6 +5835,8 @@ class _SortTag extends StatelessWidget {
   }
 }
 
+enum _ShoppingItemCardAction { delete }
+
 class _ShoppingItemCard extends StatelessWidget {
   const _ShoppingItemCard({
     required this.item,
@@ -4493,29 +5867,29 @@ class _ShoppingItemCard extends StatelessWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 280),
+        duration: AppTokens.motionFast,
         curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.fromLTRB(14, 12, 10, 14),
+        padding: const EdgeInsets.fromLTRB(12, 11, 10, 11),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: isPurchased
                 ? [
-                    colorScheme.primaryContainer.withValues(alpha: 0.45),
+                    colorScheme.primaryContainer.withValues(alpha: 0.42),
                     colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
                   ]
                 : [
                     colorScheme.surface,
-                    colorScheme.surfaceContainerLow.withValues(alpha: 0.45),
+                    colorScheme.surfaceContainerLow.withValues(alpha: 0.5),
                   ],
           ),
           border: Border.all(
             color: isPurchased
-                ? colorScheme.primary.withValues(alpha: 0.45)
-                : colorScheme.outlineVariant.withValues(alpha: 0.45),
+                ? colorScheme.primary.withValues(alpha: 0.35)
+                : colorScheme.outlineVariant.withValues(alpha: 0.3),
           ),
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(AppTokens.radiusLg),
         ),
         child: Column(
           children: [
@@ -4523,141 +5897,195 @@ class _ShoppingItemCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      AnimatedDefaultTextStyle(
-                        duration: const Duration(milliseconds: 220),
-                        style: textTheme.titleMedium!.copyWith(
-                          fontWeight: FontWeight.w700,
-                          decoration: isPurchased
-                              ? TextDecoration.lineThrough
-                              : null,
-                          color: colorScheme.onSurface,
-                        ),
-                        child: Text(item.name),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${item.quantity} x ${formatCurrency(item.unitPrice)}',
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Subtotal: ${formatCurrency(item.subtotal)}',
-                        style: textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: colorScheme.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          Chip(
-                            avatar: Icon(item.category.icon, size: 17),
-                            label: Text(item.category.label),
-                            visualDensity: VisualDensity.compact,
-                            backgroundColor: colorScheme.surfaceContainerHighest
-                                .withValues(alpha: 0.65),
+                  child: Opacity(
+                    opacity: isPurchased ? 0.86 : 1,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            decoration: isPurchased
+                                ? TextDecoration.lineThrough
+                                : null,
                           ),
-                          if (item.barcode != null && item.barcode!.isNotEmpty)
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${item.quantity} x ${formatCurrency(item.unitPrice)}',
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 7),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
                             Chip(
-                              avatar: const Icon(
-                                Icons.qr_code_2_rounded,
-                                size: 17,
-                              ),
-                              label: Text(item.barcode!),
+                              avatar: Icon(item.category.icon, size: 15),
                               visualDensity: VisualDensity.compact,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                              label: Text(item.category.label),
                               backgroundColor: colorScheme.surfaceContainerHigh
                                   .withValues(alpha: 0.72),
                             ),
-                          if (item.priceHistory.length > 1)
-                            Chip(
-                              avatar: const Icon(
-                                Icons.show_chart_rounded,
-                                size: 17,
+                            if (item.barcode != null &&
+                                item.barcode!.isNotEmpty)
+                              Chip(
+                                avatar: const Icon(
+                                  Icons.qr_code_2_rounded,
+                                  size: 15,
+                                ),
+                                visualDensity: VisualDensity.compact,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                                label: Text(item.barcode!),
+                                backgroundColor:
+                                    colorScheme.surfaceContainerLow,
                               ),
-                              label: Text('${item.priceHistory.length} preços'),
-                              visualDensity: VisualDensity.compact,
-                              backgroundColor: colorScheme.secondaryContainer
-                                  .withValues(alpha: 0.7),
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                AnimatedScale(
-                  duration: const Duration(milliseconds: 200),
-                  scale: isPurchased ? 1.05 : 1,
-                  child: Checkbox(
-                    value: isPurchased,
-                    onChanged: readOnly ? null : onPurchasedChanged,
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Editar',
-                  onPressed: readOnly ? null : onEdit,
-                  icon: const Icon(Icons.edit_rounded),
-                ),
-                IconButton(
-                  tooltip: 'Histórico de preço',
-                  onPressed: onViewHistory,
-                  icon: const Icon(Icons.query_stats_rounded),
-                ),
-                IconButton(
-                  tooltip: 'Excluir',
-                  onPressed: readOnly ? null : onDelete,
-                  icon: const Icon(Icons.delete_outline_rounded),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                IconButton.filledTonal(
-                  onPressed: readOnly
-                      ? null
-                      : (item.quantity > 1 ? onDecrement : null),
-                  icon: const Icon(Icons.remove_rounded),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Text(
-                    '${item.quantity}',
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                IconButton.filled(
-                  onPressed: readOnly ? null : onIncrement,
-                  icon: const Icon(Icons.add_rounded),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Subtotal',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      formatCurrency(item.subtotal),
+                      style: textTheme.titleMedium?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
                 ),
-                const Spacer(),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHigh.withValues(
+                      alpha: 0.72,
+                    ),
+                    borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+                    border: Border.all(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 2,
+                      vertical: 1,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          onPressed: readOnly
+                              ? null
+                              : (item.quantity > 1 ? onDecrement : null),
+                          icon: const Icon(Icons.remove_rounded),
+                        ),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(minWidth: 24),
+                          child: Text(
+                            '${item.quantity}',
+                            textAlign: TextAlign.center,
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          onPressed: readOnly ? null : onIncrement,
+                          icon: const Icon(Icons.add_rounded),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Checkbox(
+                  value: isPurchased,
+                  onChanged: readOnly ? null : onPurchasedChanged,
+                  visualDensity: VisualDensity.compact,
+                ),
                 AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
+                  duration: const Duration(milliseconds: 180),
                   child: isPurchased
                       ? Chip(
                           key: const ValueKey('purchased-chip'),
                           avatar: const Icon(
                             Icons.check_circle_rounded,
-                            size: 18,
+                            size: 16,
                           ),
                           label: const Text('Comprado'),
                           backgroundColor: colorScheme.primaryContainer,
+                          visualDensity: VisualDensity.compact,
                         )
                       : Chip(
                           key: const ValueKey('pending-chip'),
-                          avatar: const Icon(Icons.timelapse_rounded, size: 18),
+                          avatar: const Icon(Icons.timelapse_rounded, size: 16),
                           label: const Text('Pendente'),
                           backgroundColor: colorScheme.surfaceContainerHigh,
+                          visualDensity: VisualDensity.compact,
                         ),
                 ),
+                const Spacer(),
+                if (!readOnly)
+                  IconButton(
+                    tooltip: 'Editar',
+                    onPressed: onEdit,
+                    icon: const Icon(Icons.edit_rounded),
+                  ),
+                IconButton(
+                  tooltip: 'Histórico de preço',
+                  onPressed: onViewHistory,
+                  icon: const Icon(Icons.query_stats_rounded),
+                ),
+                if (!readOnly)
+                  PopupMenuButton<_ShoppingItemCardAction>(
+                    tooltip: 'Mais ações',
+                    onSelected: (action) {
+                      if (action == _ShoppingItemCardAction.delete) {
+                        onDelete();
+                      }
+                    },
+                    itemBuilder: (context) =>
+                        const <PopupMenuEntry<_ShoppingItemCardAction>>[
+                          PopupMenuItem<_ShoppingItemCardAction>(
+                            value: _ShoppingItemCardAction.delete,
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete_outline_rounded, size: 18),
+                                SizedBox(width: 10),
+                                Text('Excluir item'),
+                              ],
+                            ),
+                          ),
+                        ],
+                    icon: const Icon(Icons.more_horiz_rounded),
+                  ),
               ],
             ),
           ],
@@ -4834,7 +6262,7 @@ class _EmptyItemsState extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Adicione o primeiro produto e acompanhe subtotal e total automaticos.',
+                  'Adicione o primeiro produto e acompanhe subtotal e total automáticos.',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -4870,19 +6298,24 @@ class _EntryAnimationState extends State<_EntryAnimation>
   late final AnimationController _controller;
   late final Animation<double> _fade;
   late final Animation<Offset> _slide;
+  late final Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 320),
+      duration: const Duration(milliseconds: 220),
     );
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
     _slide = Tween<Offset>(
-      begin: const Offset(0, 0.08),
+      begin: const Offset(0, 0.04),
       end: Offset.zero,
     ).animate(_fade);
+    _scale = Tween<double>(
+      begin: 0.985,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
     Future<void>.delayed(widget.delay, () {
       if (mounted) {
@@ -4901,7 +6334,10 @@ class _EntryAnimationState extends State<_EntryAnimation>
   Widget build(BuildContext context) {
     return FadeTransition(
       opacity: _fade,
-      child: SlideTransition(position: _slide, child: widget.child),
+      child: SlideTransition(
+        position: _slide,
+        child: ScaleTransition(scale: _scale, child: widget.child),
+      ),
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -19,6 +20,8 @@ import '../data/services/reminder_service.dart';
 import '../presentation/auth_page.dart';
 import '../presentation/launch.dart';
 import '../presentation/pages.dart';
+import '../presentation/theme/app_tokens.dart';
+import '../presentation/utils/app_toast.dart';
 
 class ShoppingListApp extends StatefulWidget {
   const ShoppingListApp({
@@ -62,6 +65,16 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   );
   static const String _cosmosHardcodedToken = '4hrzg_tHwg2TqECZotwqDg';
   static const String _themeModeKey = 'app_theme_mode_v1';
+  static const Set<String> _transientCloudErrorCodes = <String>{
+    'unavailable',
+    'deadline-exceeded',
+    'aborted',
+    'resource-exhausted',
+  };
+
+  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
+      GlobalKey<ScaffoldMessengerState>();
+  final Connectivity _connectivity = Connectivity();
 
   late final ShoppingListsStore _store;
   late final ShoppingBackupService _backupService;
@@ -69,12 +82,22 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   FirestoreUserDataRepository? _cloudRepository;
 
   StreamSubscription<User?>? _authSubscription;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   Timer? _cloudSyncDebounce;
   Timer? _cloudSyncRetryTimer;
+  User? _currentUser;
+  bool _authStateResolved = false;
+  bool _isInitialCloudHydration = false;
+  String? _hydratingCloudUid;
   String? _loadedCloudUid;
   bool _isApplyingCloudSnapshot = false;
   bool _isPushingCloudSnapshot = false;
   bool _hasPendingCloudSync = false;
+  bool _hasNetworkConnection = true;
+  bool _notifySuccessOnNextSync = false;
+  DateTime? _lastSuccessfulCloudSyncAt;
+  DateTime? _lastCloudSyncSnackAt;
+  String? _lastCloudSyncSnackMessage;
 
   ThemeMode _themeMode = ThemeMode.light;
 
@@ -115,20 +138,47 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     if (widget._storage == null) {
       _cloudRepository = FirestoreUserDataRepository();
       unawaited(_restoreThemeMode());
+      unawaited(_startConnectivityTracking());
       _store.addListener(_handleStoreChanged);
       _authSubscription = FirebaseAuth.instance.authStateChanges().listen((
         user,
       ) {
+        final previousUid = _currentUser?.uid;
+        _currentUser = user;
+        _authStateResolved = true;
+
         if (user == null) {
+          _isInitialCloudHydration = false;
+          _hydratingCloudUid = null;
           _loadedCloudUid = null;
           _hasPendingCloudSync = false;
+          _lastSuccessfulCloudSyncAt = null;
           _cloudSyncDebounce?.cancel();
           _stopCloudRetryTimer();
+          if (mounted) {
+            setState(() {});
+          }
           return;
         }
+
+        final isDifferentUser = previousUid != user.uid;
+        final needsInitialHydration = _loadedCloudUid != user.uid;
+        if (isDifferentUser && needsInitialHydration) {
+          _isInitialCloudHydration = true;
+          _hydratingCloudUid = user.uid;
+        }
         _hasPendingCloudSync = true;
+        if (mounted) {
+          setState(() {});
+        }
         _ensureCloudRetryTimer();
-        unawaited(_pullFromCloud(user.uid));
+        if (needsInitialHydration) {
+          unawaited(
+            _pullFromCloud(user.uid, asInitialHydration: isDifferentUser),
+          );
+          return;
+        }
+        _scheduleCloudSync(immediate: true);
       });
     }
   }
@@ -152,6 +202,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _authSubscription?.cancel();
+    _connectivitySubscription?.cancel();
     _cloudSyncDebounce?.cancel();
     _stopCloudRetryTimer();
     if (widget._storage == null) {
@@ -166,6 +217,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     if (state != AppLifecycleState.resumed || widget._storage != null) {
       return;
     }
+    unawaited(_refreshConnectivityStatus());
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null || uid.isEmpty) {
       return;
@@ -223,7 +275,144 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     };
   }
 
-  Future<void> _pullFromCloud(String uid) async {
+  String? _resolveProviderId(User user) {
+    for (final info in user.providerData) {
+      final providerId = info.providerId.trim();
+      if (providerId.isEmpty || providerId == 'firebase') {
+        continue;
+      }
+      if (providerId == 'password' || providerId == 'google.com') {
+        return providerId;
+      }
+      return null;
+    }
+    return null;
+  }
+
+  Future<void> _startConnectivityTracking() async {
+    await _refreshConnectivityStatus(triggerSyncIfOnline: false);
+    _connectivitySubscription = _connectivity.onConnectivityChanged.listen((
+      results,
+    ) {
+      _handleConnectivityChanged(results, triggerSyncIfOnline: true);
+    });
+  }
+
+  Future<void> _refreshConnectivityStatus({
+    bool triggerSyncIfOnline = true,
+  }) async {
+    try {
+      final results = await _connectivity.checkConnectivity();
+      _handleConnectivityChanged(
+        results,
+        triggerSyncIfOnline: triggerSyncIfOnline,
+      );
+    } catch (_) {}
+  }
+
+  void _handleConnectivityChanged(
+    List<ConnectivityResult> results, {
+    required bool triggerSyncIfOnline,
+  }) {
+    final hasConnection = results.any(
+      (result) => result != ConnectivityResult.none,
+    );
+    final connectionChanged = hasConnection != _hasNetworkConnection;
+    _hasNetworkConnection = hasConnection;
+
+    if (connectionChanged && mounted) {
+      setState(() {});
+    }
+
+    if (!hasConnection) {
+      if (connectionChanged) {
+        _showCloudSyncNotification(
+          'Sem internet. As listas continuam salvas no aparelho.',
+          type: AppToastType.warning,
+        );
+      }
+      return;
+    }
+
+    if (!triggerSyncIfOnline) {
+      return;
+    }
+
+    if (_hasPendingCloudSync) {
+      if (connectionChanged) {
+        _notifySuccessOnNextSync = true;
+        _showCloudSyncNotification(
+          'Internet detectada. Sincronizando listas.',
+          type: AppToastType.info,
+        );
+      }
+      _scheduleCloudSync(immediate: true);
+    }
+  }
+
+  void _showCloudSyncNotification(
+    String message, {
+    Duration duration = const Duration(seconds: 3),
+    AppToastType type = AppToastType.info,
+  }) {
+    final messenger = _scaffoldMessengerKey.currentState;
+    if (messenger == null) {
+      return;
+    }
+    final now = DateTime.now();
+    if (_lastCloudSyncSnackMessage == message &&
+        _lastCloudSyncSnackAt != null &&
+        now.difference(_lastCloudSyncSnackAt!) < const Duration(seconds: 6)) {
+      return;
+    }
+    _lastCloudSyncSnackAt = now;
+    _lastCloudSyncSnackMessage = message;
+    AppToast.showWithMessenger(
+      messenger,
+      message: message,
+      type: type,
+      duration: duration,
+    );
+  }
+
+  String _cloudErrorCode(Object error) {
+    if (error is FirebaseException) {
+      final code = error.code.trim();
+      return code.isEmpty ? 'firebase-error' : code;
+    }
+    return 'erro-desconhecido';
+  }
+
+  bool _isTransientCloudError(Object error) {
+    if (error is FirebaseException) {
+      return _transientCloudErrorCodes.contains(
+        error.code.trim().toLowerCase(),
+      );
+    }
+    return false;
+  }
+
+  String _cloudErrorDetails(Object error) {
+    if (error is FirebaseException) {
+      final code = _cloudErrorCode(error);
+      final message = (error.message ?? '').trim();
+      if (message.isEmpty) {
+        return code;
+      }
+      return '$code: $message';
+    }
+    return error.toString();
+  }
+
+  void _logCloudError(String stage, Object error, StackTrace stack) {
+    debugPrint('[CloudSync][$stage] ${_cloudErrorDetails(error)}');
+    debugPrintStack(label: '[CloudSync][$stage]', stackTrace: stack);
+  }
+
+  Future<void> _pullFromCloud(
+    String uid, {
+    bool asInitialHydration = false,
+  }) async {
     if (_loadedCloudUid == uid) {
       return;
     }
@@ -231,6 +420,8 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     if (repository == null) {
       return;
     }
+    final shouldEndInitialHydration =
+        asInitialHydration && _hydratingCloudUid == uid;
     try {
       await _waitForStoreLoaded();
       if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) {
@@ -267,12 +458,40 @@ class _ShoppingListAppState extends State<ShoppingListApp>
 
       _loadedCloudUid = uid;
       _hasPendingCloudSync = true;
+      if (mounted) {
+        setState(() {});
+      }
       _scheduleCloudSync(immediate: true);
       _ensureCloudRetryTimer();
       await _pushToCloud(uid);
-    } catch (_) {
+    } catch (error, stack) {
+      _logCloudError('pull', error, stack);
       _hasPendingCloudSync = true;
+      _notifySuccessOnNextSync = true;
       _ensureCloudRetryTimer();
+      if (_isTransientCloudError(error)) {
+        _showCloudSyncNotification(
+          'Servidor da nuvem indisponível no momento. Continuando offline e tentando novamente.',
+          duration: const Duration(seconds: 6),
+          type: AppToastType.warning,
+        );
+      } else {
+        _showCloudSyncNotification(
+          'Falha ao carregar dados online: ${_cloudErrorDetails(error)}',
+          duration: const Duration(seconds: 8),
+          type: AppToastType.error,
+        );
+      }
+      if (mounted) {
+        setState(() {});
+      }
+    } finally {
+      if (shouldEndInitialHydration && mounted) {
+        setState(() {
+          _isInitialCloudHydration = false;
+          _hydratingCloudUid = null;
+        });
+      }
     }
   }
 
@@ -295,11 +514,20 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     if (uid == null || uid.isEmpty) {
       return;
     }
-    _hasPendingCloudSync = true;
+    if (!_hasPendingCloudSync) {
+      _hasPendingCloudSync = true;
+      if (mounted) {
+        setState(() {});
+      }
+    }
     _ensureCloudRetryTimer();
     _cloudSyncDebounce?.cancel();
     final delay = immediate ? Duration.zero : _cloudSyncDebounceDuration;
     _cloudSyncDebounce = Timer(delay, () {
+      if (_loadedCloudUid != uid) {
+        unawaited(_pullFromCloud(uid));
+        return;
+      }
       unawaited(_pushToCloud(uid));
     });
   }
@@ -314,12 +542,40 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         _isApplyingCloudSnapshot) {
       return;
     }
+    if (_loadedCloudUid != uid) {
+      _ensureCloudRetryTimer();
+      return;
+    }
+    if (!_hasNetworkConnection) {
+      if (!_hasPendingCloudSync) {
+        _hasPendingCloudSync = true;
+        if (mounted) {
+          setState(() {});
+        }
+      }
+      _ensureCloudRetryTimer();
+      return;
+    }
     if (!_hasPendingCloudSync && _loadedCloudUid == uid) {
       return;
     }
 
     _isPushingCloudSnapshot = true;
+    if (mounted) {
+      setState(() {});
+    }
     try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      final profile = currentUser == null
+          ? null
+          : FirestoreUserProfile(
+              uid: uid,
+              displayName: currentUser.displayName,
+              email: currentUser.email,
+              photoUrl: currentUser.photoURL,
+              provider: _resolveProviderId(currentUser),
+              themeMode: _themeMode == ThemeMode.dark ? 'dark' : 'light',
+            );
       await repository.saveUserSnapshot(
         uid: uid,
         lists: _store.lists,
@@ -328,15 +584,48 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         settings: FirestoreUserAppSettings(
           themeMode: _themeMode == ThemeMode.dark ? 'dark' : 'light',
         ),
+        profile: profile,
       );
       _hasPendingCloudSync = false;
       _loadedCloudUid = uid;
+      _lastSuccessfulCloudSyncAt = DateTime.now();
       _stopCloudRetryTimer();
-    } catch (_) {
+      if (_notifySuccessOnNextSync) {
+        _notifySuccessOnNextSync = false;
+        _showCloudSyncNotification(
+          'Sincronização concluída.',
+          type: AppToastType.success,
+        );
+      }
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (error, stack) {
+      _logCloudError('push', error, stack);
       _hasPendingCloudSync = true;
+      _notifySuccessOnNextSync = true;
       _ensureCloudRetryTimer();
+      if (mounted && _hasNetworkConnection) {
+        if (_isTransientCloudError(error)) {
+          _showCloudSyncNotification(
+            'Sincronização pausada: servidor indisponível. Tentaremos novamente automático.',
+            duration: const Duration(seconds: 6),
+            type: AppToastType.warning,
+          );
+        } else {
+          _showCloudSyncNotification(
+            'Falha ao sincronizar: ${_cloudErrorDetails(error)}',
+            duration: const Duration(seconds: 8),
+            type: AppToastType.error,
+          );
+        }
+        setState(() {});
+      }
     } finally {
       _isPushingCloudSnapshot = false;
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
@@ -350,6 +639,10 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       }
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null || uid.isEmpty) {
+        return;
+      }
+      if (_loadedCloudUid != uid) {
+        unawaited(_pullFromCloud(uid));
         return;
       }
       unawaited(_pushToCloud(uid));
@@ -369,56 +662,172 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   }
 
   ThemeData _buildLightTheme() {
-    const seed = Color(0xFF008577);
+    final scheme = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF008577),
+      brightness: Brightness.light,
+      surface: const Color(0xFFF8FCFB),
+      surfaceContainerHighest: const Color(0xFFE8F2EF),
+      surfaceContainerHigh: const Color(0xFFEDF5F3),
+    );
     final base = ThemeData(
       useMaterial3: true,
-      colorSchemeSeed: seed,
+      colorScheme: scheme,
       visualDensity: VisualDensity.adaptivePlatformDensity,
       brightness: Brightness.light,
     );
     return base.copyWith(
-      scaffoldBackgroundColor: const Color(0xFFF3F8F7),
+      scaffoldBackgroundColor: const Color(0xFFF5FAF8),
+      textTheme: base.textTheme.copyWith(
+        titleLarge: base.textTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.2,
+        ),
+        titleMedium: base.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.1,
+        ),
+        bodyLarge: base.textTheme.bodyLarge?.copyWith(height: 1.3),
+        bodyMedium: base.textTheme.bodyMedium?.copyWith(height: 1.3),
+      ),
       cardTheme: const CardThemeData(
-        elevation: 0,
+        elevation: AppTokens.cardElevation,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(22)),
+          borderRadius: BorderRadius.all(Radius.circular(AppTokens.radiusXl)),
         ),
       ),
-      appBarTheme: const AppBarTheme(surfaceTintColor: Colors.transparent),
+      appBarTheme: const AppBarTheme(
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          ),
+        ),
+      ),
+      inputDecorationTheme: base.inputDecorationTheme.copyWith(
+        filled: true,
+        fillColor: const Color(0xFFF0F6F4),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          borderSide: BorderSide(color: scheme.outlineVariant),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          borderSide: BorderSide(color: scheme.outlineVariant),
+        ),
+      ),
     );
   }
 
   ThemeData _buildDarkTheme() {
-    const seed = Color(0xFF00A896);
+    final scheme = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF00A896),
+      brightness: Brightness.dark,
+      surface: const Color(0xFF151E22),
+      surfaceContainerHighest: const Color(0xFF27343A),
+      surfaceContainerHigh: const Color(0xFF212C31),
+      primary: const Color(0xFF4ED7C7),
+      secondary: const Color(0xFF8ECFC6),
+      tertiary: const Color(0xFF6FA5FF),
+    );
     final base = ThemeData(
       useMaterial3: true,
-      colorSchemeSeed: seed,
+      colorScheme: scheme,
       visualDensity: VisualDensity.adaptivePlatformDensity,
       brightness: Brightness.dark,
     );
     return base.copyWith(
-      scaffoldBackgroundColor: const Color(0xFF0D1214),
+      scaffoldBackgroundColor: const Color(0xFF0F161A),
+      textTheme: base.textTheme.copyWith(
+        titleLarge: base.textTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.2,
+        ),
+        titleMedium: base.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.1,
+        ),
+        bodyLarge: base.textTheme.bodyLarge?.copyWith(height: 1.32),
+        bodyMedium: base.textTheme.bodyMedium?.copyWith(height: 1.32),
+      ),
       cardTheme: const CardThemeData(
-        elevation: 0,
+        elevation: AppTokens.cardElevation,
         margin: EdgeInsets.zero,
-        color: Color(0xFF172024),
+        color: Color(0xFF1A252A),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(22)),
+          borderRadius: BorderRadius.all(Radius.circular(AppTokens.radiusXl)),
         ),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: const Color(0xFF0D1214),
-        foregroundColor: base.colorScheme.onSurface,
+        backgroundColor: const Color(0xFF0F161A),
+        foregroundColor: scheme.onSurface,
         surfaceTintColor: Colors.transparent,
+        elevation: 0,
       ),
       inputDecorationTheme: base.inputDecorationTheme.copyWith(
         filled: true,
-        fillColor: const Color(0xFF1B262B),
+        fillColor: const Color(0xFF1E2A2F),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          borderSide: BorderSide(color: scheme.outlineVariant),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          borderSide: BorderSide(color: scheme.outlineVariant),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          ),
+        ),
       ),
       snackBarTheme: base.snackBarTheme.copyWith(
         behavior: SnackBarBehavior.floating,
       ),
+    );
+  }
+
+  Widget _buildHomeTransitionShell({
+    required Widget child,
+    required String stateKey,
+  }) {
+    return AnimatedSwitcher(
+      duration: AppTokens.motionSlow,
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (widget, animation) {
+        final opacity = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+        final scale = Tween<double>(begin: 0.985, end: 1.0).animate(
+          CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+        );
+        return FadeTransition(
+          opacity: opacity,
+          child: ScaleTransition(scale: scale, child: widget),
+        );
+      },
+      child: KeyedSubtree(key: ValueKey<String>(stateKey), child: child),
     );
   }
 
@@ -429,6 +838,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: _scaffoldMessengerKey,
       title: 'Minhas Compras',
       supportedLocales: const <Locale>[Locale('pt', 'BR'), Locale('en', 'US')],
       localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
@@ -448,48 +858,84 @@ class _ShoppingListAppState extends State<ShoppingListApp>
               final launchReady =
                   launchSnapshot.connectionState == ConnectionState.done;
               if (!launchReady || _store.isLoading) {
-                return LoadingScreen(
-                  showReadyHint: launchReady && _store.isLoading,
+                return _buildHomeTransitionShell(
+                  stateKey: 'boot-loading',
+                  child: LoadingScreen(
+                    showReadyHint: launchReady && _store.isLoading,
+                  ),
                 );
               }
+              final listRecords = _store.lists.length;
+              final historyRecords = _store.purchaseHistory.length;
+              final catalogRecords = _store.catalogProducts.length;
+              final totalSyncRecords =
+                  listRecords + historyRecords + catalogRecords;
+              final pendingSyncRecords =
+                  (_hasPendingCloudSync || _isPushingCloudSnapshot)
+                  ? totalSyncRecords
+                  : 0;
 
               if (widget._storage == null) {
-                return StreamBuilder<User?>(
-                  stream: FirebaseAuth.instance.authStateChanges(),
-                  builder: (context, authSnapshot) {
-                    if (authSnapshot.connectionState ==
-                        ConnectionState.waiting) {
-                      return const LoadingScreen(showReadyHint: true);
-                    }
-                    if (authSnapshot.data == null) {
-                      return AuthPage(
-                        themeMode: _themeMode,
-                        onThemeModeChanged: (mode) {
-                          unawaited(_setThemeMode(mode));
-                        },
-                      );
-                    }
-                    final user = authSnapshot.data;
-                    return DashboardPage(
-                      store: _store,
-                      backupService: _backupService,
+                if (!_authStateResolved) {
+                  return _buildHomeTransitionShell(
+                    stateKey: 'auth-resolve',
+                    child: const LoadingScreen(showReadyHint: true),
+                  );
+                }
+                final user = _currentUser;
+                if (user == null) {
+                  return _buildHomeTransitionShell(
+                    stateKey: 'auth-page',
+                    child: AuthPage(
                       themeMode: _themeMode,
-                      onThemeModeChanged: _setThemeMode,
-                      userDisplayName: user?.displayName,
-                      userEmail: user?.email,
-                      onSignOut: _signOut,
-                    );
-                  },
+                      onThemeModeChanged: (mode) {
+                        unawaited(_setThemeMode(mode));
+                      },
+                    ),
+                  );
+                }
+                final isHydratingLoggedUser =
+                    _isInitialCloudHydration && _hydratingCloudUid == user.uid;
+                if (isHydratingLoggedUser) {
+                  return _buildHomeTransitionShell(
+                    stateKey: 'cloud-hydration',
+                    child: const LoadingScreen(showReadyHint: true),
+                  );
+                }
+                return _buildHomeTransitionShell(
+                  stateKey: 'dashboard-auth',
+                  child: DashboardPage(
+                    store: _store,
+                    backupService: _backupService,
+                    themeMode: _themeMode,
+                    onThemeModeChanged: _setThemeMode,
+                    userDisplayName: user.displayName,
+                    userEmail: user.email,
+                    onSignOut: _signOut,
+                    showCloudSyncStatus: true,
+                    hasInternetConnection: _hasNetworkConnection,
+                    hasPendingCloudSync: _hasPendingCloudSync,
+                    isCloudSyncing: _isPushingCloudSnapshot,
+                    lastCloudSyncAt: _lastSuccessfulCloudSyncAt,
+                    totalSyncRecords: totalSyncRecords,
+                    pendingSyncRecords: pendingSyncRecords,
+                    listRecords: listRecords,
+                    historyRecords: historyRecords,
+                    catalogRecords: catalogRecords,
+                  ),
                 );
               }
 
-              return DashboardPage(
-                store: _store,
-                backupService: _backupService,
-                themeMode: _themeMode,
-                onThemeModeChanged: _setThemeMode,
-                userDisplayName: null,
-                userEmail: null,
+              return _buildHomeTransitionShell(
+                stateKey: 'dashboard-local',
+                child: DashboardPage(
+                  store: _store,
+                  backupService: _backupService,
+                  themeMode: _themeMode,
+                  onThemeModeChanged: _setThemeMode,
+                  userDisplayName: null,
+                  userEmail: null,
+                ),
               );
             },
           );

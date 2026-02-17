@@ -12,6 +12,7 @@ import '../data/services/fiscal_receipt_parser.dart';
 import '../domain/classifications.dart';
 import '../domain/models_and_utils.dart';
 import 'extensions/classification_ui_extensions.dart';
+import 'utils/app_modal.dart';
 import 'utils/time_utils.dart';
 
 Future<String?> showListNameDialog(
@@ -23,7 +24,7 @@ Future<String?> showListNameDialog(
   final formKey = GlobalKey<FormState>();
   final controller = TextEditingController(text: initialValue);
 
-  final result = await showDialog<String>(
+  final result = await showAppDialog<String>(
     context: context,
     builder: (context) {
       return AlertDialog(
@@ -84,7 +85,7 @@ Future<BudgetEditorResult?> showBudgetEditorDialog(
     text: initialValue == null ? '' : formatter.formatValue(initialValue),
   );
 
-  final result = await showDialog<BudgetEditorResult>(
+  final result = await showAppDialog<BudgetEditorResult>(
     context: context,
     builder: (context) {
       return AlertDialog(
@@ -154,7 +155,7 @@ Future<PaymentBalancesEditorResult?> showPaymentBalancesEditorDialog(
       .map((entry) => entry.copyWith())
       .toList(growable: true);
 
-  return showDialog<PaymentBalancesEditorResult>(
+  return showAppDialog<PaymentBalancesEditorResult>(
     context: context,
     builder: (dialogContext) {
       return StatefulBuilder(
@@ -428,7 +429,7 @@ Future<PaymentBalance?> _showPaymentBalanceEntryDialog(
   var selectedType = initialValue?.type ?? PaymentBalanceType.card;
 
   try {
-    return await showDialog<PaymentBalance>(
+    return await showAppDialog<PaymentBalance>(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
@@ -585,13 +586,13 @@ Future<ReminderEditorResult?> showReminderEditorDialog(
     );
   }
 
-  return showDialog<ReminderEditorResult>(
+  return showAppDialog<ReminderEditorResult>(
     context: context,
     builder: (dialogContext) {
       return StatefulBuilder(
         builder: (context, setDialogState) {
           Future<void> pickDate() async {
-            final selected = await showDatePicker(
+            final selected = await showAppDatePicker(
               context: dialogContext,
               initialDate: selectedDate,
               firstDate: DateTime(now.year, now.month, now.day),
@@ -608,7 +609,7 @@ Future<ReminderEditorResult?> showReminderEditorDialog(
           }
 
           Future<void> pickTime() async {
-            final selected = await showTimePicker(
+            final selected = await showAppTimePicker(
               context: dialogContext,
               initialTime: selectedTime,
               helpText: 'Horário do lembrete',
@@ -729,7 +730,7 @@ Future<PurchaseCheckoutResult?> showPurchaseCheckoutDialog(
       .where((item) => item.isPurchased)
       .fold<double>(0, (sum, item) => sum + item.subtotal);
 
-  return showDialog<PurchaseCheckoutResult>(
+  return showAppDialog<PurchaseCheckoutResult>(
     context: context,
     builder: (dialogContext) {
       return StatefulBuilder(
@@ -803,7 +804,7 @@ Future<ShoppingListModel?> showTemplatePickerSheet(
   BuildContext context, {
   required List<ShoppingListModel> lists,
 }) {
-  return showModalBottomSheet<ShoppingListModel>(
+  return showAppModalBottomSheet<ShoppingListModel>(
     context: context,
     showDragHandle: true,
     useSafeArea: true,
@@ -837,7 +838,7 @@ Future<ShoppingListModel?> showTemplatePickerSheet(
 }
 
 Future<String?> showBarcodeScannerSheet(BuildContext context) {
-  return showModalBottomSheet<String>(
+  return showAppModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
@@ -849,7 +850,7 @@ Future<String?> showBarcodeScannerSheet(BuildContext context) {
 Future<List<ShoppingItemDraft>?> showFiscalReceiptImportSheet(
   BuildContext context,
 ) {
-  return showModalBottomSheet<List<ShoppingItemDraft>>(
+  return showAppModalBottomSheet<List<ShoppingItemDraft>>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
@@ -1179,7 +1180,7 @@ Future<ShoppingItemDraft?> showShoppingItemEditorSheet(
   Future<ProductLookupResult> Function(String barcode)? onLookupBarcode,
   Future<CatalogProduct?> Function(String name)? onLookupCatalogByName,
 }) {
-  return showModalBottomSheet<ShoppingItemDraft>(
+  return showAppModalBottomSheet<ShoppingItemDraft>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
