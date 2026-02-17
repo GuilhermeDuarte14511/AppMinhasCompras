@@ -112,9 +112,9 @@ class FirebaseAuthService {
       case 'google-sign-in-unexpected':
         return 'Erro inesperado no login Google. Verifique configuração Firebase do app Android.';
       case 'invalid-email':
-        return 'E-mail invalido.';
+        return 'E-mail inválido.';
       case 'email-already-in-use':
-        return 'Esse e-mail ja esta em uso.';
+        return 'Esse e-mail já está em uso.';
       case 'weak-password':
         return 'Senha fraca. Use pelo menos 6 caracteres.';
       case 'wrong-password':
@@ -125,7 +125,7 @@ class FirebaseAuthService {
       case 'network-request-failed':
         return 'Sem internet no momento.';
       case 'account-exists-with-different-credential':
-        return 'Este e-mail ja esta vinculado a outro metodo de login.';
+        return 'Este e-mail já está vinculado a outro método de login.';
       case 'operation-not-allowed':
         return 'Método de login não habilitado no Firebase.';
       case 'user-disabled':
@@ -133,7 +133,7 @@ class FirebaseAuthService {
       case 'too-many-requests':
         return 'Muitas tentativas. Tente novamente em instantes.';
       default:
-        return 'Falha de autenticacao (${error.code}).';
+        return 'Falha de autenticação (${error.code}).';
     }
   }
 }

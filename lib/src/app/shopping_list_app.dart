@@ -19,6 +19,7 @@ import '../data/services/home_widget_service.dart';
 import '../data/services/reminder_service.dart';
 import '../presentation/auth_page.dart';
 import '../presentation/launch.dart';
+import '../presentation/onboarding_page.dart';
 import '../presentation/pages.dart';
 import '../presentation/theme/app_tokens.dart';
 import '../presentation/utils/app_toast.dart';
@@ -65,6 +66,8 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   );
   static const String _cosmosHardcodedToken = '4hrzg_tHwg2TqECZotwqDg';
   static const String _themeModeKey = 'app_theme_mode_v1';
+  static const String _onboardingCompletionKeyPrefix =
+      'onboarding_completed_v1_';
   static const Set<String> _transientCloudErrorCodes = <String>{
     'unavailable',
     'deadline-exceeded',
@@ -87,6 +90,10 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   Timer? _cloudSyncRetryTimer;
   User? _currentUser;
   bool _authStateResolved = false;
+  bool _onboardingResolved = false;
+  bool? _onboardingCompleted;
+  bool _showOnboarding = false;
+  bool _openCreateListAfterOnboarding = false;
   bool _isInitialCloudHydration = false;
   String? _hydratingCloudUid;
   String? _loadedCloudUid;
@@ -151,6 +158,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
           _isInitialCloudHydration = false;
           _hydratingCloudUid = null;
           _loadedCloudUid = null;
+          _resetOnboardingState();
           _hasPendingCloudSync = false;
           _lastSuccessfulCloudSyncAt = null;
           _cloudSyncDebounce?.cancel();
@@ -162,6 +170,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         }
 
         final isDifferentUser = previousUid != user.uid;
+        if (isDifferentUser) {
+          _resetOnboardingState();
+        }
         final needsInitialHydration = _loadedCloudUid != user.uid;
         if (isDifferentUser && needsInitialHydration) {
           _isInitialCloudHydration = true;
@@ -177,6 +188,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
             _pullFromCloud(user.uid, asInitialHydration: isDifferentUser),
           );
           return;
+        }
+        if (!_onboardingResolved) {
+          unawaited(_resolveOnboardingForUser(user.uid));
         }
         _scheduleCloudSync(immediate: true);
       });
@@ -247,6 +261,98 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     }
     setState(() {
       _themeMode = restored;
+    });
+  }
+
+  String _onboardingCompletionKeyForUser(String uid) {
+    return '$_onboardingCompletionKeyPrefix$uid';
+  }
+
+  Future<bool?> _readLocalOnboardingCompletion(String uid) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = _onboardingCompletionKeyForUser(uid);
+    if (!prefs.containsKey(key)) {
+      return null;
+    }
+    return prefs.getBool(key);
+  }
+
+  Future<void> _writeLocalOnboardingCompletion(String uid, bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = _onboardingCompletionKeyForUser(uid);
+    await prefs.setBool(key, value);
+  }
+
+  void _resetOnboardingState() {
+    _onboardingResolved = false;
+    _onboardingCompleted = null;
+    _showOnboarding = false;
+    _openCreateListAfterOnboarding = false;
+  }
+
+  Future<void> _resolveOnboardingForUser(
+    String uid, {
+    FirestoreUserProfile? profile,
+  }) async {
+    bool? resolvedCompletion = profile?.isOnboardingCompleted;
+    final fromCloud = resolvedCompletion != null;
+    resolvedCompletion ??= await _readLocalOnboardingCompletion(uid);
+    final shouldShow = resolvedCompletion != true;
+
+    if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) {
+      return;
+    }
+
+    setState(() {
+      _onboardingCompleted = resolvedCompletion ?? false;
+      _showOnboarding = shouldShow;
+      _onboardingResolved = true;
+    });
+
+    if (!fromCloud && resolvedCompletion == true) {
+      _hasPendingCloudSync = true;
+      _scheduleCloudSync(immediate: true);
+    }
+  }
+
+  Future<void> _completeOnboarding({required bool createFirstList}) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null || uid.isEmpty) {
+      return;
+    }
+
+    await _writeLocalOnboardingCompletion(uid, true);
+    if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) {
+      return;
+    }
+
+    setState(() {
+      _onboardingCompleted = true;
+      _showOnboarding = false;
+      _onboardingResolved = true;
+      _openCreateListAfterOnboarding = createFirstList;
+      _hasPendingCloudSync = true;
+    });
+    _scheduleCloudSync(immediate: true);
+  }
+
+  void _replayOnboarding() {
+    if (!mounted || _currentUser == null) {
+      return;
+    }
+    setState(() {
+      _showOnboarding = true;
+      _onboardingResolved = true;
+      _openCreateListAfterOnboarding = false;
+    });
+  }
+
+  void _consumeOnboardingCreateListShortcut() {
+    if (!_openCreateListAfterOnboarding || !mounted) {
+      return;
+    }
+    setState(() {
+      _openCreateListAfterOnboarding = false;
     });
   }
 
@@ -475,6 +581,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       }
 
       _loadedCloudUid = uid;
+      await _resolveOnboardingForUser(uid, profile: snapshot.profile);
       _hasPendingCloudSync = true;
       if (mounted) {
         setState(() {});
@@ -484,6 +591,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       await _pushToCloud(uid);
     } catch (error, stack) {
       _logCloudError('pull', error, stack);
+      if (!_onboardingResolved) {
+        await _resolveOnboardingForUser(uid);
+      }
       _hasPendingCloudSync = true;
       _notifySuccessOnNextSync = true;
       _ensureCloudRetryTimer();
@@ -593,6 +703,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
               photoUrl: currentUser.photoURL,
               provider: _resolveProviderId(currentUser),
               themeMode: _themeMode == ThemeMode.dark ? 'dark' : 'light',
+              isOnboardingCompleted: _onboardingCompleted,
             );
       await repository.saveUserSnapshot(
         uid: uid,
@@ -676,6 +787,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     _cloudSyncDebounce?.cancel();
     _stopCloudRetryTimer();
     _hasPendingCloudSync = false;
+    _resetOnboardingState();
     await FirebaseAuth.instance.signOut();
   }
 
@@ -760,7 +872,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         color: scheme.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(AppTokens.radius2Xl)),
-          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.36)),
+          side: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.36),
+          ),
         ),
       ),
       appBarTheme: AppBarTheme(
@@ -793,7 +907,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppTokens.radiusMd),
           ),
-          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.65)),
+          side: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.65),
+          ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -835,7 +951,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       chipTheme: base.chipTheme.copyWith(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.34)),
+          side: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.34),
+          ),
         ),
         backgroundColor: scheme.surface.withValues(alpha: 0.72),
         side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.34)),
@@ -925,7 +1043,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         fontWeight: FontWeight.w700,
         letterSpacing: -0.05,
       ),
-      titleSmall: base.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+      titleSmall: base.textTheme.titleSmall?.copyWith(
+        fontWeight: FontWeight.w700,
+      ),
       bodyLarge: base.textTheme.bodyLarge?.copyWith(height: 1.36),
       bodyMedium: base.textTheme.bodyMedium?.copyWith(height: 1.36),
       bodySmall: base.textTheme.bodySmall?.copyWith(height: 1.3),
@@ -951,7 +1071,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         color: const Color(0xFF1A252A),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(AppTokens.radius2Xl)),
-          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.34)),
+          side: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.34),
+          ),
         ),
       ),
       appBarTheme: AppBarTheme(
@@ -1002,7 +1124,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppTokens.radiusMd),
           ),
-          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.75)),
+          side: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.75),
+          ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -1173,6 +1297,26 @@ class _ShoppingListAppState extends State<ShoppingListApp>
                     child: const LoadingScreen(showReadyHint: true),
                   );
                 }
+                if (!_onboardingResolved) {
+                  return _buildHomeTransitionShell(
+                    stateKey: 'onboarding-resolve',
+                    child: const LoadingScreen(showReadyHint: true),
+                  );
+                }
+                if (_showOnboarding) {
+                  return _buildHomeTransitionShell(
+                    stateKey: 'onboarding',
+                    child: OnboardingPage(
+                      themeMode: _themeMode,
+                      onThemeModeChanged: (mode) {
+                        unawaited(_setThemeMode(mode));
+                      },
+                      onSkip: () => _completeOnboarding(createFirstList: false),
+                      onComplete: ({required bool createFirstList}) =>
+                          _completeOnboarding(createFirstList: createFirstList),
+                    ),
+                  );
+                }
                 return _buildHomeTransitionShell(
                   stateKey: 'dashboard-auth',
                   child: DashboardPage(
@@ -1195,6 +1339,10 @@ class _ShoppingListAppState extends State<ShoppingListApp>
                     listRecords: listRecords,
                     historyRecords: historyRecords,
                     catalogRecords: catalogRecords,
+                    onReplayOnboarding: _replayOnboarding,
+                    openCreateListOnStart: _openCreateListAfterOnboarding,
+                    onCreateListShortcutConsumed:
+                        _consumeOnboardingCreateListShortcut,
                   ),
                 );
               }
@@ -1209,6 +1357,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
                   userDisplayName: null,
                   userEmail: null,
                   userPhotoUrl: null,
+                  onReplayOnboarding: null,
+                  openCreateListOnStart: false,
+                  onCreateListShortcutConsumed: null,
                 ),
               );
             },

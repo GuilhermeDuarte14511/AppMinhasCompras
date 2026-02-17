@@ -33,6 +33,7 @@ class AppOptionsPage extends StatefulWidget {
     this.userPhotoUrl,
     this.onSignOut,
     this.onProfileUpdated,
+    this.onReplayOnboarding,
     this.showCloudSyncStatus = false,
     this.hasInternetConnection = true,
     this.hasPendingCloudSync = false,
@@ -52,6 +53,7 @@ class AppOptionsPage extends StatefulWidget {
   final String? userPhotoUrl;
   final VoidCallback? onSignOut;
   final Future<void> Function()? onProfileUpdated;
+  final VoidCallback? onReplayOnboarding;
   final bool showCloudSyncStatus;
   final bool hasInternetConnection;
   final bool hasPendingCloudSync;
@@ -139,6 +141,36 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
     }
   }
 
+  Widget _buildSectionHeader(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+  }) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 6, 4, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -147,12 +179,17 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
         ? 'U'
         : _resolvedName[0].toUpperCase();
     return Scaffold(
-      appBar: AppBar(title: const Text('OpÃ§Ãµes')),
+      appBar: AppBar(title: const Text('Opções')),
       body: AppGradientScene(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
+              _buildSectionHeader(
+                context,
+                title: 'Conta',
+                subtitle: 'Perfil e sessão',
+              ),
               Card(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
@@ -205,16 +242,16 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
                           ),
                         ],
                       ),
-                      if (widget.onSignOut != null) ...[
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: _openMyProfile,
-                            icon: const Icon(Icons.manage_accounts_rounded),
-                            label: const Text('Meus dados'),
-                          ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: _openMyProfile,
+                          icon: const Icon(Icons.manage_accounts_rounded),
+                          label: const Text('Meus Dados'),
                         ),
+                      ),
+                      if (widget.onSignOut != null) ...[
                         const SizedBox(height: 12),
                         SizedBox(
                           width: double.infinity,
@@ -232,22 +269,12 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
                   ),
                 ),
               ),
-              if (widget.showCloudSyncStatus) ...[
-                const SizedBox(height: 10),
-                _CloudSyncStatusCard(
-                  hasInternetConnection: widget.hasInternetConnection,
-                  hasPendingCloudSync: widget.hasPendingCloudSync,
-                  isCloudSyncing: widget.isCloudSyncing,
-                  lastCloudSyncAt: widget.lastCloudSyncAt,
-                  totalRecords: widget.totalSyncRecords,
-                  pendingRecords: widget.pendingSyncRecords,
-                  listRecords: widget.listRecords,
-                  historyRecords: widget.historyRecords,
-                  catalogRecords: widget.catalogRecords,
-                  compact: false,
-                ),
-              ],
               const SizedBox(height: 10),
+              _buildSectionHeader(
+                context,
+                title: 'Aparência',
+                subtitle: 'Tema e preferências visuais',
+              ),
               Card(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
@@ -255,7 +282,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'AparÃªncia',
+                        'Tema do App',
                         style: textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
@@ -293,7 +320,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
                       const SizedBox(height: 12),
                       Text(
                         _selectedThemeMode == ThemeMode.dark
-                            ? 'Modo escuro ativo com contraste reforÃ§ado.'
+                            ? 'Modo escuro ativo com contraste reforçado.'
                             : 'Modo claro ativo (visual original).',
                         style: textTheme.bodyMedium?.copyWith(
                           color: colorScheme.onSurfaceVariant,
@@ -301,6 +328,70 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
                       ),
                     ],
                   ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              _buildSectionHeader(
+                context,
+                title: 'Dados',
+                subtitle: 'Sincronização e armazenamento',
+              ),
+              if (widget.showCloudSyncStatus)
+                _CloudSyncStatusCard(
+                  hasInternetConnection: widget.hasInternetConnection,
+                  hasPendingCloudSync: widget.hasPendingCloudSync,
+                  isCloudSyncing: widget.isCloudSyncing,
+                  lastCloudSyncAt: widget.lastCloudSyncAt,
+                  totalRecords: widget.totalSyncRecords,
+                  pendingRecords: widget.pendingSyncRecords,
+                  listRecords: widget.listRecords,
+                  historyRecords: widget.historyRecords,
+                  catalogRecords: widget.catalogRecords,
+                  compact: false,
+                )
+              else
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.cloud_off_rounded,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Sincronização em nuvem indisponível no momento.',
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 10),
+              _buildSectionHeader(
+                context,
+                title: 'Ajuda',
+                subtitle: 'Dicas e suporte',
+              ),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.auto_awesome_rounded),
+                  title: const Text('Rever onboarding'),
+                  subtitle: const Text(
+                    'Veja novamente o tour inicial com as principais dicas.',
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: widget.onReplayOnboarding == null
+                      ? null
+                      : () {
+                          Navigator.of(context).pop();
+                          widget.onReplayOnboarding?.call();
+                        },
                 ),
               ),
             ],
@@ -398,7 +489,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       _showMessage(
-        'SessÃ£o invÃ¡lida. FaÃ§a login novamente.',
+        'Sessão inválida. Faça login novamente.',
         type: AppToastType.error,
       );
       return;
@@ -486,7 +577,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       _showMessage(
-        'SessÃ£o invÃ¡lida. FaÃ§a login novamente.',
+        'Sessão inválida. Faça login novamente.',
         type: AppToastType.error,
       );
       return;
@@ -506,7 +597,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
       if (refreshedUser == null) {
         throw FirebaseAuthException(
           code: 'user-not-found',
-          message: 'Usuario nao encontrado apos atualizar perfil.',
+          message: 'Usuário não encontrado após atualizar perfil.',
         );
       }
 
@@ -760,6 +851,9 @@ class DashboardPage extends StatefulWidget {
     this.userPhotoUrl,
     this.onSignOut,
     this.onProfileUpdated,
+    this.onReplayOnboarding,
+    this.openCreateListOnStart = false,
+    this.onCreateListShortcutConsumed,
     this.showCloudSyncStatus = false,
     this.hasInternetConnection = true,
     this.hasPendingCloudSync = false,
@@ -781,6 +875,9 @@ class DashboardPage extends StatefulWidget {
   final String? userPhotoUrl;
   final VoidCallback? onSignOut;
   final Future<void> Function()? onProfileUpdated;
+  final VoidCallback? onReplayOnboarding;
+  final bool openCreateListOnStart;
+  final VoidCallback? onCreateListShortcutConsumed;
   final bool showCloudSyncStatus;
   final bool hasInternetConnection;
   final bool hasPendingCloudSync;
@@ -797,6 +894,37 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  bool _handledCreateListShortcut = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _maybeLaunchCreateListShortcut();
+  }
+
+  @override
+  void didUpdateWidget(covariant DashboardPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.openCreateListOnStart && !oldWidget.openCreateListOnStart) {
+      _handledCreateListShortcut = false;
+      _maybeLaunchCreateListShortcut();
+    }
+  }
+
+  void _maybeLaunchCreateListShortcut() {
+    if (!widget.openCreateListOnStart || _handledCreateListShortcut) {
+      return;
+    }
+    _handledCreateListShortcut = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) {
+        return;
+      }
+      widget.onCreateListShortcutConsumed?.call();
+      await _createNewList();
+    });
+  }
+
   Future<void> _openMyLists() async {
     await Navigator.push<void>(
       context,
@@ -830,6 +958,7 @@ class _DashboardPageState extends State<DashboardPage> {
           userPhotoUrl: widget.userPhotoUrl,
           onSignOut: widget.onSignOut,
           onProfileUpdated: widget.onProfileUpdated,
+          onReplayOnboarding: widget.onReplayOnboarding,
           showCloudSyncStatus: widget.showCloudSyncStatus,
           hasInternetConnection: widget.hasInternetConnection,
           hasPendingCloudSync: widget.hasPendingCloudSync,
@@ -884,7 +1013,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<void> _createBasedOnOld() async {
     if (widget.store.lists.isEmpty) {
-      _showSnack('VocÃª ainda Não tem listas para usar como base.');
+      _showSnack('Você ainda Não tem listas para usar como base.');
       return;
     }
 
@@ -939,11 +1068,11 @@ class _DashboardPageState extends State<DashboardPage> {
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: _DashboardMenuAction.options,
-                child: Text('OpÃ§Ãµes'),
+                child: Text('Opções'),
               ),
               const PopupMenuItem(
                 value: _DashboardMenuAction.catalog,
-                child: Text('catálogo de produtos'),
+                child: Text('Catálogo de produtos'),
               ),
               if (widget.onSignOut != null)
                 const PopupMenuItem(
@@ -973,7 +1102,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 key: const ValueKey('dash_action_new'),
                 delay: const Duration(milliseconds: 40),
                 child: _ActionTile(
-                  title: 'ComeÃ§ar nova lista de compras',
+                  title: 'Começar nova lista de compras',
                   subtitle: 'Crie uma lista do zero e adicione os produtos.',
                   icon: Icons.playlist_add_rounded,
                   onTap: _createNewList,
@@ -995,8 +1124,8 @@ class _DashboardPageState extends State<DashboardPage> {
                 key: const ValueKey('dash_action_history'),
                 delay: const Duration(milliseconds: 100),
                 child: _ActionTile(
-                  title: 'histórico mensal',
-                  subtitle: 'Revise fechamentos e totais por mÃªs.',
+                  title: 'Histórico mensal',
+                  subtitle: 'Revise fechamentos e totais por mês.',
                   icon: Icons.event_note_rounded,
                   onTap: _openPurchaseHistory,
                 ),
@@ -1006,7 +1135,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 key: const ValueKey('dash_action_template'),
                 delay: const Duration(milliseconds: 130),
                 child: _ActionTile(
-                  title: 'catálogo de produtos',
+                  title: 'Catálogo de produtos',
                   subtitle:
                       'Gerencie produtos salvos localmente e/ou sincronizados.',
                   icon: Icons.local_offer_rounded,
@@ -1233,7 +1362,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Excluir selecionados?'),
-        content: Text('Deseja excluir $count produto(s) do catalogo?'),
+        content: Text('Deseja excluir $count produto(s) do catálogo?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -1505,7 +1634,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
               validator: (value) {
                 final parsed = BrlCurrencyInputFormatter.tryParse(value ?? '');
                 if (parsed == null || parsed <= 0) {
-                  return 'Informe um preço vÃ¡lido.';
+                  return 'Informe um preço válido.';
                 }
                 return null;
               },
@@ -1598,20 +1727,20 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
       appBar: AppBar(
         title: Text(
           _batchMode
-              ? 'Catalogo (${_selectedProductIds.length})'
-              : 'Catalogo de produtos',
+              ? 'Catálogo (${_selectedProductIds.length})'
+              : 'Catálogo de produtos',
         ),
         actions: [
           if (_batchMode)
             IconButton(
-              tooltip: 'Selecionar visiveis',
+              tooltip: 'Selecionar Visíveis',
               onPressed: () => _toggleSelectAllVisible(
                 _visibleProducts(widget.store.catalogProducts),
               ),
               icon: const Icon(Icons.select_all_rounded),
             ),
           IconButton(
-            tooltip: _batchMode ? 'Sair da selecao' : 'Selecao em lote',
+            tooltip: _batchMode ? 'Sair da seleção' : 'Seleção em lote',
             onPressed: () => _toggleBatchMode(),
             icon: Icon(
               _batchMode
@@ -1661,7 +1790,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
                           controller: _searchController,
                           decoration: const InputDecoration(
                             prefixIcon: Icon(Icons.search_rounded),
-                            hintText: 'Buscar no catálogo por nome ou cÃ³digo',
+                            hintText: 'Buscar no catálogo por nome ou código',
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -1785,7 +1914,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
                                   DropdownButtonFormField<_CatalogPriceFilter>(
                                     initialValue: _priceFilter,
                                     decoration: const InputDecoration(
-                                      labelText: 'Preco',
+                                      labelText: 'Preço',
                                       prefixIcon: Icon(
                                         Icons.attach_money_rounded,
                                       ),
@@ -1797,7 +1926,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
                                       ),
                                       DropdownMenuItem(
                                         value: _CatalogPriceFilter.withoutPrice,
-                                        child: Text('Sem preco'),
+                                        child: Text('Sem preço'),
                                       ),
                                     ],
                                     onChanged: (value) {
@@ -1825,7 +1954,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
                                 });
                               },
                               avatar: const Icon(Icons.qr_code_2_rounded),
-                              label: const Text('Com codigo de barras'),
+                              label: const Text('Com código de barras'),
                             ),
                             if (_hasActiveFilters)
                               ActionChip(
@@ -1948,7 +2077,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
                                                         _SummaryPill(
                                                           icon: Icons
                                                               .qr_code_2_rounded,
-                                                          label: 'CÃ³digo',
+                                                          label: 'Código',
                                                           value:
                                                               product.barcode!,
                                                         ),
@@ -2232,7 +2361,7 @@ class _MyListsPageState extends State<MyListsPage> {
     if (!mounted) {
       return;
     }
-    _showSnack('Lista excluÃ­da.');
+    _showSnack('Lista excluída.');
   }
 
   Future<void> _reopenList(ShoppingListModel list) async {
@@ -2379,7 +2508,7 @@ class _MyListsPageState extends State<MyListsPage> {
             : 'arquivo salvo em ${result.location}';
         _showSnack('Backup exportado: $location.');
       case BackupExportMode.clipboard:
-        _showSnack('Backup copiado para a area de transferencia.');
+        _showSnack('Backup copiado para a área de transferência.');
     }
   }
 
@@ -2476,7 +2605,7 @@ class _MyListsPageState extends State<MyListsPage> {
           appBar: AppBar(
             leading: _selectionMode
                 ? IconButton(
-                    tooltip: 'Cancelar seleÃ§Ã£o',
+                    tooltip: 'Cancelar seleção',
                     onPressed: _exitSelectionMode,
                     icon: const Icon(Icons.close_rounded),
                   )
@@ -2528,11 +2657,11 @@ class _MyListsPageState extends State<MyListsPage> {
                   itemBuilder: (context) => const [
                     PopupMenuItem(
                       value: _MyListsMenuAction.viewHistory,
-                      child: Text('histórico mensal'),
+                      child: Text('Histórico mensal'),
                     ),
                     PopupMenuItem(
                       value: _MyListsMenuAction.selectMany,
-                      child: Text('Selecionar vÃ¡rias'),
+                      child: Text('Selecionar várias'),
                     ),
                     PopupMenuItem(
                       value: _MyListsMenuAction.importBackup,
@@ -2740,7 +2869,7 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
     }
     AppToast.show(
       context,
-      message: 'histórico mensal limpo com sucesso.',
+      message: 'Histórico mensal limpo com sucesso.',
       type: AppToastType.success,
       duration: const Duration(seconds: 4),
     );
@@ -2759,7 +2888,7 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('histórico mensal'),
+            title: const Text('Histórico mensal'),
             actions: [
               IconButton(
                 tooltip: 'Limpar histórico',
@@ -3161,7 +3290,7 @@ class _CompletedPurchaseDetailsSheet extends StatelessWidget {
             if (purchase.hasBudget)
               _PillLabel(
                 icon: Icons.account_balance_wallet_rounded,
-                text: 'OrÃ§amento ${formatCurrency(purchase.budget!)}',
+                text: 'Orçamento ${formatCurrency(purchase.budget!)}',
               ),
             if (purchase.hasPaymentBalances)
               _PillLabel(
@@ -3420,14 +3549,14 @@ class _ListEditorActionsSheet extends StatelessWidget {
         case _ListEditorMenuAction.openCatalog:
           return _ListEditorActionMeta(
             label: 'Abrir catálogo de produtos',
-            shortLabel: 'catálogo',
+            shortLabel: 'Catálogo',
             icon: Icons.local_offer_rounded,
             color: const Color(0xFF0277BD),
           );
         case _ListEditorMenuAction.viewHistory:
           return _ListEditorActionMeta(
-            label: 'histórico mensal',
-            shortLabel: 'histórico',
+            label: 'Histórico mensal',
+            shortLabel: 'Histórico',
             icon: Icons.event_note_rounded,
             color: const Color(0xFF6D4C41),
           );
@@ -3442,8 +3571,8 @@ class _ListEditorActionsSheet extends StatelessWidget {
           );
         case _ListEditorMenuAction.editBudget:
           return _ListEditorActionMeta(
-            label: 'Definir orÃ§amento',
-            shortLabel: 'OrÃ§amento',
+            label: 'Definir orçamento',
+            shortLabel: 'Orçamento',
             icon: Icons.account_balance_wallet_rounded,
             color: const Color(0xFF3949AB),
           );
@@ -3488,19 +3617,19 @@ class _ListEditorActionsSheet extends StatelessWidget {
         padding: EdgeInsets.fromLTRB(16, 8, 16, 20 + bottomInset),
         children: [
           Text(
-            'AÃ§Ãµes da lista',
+            'Ações da lista',
             style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 4),
           Text(
-            'Tudo em um Ãºnico menu, com atalhos para as aÃ§Ãµes principais.',
+            'Tudo em um único menu, com atalhos para as ações principais.',
             style: textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 12),
           Text(
-            'AÃ§Ãµes rÃ¡pidas',
+            'Ações rápidas',
             style: textTheme.labelLarge?.copyWith(
               color: colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.w700,
@@ -3530,7 +3659,7 @@ class _ListEditorActionsSheet extends StatelessWidget {
           if (settingsActions.isNotEmpty) ...[
             const SizedBox(height: 8),
             _ListEditorActionSection(
-              title: 'ConfiguraÃ§Ãµes',
+              title: 'Configurações',
               actions: settingsActions,
               resolveMeta: resolveMeta,
               onTap: (action) => Navigator.pop(context, action),
@@ -4012,7 +4141,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     }
 
     if (addedCount == 0 && mergedCount == 0) {
-      _showSnack('Nenhum item vÃ¡lido foi extraído do cupom.');
+      _showSnack('Nenhum item válido foi extraído do cupom.');
       return;
     }
 
@@ -4245,7 +4374,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         if (isNearLimit && !_didShowBudgetNearLimitWarning) {
           _didShowBudgetNearLimitWarning = true;
           _showSnack(
-            'OrÃ§amento em 85% ou mais. Restante: ${formatCurrency(updatedList.budgetRemaining)}.',
+            'Orçamento em 85% ou mais. Restante: ${formatCurrency(updatedList.budgetRemaining)}.',
           );
           unawaited(
             widget.store.notifyBudgetNearLimit(
@@ -4264,7 +4393,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     if (updatedList.isOverBudget && !_didShowBudgetWarning) {
       _didShowBudgetWarning = true;
       _showSnack(
-        'OrÃ§amento excedido em ${formatCurrency(updatedList.overBudgetAmount)}.',
+        'Orçamento excedido em ${formatCurrency(updatedList.overBudgetAmount)}.',
       );
       return;
     }
@@ -4290,7 +4419,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     if (result.clear) {
       _updateList(
         _list.copyWith(clearBudget: true),
-        message: 'OrÃ§amento removido.',
+        message: 'Orçamento removido.',
       );
       return;
     }
@@ -4302,7 +4431,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
 
     _updateList(
       _list.copyWith(budget: value),
-      message: 'OrÃ§amento atualizado.',
+      message: 'Orçamento atualizado.',
     );
   }
 
@@ -4341,7 +4470,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     _updateList(
       _list.copyWith(paymentBalances: updatedBalances, budget: nextBudget),
       message:
-          'Saldos atualizados. OrÃ§amento ajustado para ${formatCurrency(nextBudget)}.',
+          'Saldos atualizados. Orçamento ajustado para ${formatCurrency(nextBudget)}.',
     );
   }
 
@@ -4429,7 +4558,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
 
   Future<void> _finalizePurchase() async {
     if (_isReadOnly) {
-      _showSnack('A lista jÃ¡ está fechada. Toque em reabrir para editar.');
+      _showSnack('A lista já está fechada. Toque em reabrir para editar.');
       return;
     }
     if (_list.items.isEmpty) {
@@ -4548,7 +4677,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         title: Text(_list.name),
         actions: [
           IconButton(
-            tooltip: 'AÃ§Ãµes da lista',
+            tooltip: 'Ações da lista',
             onPressed: _showListActionsSheet,
             icon: const Icon(Icons.more_vert_rounded),
           ),
@@ -4616,7 +4745,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
                   switchInCurve: Curves.easeOutCubic,
                   switchOutCurve: Curves.easeInCubic,
                   child: _list.items.isEmpty
-                      ? _EmptyItemsState(onAddPressed: _openItemForm)
+                      ? const _EmptyItemsState()
                       : visibleItems.isEmpty
                       ? _EmptySearchState(
                           query: _searchQuery,
@@ -4670,7 +4799,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
                                 secondaryBackground:
                                     const _MarketSwipeBackground(
                                       icon: Icons.bolt_rounded,
-                                      label: 'Acoes rapidas',
+                                      label: 'Ações rápidas',
                                       alignRight: true,
                                     ),
                                 child: _ShoppingItemCard(
@@ -5547,8 +5676,8 @@ class _CloudSyncStatusCard extends StatelessWidget {
         secondaryColor: colorScheme.errorContainer,
         title: 'Modo offline',
         description: pending > 0
-            ? 'Sem internet. $pending registros aguardam conexÃ£o.'
-            : 'Sem internet. AlteraÃ§Ãµes continuam salvas no aparelho.',
+            ? 'Sem internet. $pending registros aguardam conexão.'
+            : 'Sem internet. Alterações continuam salvas no aparelho.',
         showLoading: false,
       );
     }
@@ -5558,7 +5687,7 @@ class _CloudSyncStatusCard extends StatelessWidget {
         icon: Icons.sync_rounded,
         color: colorScheme.primary,
         secondaryColor: colorScheme.secondary,
-        title: 'AlteraÃ§Ãµes pendentes',
+        title: 'Alterações pendentes',
         description: '$pending registros aguardando sincronização.',
         showLoading: true,
       );
@@ -6094,7 +6223,7 @@ class _EmptyListsState extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             Text(
-              'VocÃª ainda Não tem listas',
+              'Você ainda Não tem listas',
               style: Theme.of(
                 context,
               ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
@@ -6412,8 +6541,8 @@ class _ListSummaryPanel extends StatelessWidget {
                       _QuickSummaryActionChip(
                         icon: Icons.account_balance_wallet_rounded,
                         label: list.hasBudget
-                            ? 'Editar orÃ§amento'
-                            : 'Definir orÃ§amento',
+                            ? 'Editar orçamento'
+                            : 'Definir orçamento',
                         onTap: onBudgetTap,
                       ),
                       _QuickSummaryActionChip(
@@ -6485,7 +6614,7 @@ class _ListSummaryPanel extends StatelessWidget {
                       ),
                       _MetricTag(
                         icon: Icons.account_balance_wallet_rounded,
-                        label: 'OrÃ§amento disponÃ­vel',
+                        label: 'Orçamento disponível',
                         value: list.hasBudget
                             ? formatCurrency(max(0, list.budgetRemaining))
                             : 'Não definido',
@@ -6560,7 +6689,7 @@ class _ListSummaryPanel extends StatelessWidget {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Valor total acima do orÃ§amento por ${formatCurrency(list.overBudgetAmount)}.',
+                                'Valor total acima do orçamento por ${formatCurrency(list.overBudgetAmount)}.',
                                 style: textTheme.bodyMedium?.copyWith(
                                   color: colorScheme.onErrorContainer,
                                   fontWeight: FontWeight.w600,
@@ -7116,13 +7245,13 @@ class _ShoppingItemCard extends StatelessWidget {
                     icon: const Icon(Icons.edit_rounded),
                   ),
                 IconButton(
-                  tooltip: 'histórico de preço',
+                  tooltip: 'Histórico de preço',
                   onPressed: onViewHistory,
                   icon: const Icon(Icons.query_stats_rounded),
                 ),
                 if (!readOnly)
                   PopupMenuButton<_ShoppingItemCardAction>(
-                    tooltip: 'Mais aÃ§Ãµes',
+                    tooltip: 'Mais ações',
                     onSelected: (action) {
                       if (action == _ShoppingItemCardAction.delete) {
                         onDelete();
@@ -7276,9 +7405,7 @@ class _EmptySearchState extends StatelessWidget {
 }
 
 class _EmptyItemsState extends StatelessWidget {
-  const _EmptyItemsState({required this.onAddPressed});
-
-  final VoidCallback onAddPressed;
+  const _EmptyItemsState();
 
   @override
   Widget build(BuildContext context) {
@@ -7319,17 +7446,19 @@ class _EmptyItemsState extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Adicione o primeiro produto e acompanhe subtotal e total automÃ¡ticos.',
+                  'Adicione o primeiro produto e acompanhe subtotal e total automáticos.',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 18),
-                FilledButton.icon(
-                  onPressed: onAddPressed,
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Adicionar produto'),
+                const SizedBox(height: 10),
+                Text(
+                  'Use o botao "Adicionar item" para incluir o primeiro produto.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),

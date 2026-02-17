@@ -137,7 +137,7 @@ class LocalNotificationsReminderService implements ShoppingReminderService {
     try {
       await androidPlugin.createNotificationChannel(_channel);
     } catch (error, stackTrace) {
-      _log('Falha ao criar canal de notificacao', error, stackTrace);
+      _log('Falha ao criar canal de notificação', error, stackTrace);
     }
   }
 
@@ -229,13 +229,15 @@ class LocalNotificationsReminderService implements ShoppingReminderService {
     );
 
     final preReminderDate = reminderDate.subtract(const Duration(hours: 2));
-    if (preReminderDate.isAfter(DateTime.now().add(const Duration(minutes: 1)))) {
+    if (preReminderDate.isAfter(
+      DateTime.now().add(const Duration(minutes: 1)),
+    )) {
       await _scheduleNotification(
         id: preNotificationId,
         scheduledDate: tz.TZDateTime.from(preReminderDate, tz.local),
         title: 'Hora de comprar em breve',
         body:
-            'Faltam cerca de 2h para a lista "${list.name}". Ja deixe tudo preparado.',
+            'Faltam cerca de 2h para a lista "${list.name}". Já deixe tudo preparado.',
         payload: '${list.id}:pre',
       );
     }
@@ -276,9 +278,9 @@ class LocalNotificationsReminderService implements ShoppingReminderService {
     final remaining = max<double>(0, budget - list.totalValue);
     await _showImmediateNotification(
       id: 910000000 + (_notificationIdForList(list.id) % 99999),
-      title: 'Orcamento quase no limite',
+      title: 'Orçamento quase no limite',
       body:
-          'Lista "${list.name}" ja consumiu $usedPercent% do orcamento. Restante: ${formatCurrency(remaining)}.',
+          'Lista "${list.name}" já consumiu $usedPercent% do orçamento. Restante: ${formatCurrency(remaining)}.',
       payload: '${list.id}:budget',
     );
   }
@@ -291,15 +293,13 @@ class LocalNotificationsReminderService implements ShoppingReminderService {
     if (pendingRecords <= 0 || hasNetworkConnection) {
       return;
     }
-    if (
-        !_shouldNotify('sync_pending', cooldown: const Duration(minutes: 45))) {
+    if (!_shouldNotify('sync_pending', cooldown: const Duration(minutes: 45))) {
       return;
     }
     await _showImmediateNotification(
       id: 920000001,
       title: 'Lista sem sync',
-      body:
-          '$pendingRecords registro(s) aguardando internet para sincronizar.',
+      body: '$pendingRecords registro(s) aguardando internet para sincronizar.',
       payload: 'sync-pending',
     );
   }

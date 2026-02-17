@@ -226,7 +226,7 @@ class _AuthPageState extends State<AuthPage> {
                                       ],
                                       decoration: const InputDecoration(
                                         labelText: 'E-mail',
-                                        hintText: 'voce@exemplo.com',
+                                        hintText: 'usuario@exemplo.com',
                                         prefixIcon: Icon(
                                           Icons.alternate_email_rounded,
                                         ),
@@ -235,7 +235,7 @@ class _AuthPageState extends State<AuthPage> {
                                         final email = (value ?? '').trim();
                                         if (email.isEmpty ||
                                             !email.contains('@')) {
-                                          return 'Informe um e-mail valido.';
+                                          return 'Informe um e-mail válido.';
                                         }
                                         return null;
                                       },
@@ -275,7 +275,7 @@ class _AuthPageState extends State<AuthPage> {
                                       validator: (value) {
                                         final password = value ?? '';
                                         if (password.length < 6) {
-                                          return 'Senha minima de 6 caracteres.';
+                                          return 'Senha mínima de 6 caracteres.';
                                         }
                                         return null;
                                       },
@@ -359,7 +359,7 @@ class _AuthPageState extends State<AuthPage> {
                                         WrapCrossAlignment.center,
                                     children: [
                                       Text(
-                                        'Ainda nao tem conta? ',
+                                        'Ainda não tem conta? ',
                                         style: theme.textTheme.bodyMedium,
                                       ),
                                       TextButton(
@@ -570,7 +570,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                       ],
                                       decoration: const InputDecoration(
                                         labelText: 'E-mail',
-                                        hintText: 'voce@exemplo.com',
+                                        hintText: 'usuario@exemplo.com',
                                         prefixIcon: Icon(
                                           Icons.alternate_email_rounded,
                                         ),
@@ -579,7 +579,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                         final email = (value ?? '').trim();
                                         if (email.isEmpty ||
                                             !email.contains('@')) {
-                                          return 'Informe um e-mail valido.';
+                                          return 'Informe um e-mail válido.';
                                         }
                                         return null;
                                       },
@@ -617,7 +617,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                       validator: (value) {
                                         final password = value ?? '';
                                         if (password.length < 6) {
-                                          return 'Senha minima de 6 caracteres.';
+                                          return 'Senha mínima de 6 caracteres.';
                                         }
                                         return null;
                                       },
@@ -657,7 +657,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                         final confirm = value ?? '';
                                         if (confirm !=
                                             _passwordController.text) {
-                                          return 'As senhas nao conferem.';
+                                          return 'As senhas não conferem.';
                                         }
                                         return null;
                                       },
@@ -711,7 +711,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                 child: TextButton(
                                   onPressed: () => Navigator.of(context).pop(),
                                   child: Text(
-                                    'Ja tenho conta',
+                                    'Já tenho conta',
                                     style: theme.textTheme.labelLarge,
                                   ),
                                 ),

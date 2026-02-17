@@ -585,7 +585,7 @@ class ShoppingListsStore extends ChangeNotifier {
         return _parseLists(rawLists);
       }
     }
-    throw const FormatException('Formato de backup invalido');
+    throw const FormatException('Formato de backup inválido');
   }
 
   _DecodedBackupPayload _decodeBackupPayload(String rawPayload) {
@@ -600,7 +600,7 @@ class ShoppingListsStore extends ChangeNotifier {
     if (decoded is Map<String, dynamic>) {
       final rawLists = decoded['lists'];
       if (rawLists is! List) {
-        throw const FormatException('Formato de backup invalido');
+        throw const FormatException('Formato de backup inválido');
       }
       final rawHistory = decoded['purchaseHistory'];
       final rawCatalog = decoded['catalog'];
@@ -610,7 +610,7 @@ class ShoppingListsStore extends ChangeNotifier {
         catalog: rawCatalog is List ? _parseCatalog(rawCatalog) : const [],
       );
     }
-    throw const FormatException('Formato de backup invalido');
+    throw const FormatException('Formato de backup inválido');
   }
 
   List<ShoppingListModel> _parseLists(List<dynamic> rawLists) {

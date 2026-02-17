@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -1051,7 +1051,7 @@ class _FiscalReceiptImportSheetState extends State<_FiscalReceiptImportSheet> {
         setState(() {
           _isExtractingFromImage = false;
           _ocrFeedback =
-              'Nao foi possivel identificar texto suficiente no cupom.';
+              'Não foi possível identificar texto suficiente no cupom.';
         });
         return;
       }
@@ -1065,7 +1065,7 @@ class _FiscalReceiptImportSheetState extends State<_FiscalReceiptImportSheet> {
         ..selection = TextSelection.collapsed(offset: merged.length);
       setState(() {
         _isExtractingFromImage = false;
-        _ocrFeedback = 'Texto extraido com sucesso pela imagem.';
+        _ocrFeedback = 'Texto extraído com sucesso pela imagem.';
       });
     } catch (error) {
       if (!mounted) {
@@ -1117,7 +1117,9 @@ class _FiscalReceiptImportSheetState extends State<_FiscalReceiptImportSheet> {
               runSpacing: 8,
               children: [
                 FilledButton.tonalIcon(
-                  onPressed: _isExtractingFromImage ? null : _pasteFromClipboard,
+                  onPressed: _isExtractingFromImage
+                      ? null
+                      : _pasteFromClipboard,
                   icon: const Icon(Icons.content_paste_rounded),
                   label: const Text('Colar texto'),
                 ),
@@ -1551,7 +1553,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
       ProductLookupSource.localCatalog =>
         'Produto encontrado no seu catálogo local.',
       ProductLookupSource.notFound =>
-        'Codigo lido, mas sem resultado online/local. Complete manualmente.',
+        'Código lido, mas sem resultado online/local. Complete manualmente.',
     };
     final latestPriceMessage =
         (result.unitPrice != null && result.unitPrice! > 0)
@@ -1634,8 +1636,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     final safeBottomInset = MediaQuery.viewPaddingOf(context).bottom;
     final contentBottomPadding = max(20.0, safeBottomInset + 20);
     final isEditing = widget.existingItem != null;
-    final isCatalogMode =
-        widget.mode == ShoppingItemEditorMode.catalogProduct;
+    final isCatalogMode = widget.mode == ShoppingItemEditorMode.catalogProduct;
     final title = isEditing
         ? (isCatalogMode ? 'Editar produto' : 'Editar item')
         : (isCatalogMode ? 'Novo produto' : 'Novo item');
@@ -1699,7 +1700,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 textInputAction: TextInputAction.next,
                 decoration: InputDecoration(
-                  labelText: 'Codigo de barras (opcional)',
+                  labelText: 'Código de barras (opcional)',
                   prefixIcon: const Icon(Icons.qr_code_rounded),
                   suffixIcon: _barcodeController.text.isEmpty
                       ? null
@@ -1935,7 +1936,7 @@ class _CatalogPriceHint extends StatelessWidget {
         ? 'Subiu ${variation.abs().toStringAsFixed(1)}% em relação ao registro anterior.'
         : variation < 0
         ? 'Caiu ${variation.abs().toStringAsFixed(1)}% em relação ao registro anterior.'
-        : 'Preco igual ao registro anterior.';
+        : 'Preço igual ao registro anterior.';
 
     final latestDate = history.isNotEmpty
         ? formatDateTime(history.last.recordedAt)
@@ -1954,7 +1955,7 @@ class _CatalogPriceHint extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Preco sugerido: ${formatCurrency(latestPrice)}',
+              'Preço sugerido: ${formatCurrency(latestPrice)}',
               style: Theme.of(
                 context,
               ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),

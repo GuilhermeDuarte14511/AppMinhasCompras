@@ -78,7 +78,8 @@ service cloud.firestore {
           'provider',
           'createdAt',
           'updatedAt',
-          'themeMode'
+          'themeMode',
+          'isOnboardingCompleted'
         ]) &&
         d.keys().hasAny(['updatedAt']) &&
         (!d.keys().hasAny(['displayName']) || isString(d.displayName, 1, 80)) &&
@@ -89,7 +90,9 @@ service cloud.firestore {
         (!d.keys().hasAny(['provider']) || validProvider(d.provider)) &&
         (!d.keys().hasAny(['createdAt']) || isDateLike(d.createdAt)) &&
         isDateLike(d.updatedAt) &&
-        (!d.keys().hasAny(['themeMode']) || validTheme(d.themeMode));
+        (!d.keys().hasAny(['themeMode']) || validTheme(d.themeMode)) &&
+        (!d.keys().hasAny(['isOnboardingCompleted']) ||
+          d.isOnboardingCompleted is bool);
     }
 
     function validUserRootCreate() {

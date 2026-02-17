@@ -11,6 +11,7 @@ class FirestoreUserProfile {
     this.photoUrl,
     this.provider,
     this.themeMode,
+    this.isOnboardingCompleted,
   });
 
   final String uid;
@@ -19,6 +20,57 @@ class FirestoreUserProfile {
   final String? photoUrl;
   final String? provider;
   final String? themeMode;
+  final bool? isOnboardingCompleted;
+
+  bool get hasAnyValue {
+    return (displayName?.trim().isNotEmpty ?? false) ||
+        (email?.trim().isNotEmpty ?? false) ||
+        (photoUrl?.trim().isNotEmpty ?? false) ||
+        (provider?.trim().isNotEmpty ?? false) ||
+        (themeMode?.trim().isNotEmpty ?? false) ||
+        isOnboardingCompleted != null;
+  }
+
+  factory FirestoreUserProfile.fromFirestoreJson({
+    required String uid,
+    required Map<String, dynamic> json,
+  }) {
+    String? readString(String key) {
+      final raw = json[key];
+      if (raw is! String) {
+        return null;
+      }
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) {
+        return null;
+      }
+      return trimmed;
+    }
+
+    final parsedThemeMode = switch (readString('themeMode')) {
+      'dark' => 'dark',
+      'light' => 'light',
+      _ => null,
+    };
+    final parsedProvider = switch (readString('provider')) {
+      'password' => 'password',
+      'google.com' => 'google.com',
+      _ => null,
+    };
+    final rawOnboardingCompleted = json['isOnboardingCompleted'];
+
+    return FirestoreUserProfile(
+      uid: uid,
+      displayName: readString('displayName'),
+      email: readString('email'),
+      photoUrl: readString('photoUrl'),
+      provider: parsedProvider,
+      themeMode: parsedThemeMode,
+      isOnboardingCompleted: rawOnboardingCompleted is bool
+          ? rawOnboardingCompleted
+          : null,
+    );
+  }
 
   Map<String, dynamic> toFirestoreJson({bool includeCreatedAt = true}) {
     final now = DateTime.now().toIso8601String();
@@ -42,6 +94,9 @@ class FirestoreUserProfile {
     }
     if (cleanedThemeMode != null) {
       payload['themeMode'] = cleanedThemeMode;
+    }
+    if (isOnboardingCompleted != null) {
+      payload['isOnboardingCompleted'] = isOnboardingCompleted;
     }
     if (includeCreatedAt) {
       payload['createdAt'] = now;
@@ -89,16 +144,19 @@ class FirestoreUserDataSnapshot {
     required this.history,
     required this.catalog,
     required this.settings,
+    this.profile,
   });
 
   final List<ShoppingListModel> lists;
   final List<CompletedPurchase> history;
   final List<CatalogProduct> catalog;
   final FirestoreUserAppSettings settings;
+  final FirestoreUserProfile? profile;
 
   bool get hasCoreData =>
       lists.isNotEmpty || history.isNotEmpty || catalog.isNotEmpty;
-  bool get hasAnyData => hasCoreData || settings.hasData;
+  bool get hasAnyData =>
+      hasCoreData || settings.hasData || (profile?.hasAnyValue ?? false);
 }
 
 class FirestoreUserDataRepository {
@@ -206,6 +264,9 @@ class FirestoreUserDataRepository {
     final getOptions = source == null ? null : GetOptions(source: source);
     final responses = await Future.wait<dynamic>([
       getOptions == null
+          ? _userDocRef(firestore, uid).get()
+          : _userDocRef(firestore, uid).get(getOptions),
+      getOptions == null
           ? _listsRef(firestore, uid).get()
           : _listsRef(firestore, uid).get(getOptions),
       getOptions == null
@@ -218,11 +279,12 @@ class FirestoreUserDataRepository {
           ? _settingsDocRef(firestore, uid).get()
           : _settingsDocRef(firestore, uid).get(getOptions),
     ]);
-    final listsSnapshot = responses[0] as QuerySnapshot<Map<String, dynamic>>;
-    final historySnapshot = responses[1] as QuerySnapshot<Map<String, dynamic>>;
-    final catalogSnapshot = responses[2] as QuerySnapshot<Map<String, dynamic>>;
+    final userSnapshot = responses[0] as DocumentSnapshot<Map<String, dynamic>>;
+    final listsSnapshot = responses[1] as QuerySnapshot<Map<String, dynamic>>;
+    final historySnapshot = responses[2] as QuerySnapshot<Map<String, dynamic>>;
+    final catalogSnapshot = responses[3] as QuerySnapshot<Map<String, dynamic>>;
     final settingsSnapshot =
-        responses[3] as DocumentSnapshot<Map<String, dynamic>>;
+        responses[4] as DocumentSnapshot<Map<String, dynamic>>;
 
     final lists = <ShoppingListModel>[];
     for (final doc in listsSnapshot.docs) {
@@ -248,6 +310,10 @@ class FirestoreUserDataRepository {
     final settings = FirestoreUserAppSettings.fromJson(
       settingsSnapshot.data() ?? const <String, dynamic>{},
     );
+    final profileData = userSnapshot.data();
+    final profile = profileData == null
+        ? null
+        : FirestoreUserProfile.fromFirestoreJson(uid: uid, json: profileData);
 
     lists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     history.sort((a, b) => b.closedAt.compareTo(a.closedAt));
@@ -258,6 +324,7 @@ class FirestoreUserDataRepository {
       history: List.unmodifiable(history),
       catalog: List.unmodifiable(catalog),
       settings: settings,
+      profile: profile,
     );
   }
 
