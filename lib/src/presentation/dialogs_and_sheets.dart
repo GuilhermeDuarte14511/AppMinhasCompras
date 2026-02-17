@@ -1,8 +1,10 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -963,7 +965,13 @@ class _FiscalReceiptImportSheet extends StatefulWidget {
 class _FiscalReceiptImportSheetState extends State<_FiscalReceiptImportSheet> {
   final FiscalReceiptParser _parser = const FiscalReceiptParser();
   final TextEditingController _rawTextController = TextEditingController();
+  final ImagePicker _imagePicker = ImagePicker();
+  final TextRecognizer _textRecognizer = TextRecognizer(
+    script: TextRecognitionScript.latin,
+  );
   List<ShoppingItemDraft> _parsedItems = const <ShoppingItemDraft>[];
+  bool _isExtractingFromImage = false;
+  String? _ocrFeedback;
 
   @override
   void initState() {
@@ -975,6 +983,7 @@ class _FiscalReceiptImportSheetState extends State<_FiscalReceiptImportSheet> {
   void dispose() {
     _rawTextController.removeListener(_onTextChanged);
     _rawTextController.dispose();
+    unawaited(_textRecognizer.close());
     super.dispose();
   }
 
@@ -997,6 +1006,76 @@ class _FiscalReceiptImportSheetState extends State<_FiscalReceiptImportSheet> {
     _rawTextController
       ..text = text
       ..selection = TextSelection.collapsed(offset: text.length);
+  }
+
+  String _normalizeOcrText(String raw) {
+    return raw
+        .replaceAll('\r', '\n')
+        .replaceAll(RegExp(r'[ \t]+'), ' ')
+        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+        .trim();
+  }
+
+  Future<void> _importFromImage(ImageSource source) async {
+    if (_isExtractingFromImage) {
+      return;
+    }
+    setState(() {
+      _isExtractingFromImage = true;
+      _ocrFeedback = null;
+    });
+
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 85,
+      );
+      if (!mounted) {
+        return;
+      }
+      if (picked == null) {
+        setState(() {
+          _isExtractingFromImage = false;
+          _ocrFeedback = 'Nenhuma imagem selecionada.';
+        });
+        return;
+      }
+
+      final inputImage = InputImage.fromFilePath(picked.path);
+      final recognizedText = await _textRecognizer.processImage(inputImage);
+      if (!mounted) {
+        return;
+      }
+      final extractedText = _normalizeOcrText(recognizedText.text);
+      if (extractedText.isEmpty) {
+        setState(() {
+          _isExtractingFromImage = false;
+          _ocrFeedback =
+              'Nao foi possivel identificar texto suficiente no cupom.';
+        });
+        return;
+      }
+
+      final currentText = _rawTextController.text.trim();
+      final merged = currentText.isEmpty
+          ? extractedText
+          : '$currentText\n$extractedText';
+      _rawTextController
+        ..text = merged
+        ..selection = TextSelection.collapsed(offset: merged.length);
+      setState(() {
+        _isExtractingFromImage = false;
+        _ocrFeedback = 'Texto extraido com sucesso pela imagem.';
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isExtractingFromImage = false;
+        _ocrFeedback = 'Falha ao executar OCR na imagem. [$error]';
+      });
+    }
   }
 
   @override
@@ -1033,22 +1112,52 @@ class _FiscalReceiptImportSheetState extends State<_FiscalReceiptImportSheet> {
               ),
             ),
             const SizedBox(height: 10),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 FilledButton.tonalIcon(
-                  onPressed: _pasteFromClipboard,
+                  onPressed: _isExtractingFromImage ? null : _pasteFromClipboard,
                   icon: const Icon(Icons.content_paste_rounded),
                   label: const Text('Colar texto'),
                 ),
-                const SizedBox(width: 8),
+                FilledButton.tonalIcon(
+                  onPressed: _isExtractingFromImage
+                      ? null
+                      : () => _importFromImage(ImageSource.gallery),
+                  icon: const Icon(Icons.photo_library_rounded),
+                  label: const Text('OCR galeria'),
+                ),
+                FilledButton.tonalIcon(
+                  onPressed: _isExtractingFromImage
+                      ? null
+                      : () => _importFromImage(ImageSource.camera),
+                  icon: const Icon(Icons.photo_camera_rounded),
+                  label: const Text('OCR camera'),
+                ),
                 if (hasInput)
                   OutlinedButton.icon(
-                    onPressed: _rawTextController.clear,
+                    onPressed: _isExtractingFromImage
+                        ? null
+                        : _rawTextController.clear,
                     icon: const Icon(Icons.delete_outline_rounded),
                     label: const Text('Limpar'),
                   ),
               ],
             ),
+            if (_isExtractingFromImage) ...[
+              const SizedBox(height: 8),
+              const LinearProgressIndicator(minHeight: 3),
+            ],
+            if (_ocrFeedback != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _ocrFeedback!,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
             const SizedBox(height: 10),
             Expanded(
               child: TextField(
@@ -1172,6 +1281,8 @@ class _FiscalReceiptImportSheetState extends State<_FiscalReceiptImportSheet> {
   }
 }
 
+enum ShoppingItemEditorMode { listItem, catalogProduct }
+
 Future<ShoppingItemDraft?> showShoppingItemEditorSheet(
   BuildContext context, {
   ShoppingItem? existingItem,
@@ -1179,6 +1290,7 @@ Future<ShoppingItemDraft?> showShoppingItemEditorSheet(
   List<String> suggestionCatalog = const <String>[],
   Future<ProductLookupResult> Function(String barcode)? onLookupBarcode,
   Future<CatalogProduct?> Function(String name)? onLookupCatalogByName,
+  ShoppingItemEditorMode mode = ShoppingItemEditorMode.listItem,
 }) {
   return showAppModalBottomSheet<ShoppingItemDraft>(
     context: context,
@@ -1192,6 +1304,7 @@ Future<ShoppingItemDraft?> showShoppingItemEditorSheet(
         suggestionCatalog: suggestionCatalog,
         onLookupBarcode: onLookupBarcode,
         onLookupCatalogByName: onLookupCatalogByName,
+        mode: mode,
       );
     },
   );
@@ -1204,6 +1317,7 @@ class _ShoppingItemEditorSheet extends StatefulWidget {
     required this.suggestionCatalog,
     required this.onLookupBarcode,
     required this.onLookupCatalogByName,
+    required this.mode,
   });
 
   final ShoppingItem? existingItem;
@@ -1211,6 +1325,7 @@ class _ShoppingItemEditorSheet extends StatefulWidget {
   final List<String> suggestionCatalog;
   final Future<ProductLookupResult> Function(String barcode)? onLookupBarcode;
   final Future<CatalogProduct?> Function(String name)? onLookupCatalogByName;
+  final ShoppingItemEditorMode mode;
 
   @override
   State<_ShoppingItemEditorSheet> createState() =>
@@ -1389,7 +1504,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
         _isLookingUpCatalog = false;
         final latestPrice = result.unitPrice;
         _lookupFeedback = latestPrice != null && latestPrice > 0
-            ? 'Sugestão local aplicada com último preço salvo (${formatCurrency(latestPrice)}).'
+            ? 'Sugestão local aplicada com último preçoo salvo (${formatCurrency(latestPrice)}).'
             : 'Sugestão local aplicada a partir do catálogo.';
       });
     } catch (_) {
@@ -1440,7 +1555,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     };
     final latestPriceMessage =
         (result.unitPrice != null && result.unitPrice! > 0)
-        ? ' Último preço salvo: ${formatCurrency(result.unitPrice!)}.'
+        ? ' Último preçoo salvo: ${formatCurrency(result.unitPrice!)}.'
         : '';
     setState(() {
       _isLookingUpBarcode = false;
@@ -1490,7 +1605,9 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
       return;
     }
 
-    final quantity = int.tryParse(_quantityController.text.trim());
+    final quantity = widget.mode == ShoppingItemEditorMode.catalogProduct
+        ? 1
+        : int.tryParse(_quantityController.text.trim());
     final unitPrice = BrlCurrencyInputFormatter.tryParse(_priceController.text);
     if (quantity == null ||
         quantity < 1 ||
@@ -1517,6 +1634,15 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     final safeBottomInset = MediaQuery.viewPaddingOf(context).bottom;
     final contentBottomPadding = max(20.0, safeBottomInset + 20);
     final isEditing = widget.existingItem != null;
+    final isCatalogMode =
+        widget.mode == ShoppingItemEditorMode.catalogProduct;
+    final title = isEditing
+        ? (isCatalogMode ? 'Editar produto' : 'Editar item')
+        : (isCatalogMode ? 'Novo produto' : 'Novo item');
+    final submitLabel = isEditing
+        ? (isCatalogMode ? 'Salvar produto' : 'Salvar item')
+        : (isCatalogMode ? 'Adicionar produto' : 'Adicionar item');
+    final nameLabel = isCatalogMode ? 'Produto' : 'Item';
 
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
@@ -1530,7 +1656,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                isEditing ? 'Editar produto' : 'Novo produto',
+                title,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
@@ -1604,7 +1730,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                 controller: _nameController,
                 textInputAction: TextInputAction.next,
                 decoration: InputDecoration(
-                  labelText: 'Produto',
+                  labelText: nameLabel,
                   prefixIcon: const Icon(Icons.local_grocery_store_rounded),
                   suffixIcon: IconButton(
                     tooltip: 'Buscar no catálogo local',
@@ -1623,10 +1749,14 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                 validator: (value) {
                   final normalized = normalizeQuery(value ?? '');
                   if (normalized.isEmpty) {
-                    return 'Digite o nome do produto.';
+                    return isCatalogMode
+                        ? 'Digite o nome do produto.'
+                        : 'Digite o nome do item.';
                   }
                   if (widget.blockedNormalizedNames.contains(normalized)) {
-                    return 'Esse produto já existe na lista.';
+                    return isCatalogMode
+                        ? 'Esse produto já existe no catálogo.'
+                        : 'Esse item já existe na lista.';
                   }
                   return null;
                 },
@@ -1685,53 +1815,77 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                 },
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _quantityController,
-                      keyboardType: TextInputType.number,
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Quantidade',
-                        prefixIcon: Icon(Icons.numbers_rounded),
-                      ),
-                      validator: (value) {
-                        final parsed = int.tryParse((value ?? '').trim());
-                        if (parsed == null || parsed < 1) {
-                          return 'Inválida';
-                        }
-                        return null;
-                      },
-                    ),
+              if (isCatalogMode)
+                TextFormField(
+                  controller: _priceController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    _currencyFormatter,
+                  ],
+                  decoration: const InputDecoration(
+                    labelText: 'Valor',
+                    prefixIcon: Icon(Icons.monetization_on_rounded),
+                    hintText: 'R\$ 0,00',
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _priceController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        _currencyFormatter,
-                      ],
-                      decoration: const InputDecoration(
-                        labelText: 'Valor unitario',
-                        prefixIcon: Icon(Icons.monetization_on_rounded),
-                        hintText: 'R\$ 0,00',
+                  validator: (value) {
+                    final parsed = BrlCurrencyInputFormatter.tryParse(
+                      value ?? '',
+                    );
+                    if (parsed == null || parsed <= 0) {
+                      return 'Invalido';
+                    }
+                    return null;
+                  },
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _quantityController,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'Quantidade',
+                          prefixIcon: Icon(Icons.numbers_rounded),
+                        ),
+                        validator: (value) {
+                          final parsed = int.tryParse((value ?? '').trim());
+                          if (parsed == null || parsed < 1) {
+                            return 'Invalida';
+                          }
+                          return null;
+                        },
                       ),
-                      validator: (value) {
-                        final parsed = BrlCurrencyInputFormatter.tryParse(
-                          value ?? '',
-                        );
-                        if (parsed == null || parsed <= 0) {
-                          return 'Inválido';
-                        }
-                        return null;
-                      },
                     ),
-                  ),
-                ],
-              ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _priceController,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          _currencyFormatter,
+                        ],
+                        decoration: const InputDecoration(
+                          labelText: 'Valor unitario',
+                          prefixIcon: Icon(Icons.monetization_on_rounded),
+                          hintText: 'R\$ 0,00',
+                        ),
+                        validator: (value) {
+                          final parsed = BrlCurrencyInputFormatter.tryParse(
+                            value ?? '',
+                          );
+                          if (parsed == null || parsed <= 0) {
+                            return 'Invalido';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               if (_catalogMatch != null) ...[
                 const SizedBox(height: 10),
                 _CatalogPriceHint(product: _catalogMatch!),
@@ -1744,7 +1898,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                   icon: Icon(
                     isEditing ? Icons.save_rounded : Icons.add_rounded,
                   ),
-                  label: Text(isEditing ? 'Salvar item' : 'Adicionar item'),
+                  label: Text(submitLabel),
                 ),
               ),
             ],
@@ -1776,7 +1930,7 @@ class _CatalogPriceHint extends StatelessWidget {
         ? null
         : ((latestPrice - previousPrice) / previousPrice) * 100;
     final variationText = variation == null
-        ? 'Primeiro preço salvo no catálogo.'
+        ? 'Primeiro preçoo salvo no catálogo.'
         : variation > 0
         ? 'Subiu ${variation.abs().toStringAsFixed(1)}% em relação ao registro anterior.'
         : variation < 0

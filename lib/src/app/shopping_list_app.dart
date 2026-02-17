@@ -330,6 +330,15 @@ class _ShoppingListAppState extends State<ShoppingListApp>
           'Sem internet. As listas continuam salvas no aparelho.',
           type: AppToastType.warning,
         );
+        final pendingRecords = _estimatedPendingCloudRecords();
+        if (pendingRecords > 0) {
+          unawaited(
+            _store.notifySyncPending(
+              pendingRecords: pendingRecords,
+              hasNetworkConnection: false,
+            ),
+          );
+        }
       }
       return;
     }
@@ -348,6 +357,15 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       }
       _scheduleCloudSync(immediate: true);
     }
+  }
+
+  int _estimatedPendingCloudRecords() {
+    if (!_hasPendingCloudSync) {
+      return 0;
+    }
+    return _store.lists.length +
+        _store.purchaseHistory.length +
+        _store.catalogProducts.length;
   }
 
   void _showCloudSyncNotification(
@@ -693,33 +711,75 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       visualDensity: VisualDensity.adaptivePlatformDensity,
       brightness: Brightness.light,
     );
+    final textTheme = base.textTheme.copyWith(
+      displaySmall: base.textTheme.displaySmall?.copyWith(
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.45,
+      ),
+      headlineMedium: base.textTheme.headlineMedium?.copyWith(
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.25,
+      ),
+      headlineSmall: base.textTheme.headlineSmall?.copyWith(
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.2,
+      ),
+      titleLarge: base.textTheme.titleLarge?.copyWith(
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.2,
+      ),
+      titleMedium: base.textTheme.titleMedium?.copyWith(
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.1,
+      ),
+      titleSmall: base.textTheme.titleSmall?.copyWith(
+        fontWeight: FontWeight.w700,
+      ),
+      bodyLarge: base.textTheme.bodyLarge?.copyWith(height: 1.35),
+      bodyMedium: base.textTheme.bodyMedium?.copyWith(height: 1.35),
+      bodySmall: base.textTheme.bodySmall?.copyWith(height: 1.3),
+      labelLarge: base.textTheme.labelLarge?.copyWith(
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.15,
+      ),
+      labelMedium: base.textTheme.labelMedium?.copyWith(
+        fontWeight: FontWeight.w700,
+      ),
+    );
     return base.copyWith(
       scaffoldBackgroundColor: const Color(0xFFF5FAF8),
-      textTheme: base.textTheme.copyWith(
-        titleLarge: base.textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.2,
-        ),
-        titleMedium: base.textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.1,
-        ),
-        bodyLarge: base.textTheme.bodyLarge?.copyWith(height: 1.3),
-        bodyMedium: base.textTheme.bodyMedium?.copyWith(height: 1.3),
+      textTheme: textTheme,
+      dividerTheme: DividerThemeData(
+        color: scheme.outlineVariant.withValues(alpha: 0.42),
+        thickness: 1,
       ),
-      cardTheme: const CardThemeData(
+      cardTheme: CardThemeData(
         elevation: AppTokens.cardElevation,
         margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        color: scheme.surface,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(AppTokens.radiusXl)),
+          borderRadius: BorderRadius.all(Radius.circular(AppTokens.radius2Xl)),
+          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.36)),
         ),
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
+        backgroundColor: const Color(0xFFF5FAF8),
+        foregroundColor: scheme.onSurface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
+        titleTextStyle: textTheme.titleLarge?.copyWith(
+          color: scheme.onSurface,
+          fontWeight: FontWeight.w800,
+        ),
+        iconTheme: IconThemeData(color: scheme.onSurface),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
+          minimumSize: const Size(0, AppTokens.controlHeightLg),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          textStyle: textTheme.labelLarge,
+          elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppTokens.radiusMd),
           ),
@@ -727,14 +787,94 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
+          minimumSize: const Size(0, AppTokens.controlHeightLg),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          textStyle: textTheme.labelLarge,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          ),
+          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.65)),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(0, AppTokens.controlHeight),
+          textStyle: textTheme.labelLarge,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          ),
+        ),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          textStyle: WidgetStatePropertyAll<TextStyle?>(textTheme.labelLarge),
+          padding: const WidgetStatePropertyAll<EdgeInsets>(
+            EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          ),
+          shape: WidgetStatePropertyAll<RoundedRectangleBorder>(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+            ),
+          ),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: scheme.primary,
+        foregroundColor: scheme.onPrimary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+        ),
+        extendedTextStyle: textTheme.labelLarge,
+      ),
+      listTileTheme: ListTileThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+        ),
+        iconColor: scheme.onSurfaceVariant,
+      ),
+      chipTheme: base.chipTheme.copyWith(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.34)),
+        ),
+        backgroundColor: scheme.surface.withValues(alpha: 0.72),
+        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.34)),
+        labelStyle: textTheme.labelMedium?.copyWith(
+          color: scheme.onSurfaceVariant,
+          fontWeight: FontWeight.w700,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      ),
+      snackBarTheme: base.snackBarTheme.copyWith(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      dialogTheme: DialogThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radius2Xl),
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        showDragHandle: true,
+        dragHandleColor: scheme.onSurfaceVariant.withValues(alpha: 0.45),
+        backgroundColor: scheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppTokens.radius2Xl),
           ),
         ),
       ),
       inputDecorationTheme: base.inputDecorationTheme.copyWith(
         filled: true,
         fillColor: const Color(0xFFF0F6F4),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
+        labelStyle: textTheme.labelLarge?.copyWith(
+          color: scheme.onSurfaceVariant,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppTokens.radiusMd),
           borderSide: BorderSide(color: scheme.outlineVariant),
@@ -764,26 +904,54 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       visualDensity: VisualDensity.adaptivePlatformDensity,
       brightness: Brightness.dark,
     );
+    final textTheme = base.textTheme.copyWith(
+      displaySmall: base.textTheme.displaySmall?.copyWith(
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.4,
+      ),
+      headlineMedium: base.textTheme.headlineMedium?.copyWith(
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.2,
+      ),
+      headlineSmall: base.textTheme.headlineSmall?.copyWith(
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.2,
+      ),
+      titleLarge: base.textTheme.titleLarge?.copyWith(
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.15,
+      ),
+      titleMedium: base.textTheme.titleMedium?.copyWith(
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.05,
+      ),
+      titleSmall: base.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+      bodyLarge: base.textTheme.bodyLarge?.copyWith(height: 1.36),
+      bodyMedium: base.textTheme.bodyMedium?.copyWith(height: 1.36),
+      bodySmall: base.textTheme.bodySmall?.copyWith(height: 1.3),
+      labelLarge: base.textTheme.labelLarge?.copyWith(
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.2,
+      ),
+      labelMedium: base.textTheme.labelMedium?.copyWith(
+        fontWeight: FontWeight.w700,
+      ),
+    );
     return base.copyWith(
       scaffoldBackgroundColor: const Color(0xFF0F161A),
-      textTheme: base.textTheme.copyWith(
-        titleLarge: base.textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.2,
-        ),
-        titleMedium: base.textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.1,
-        ),
-        bodyLarge: base.textTheme.bodyLarge?.copyWith(height: 1.32),
-        bodyMedium: base.textTheme.bodyMedium?.copyWith(height: 1.32),
+      textTheme: textTheme,
+      dividerTheme: DividerThemeData(
+        color: scheme.outlineVariant.withValues(alpha: 0.44),
+        thickness: 1,
       ),
-      cardTheme: const CardThemeData(
+      cardTheme: CardThemeData(
         elevation: AppTokens.cardElevation,
         margin: EdgeInsets.zero,
-        color: Color(0xFF1A252A),
+        clipBehavior: Clip.antiAlias,
+        color: const Color(0xFF1A252A),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(AppTokens.radiusXl)),
+          borderRadius: BorderRadius.all(Radius.circular(AppTokens.radius2Xl)),
+          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.34)),
         ),
       ),
       appBarTheme: AppBarTheme(
@@ -791,10 +959,21 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         foregroundColor: scheme.onSurface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
+        titleTextStyle: textTheme.titleLarge?.copyWith(
+          color: scheme.onSurface,
+          fontWeight: FontWeight.w800,
+        ),
       ),
       inputDecorationTheme: base.inputDecorationTheme.copyWith(
         filled: true,
         fillColor: const Color(0xFF1E2A2F),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
+        labelStyle: textTheme.labelLarge?.copyWith(
+          color: scheme.onSurfaceVariant.withValues(alpha: 0.9),
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppTokens.radiusMd),
           borderSide: BorderSide(color: scheme.outlineVariant),
@@ -806,6 +985,10 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
+          minimumSize: const Size(0, AppTokens.controlHeightLg),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          textStyle: textTheme.labelLarge,
+          elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppTokens.radiusMd),
           ),
@@ -813,13 +996,83 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
+          minimumSize: const Size(0, AppTokens.controlHeightLg),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          textStyle: textTheme.labelLarge,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          ),
+          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.75)),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(0, AppTokens.controlHeight),
+          textStyle: textTheme.labelLarge,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppTokens.radiusMd),
           ),
         ),
       ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          textStyle: WidgetStatePropertyAll<TextStyle?>(textTheme.labelLarge),
+          padding: const WidgetStatePropertyAll<EdgeInsets>(
+            EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          ),
+          shape: WidgetStatePropertyAll<RoundedRectangleBorder>(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+            ),
+          ),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: scheme.primary,
+        foregroundColor: scheme.onPrimary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+        ),
+        extendedTextStyle: textTheme.labelLarge,
+      ),
+      listTileTheme: ListTileThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+        ),
+        iconColor: scheme.onSurfaceVariant,
+      ),
+      chipTheme: base.chipTheme.copyWith(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.4)),
+        ),
+        backgroundColor: scheme.surface.withValues(alpha: 0.75),
+        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.4)),
+        labelStyle: textTheme.labelMedium?.copyWith(
+          color: scheme.onSurfaceVariant,
+          fontWeight: FontWeight.w700,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      ),
       snackBarTheme: base.snackBarTheme.copyWith(
         behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      dialogTheme: DialogThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radius2Xl),
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        showDragHandle: true,
+        dragHandleColor: scheme.onSurfaceVariant.withValues(alpha: 0.5),
+        backgroundColor: scheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppTokens.radius2Xl),
+          ),
+        ),
       ),
     );
   }

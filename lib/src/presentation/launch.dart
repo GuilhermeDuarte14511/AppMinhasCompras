@@ -344,19 +344,61 @@ class AppGradientScene extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [
-            colorScheme.primaryContainer.withValues(alpha: 0.11),
+            colorScheme.primaryContainer.withValues(alpha: 0.12),
             colorScheme.surface,
             colorScheme.secondaryContainer.withValues(alpha: 0.08),
           ],
         ),
       ),
-      child: child,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          IgnorePointer(
+            child: Stack(
+              children: [
+                Positioned(
+                  top: -80,
+                  right: -40,
+                  child: _SceneAura(
+                    size: 220,
+                    color: colorScheme.primary.withValues(alpha: 0.09),
+                  ),
+                ),
+                Positioned(
+                  bottom: -90,
+                  left: -46,
+                  child: _SceneAura(
+                    size: 260,
+                    color: colorScheme.tertiary.withValues(alpha: 0.08),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _SceneAura extends StatelessWidget {
+  const _SceneAura({required this.size, required this.color});
+
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+      child: SizedBox(width: size, height: size),
     );
   }
 }

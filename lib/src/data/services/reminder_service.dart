@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -20,6 +22,18 @@ class NoopShoppingReminderService implements ShoppingReminderService {
 
   @override
   Future<void> cancelForList(String listId) async {}
+
+  @override
+  Future<void> notifyBudgetNearLimit(
+    ShoppingListModel list, {
+    required double budgetUsageRatio,
+  }) async {}
+
+  @override
+  Future<void> notifySyncPending({
+    required int pendingRecords,
+    required bool hasNetworkConnection,
+  }) async {}
 
   @override
   Future<void> syncFromLists(
@@ -46,6 +60,7 @@ class LocalNotificationsReminderService implements ShoppingReminderService {
   bool _initialized = false;
   bool _canScheduleExactNotifications = false;
   bool _notificationsEnabled = true;
+  final Map<String, DateTime> _notificationThrottle = <String, DateTime>{};
 
   @override
   Future<void> initialize() async {
@@ -198,14 +213,142 @@ class LocalNotificationsReminderService implements ShoppingReminderService {
 
     final scheduleDate = tz.TZDateTime.from(reminderDate, tz.local);
     final notificationId = _notificationIdForList(list.id);
+    final preNotificationId = _preNotificationIdForList(list.id);
     final title = _buildNotificationTitle(list, reminderDate);
     final body = _buildNotificationBody(list, reminderDate);
 
     await _plugin.cancel(id: notificationId);
+    await _plugin.cancel(id: preNotificationId);
 
-    await _plugin.zonedSchedule(
+    await _scheduleNotification(
       id: notificationId,
       scheduledDate: scheduleDate,
+      title: title,
+      body: body,
+      payload: list.id,
+    );
+
+    final preReminderDate = reminderDate.subtract(const Duration(hours: 2));
+    if (preReminderDate.isAfter(DateTime.now().add(const Duration(minutes: 1)))) {
+      await _scheduleNotification(
+        id: preNotificationId,
+        scheduledDate: tz.TZDateTime.from(preReminderDate, tz.local),
+        title: 'Hora de comprar em breve',
+        body:
+            'Faltam cerca de 2h para a lista "${list.name}". Ja deixe tudo preparado.',
+        payload: '${list.id}:pre',
+      );
+    }
+
+    _log(
+      'Lembrete agendado para ${list.name} em ${scheduleDate.toString()} (exact=$_canScheduleExactNotifications)',
+      null,
+      null,
+    );
+  }
+
+  @override
+  Future<void> cancelForList(String listId) async {
+    if (!_initialized) {
+      await initialize();
+    }
+
+    await _plugin.cancel(id: _notificationIdForList(listId));
+    await _plugin.cancel(id: _preNotificationIdForList(listId));
+  }
+
+  @override
+  Future<void> notifyBudgetNearLimit(
+    ShoppingListModel list, {
+    required double budgetUsageRatio,
+  }) async {
+    if (!list.hasBudget || budgetUsageRatio < 0.85 || budgetUsageRatio >= 1.0) {
+      return;
+    }
+    if (!_shouldNotify(
+      'budget_${list.id}',
+      cooldown: const Duration(hours: 4),
+    )) {
+      return;
+    }
+    final budget = list.budget ?? 0;
+    final usedPercent = (budgetUsageRatio * 100).clamp(0, 999).round();
+    final remaining = max<double>(0, budget - list.totalValue);
+    await _showImmediateNotification(
+      id: 910000000 + (_notificationIdForList(list.id) % 99999),
+      title: 'Orcamento quase no limite',
+      body:
+          'Lista "${list.name}" ja consumiu $usedPercent% do orcamento. Restante: ${formatCurrency(remaining)}.',
+      payload: '${list.id}:budget',
+    );
+  }
+
+  @override
+  Future<void> notifySyncPending({
+    required int pendingRecords,
+    required bool hasNetworkConnection,
+  }) async {
+    if (pendingRecords <= 0 || hasNetworkConnection) {
+      return;
+    }
+    if (
+        !_shouldNotify('sync_pending', cooldown: const Duration(minutes: 45))) {
+      return;
+    }
+    await _showImmediateNotification(
+      id: 920000001,
+      title: 'Lista sem sync',
+      body:
+          '$pendingRecords registro(s) aguardando internet para sincronizar.',
+      payload: 'sync-pending',
+    );
+  }
+
+  @override
+  Future<void> syncFromLists(
+    List<ShoppingListModel> lists, {
+    bool reset = false,
+  }) async {
+    if (!_initialized) {
+      await initialize();
+    }
+
+    if (reset) {
+      try {
+        await _plugin.cancelAllPendingNotifications();
+      } catch (_) {
+        await _plugin.cancelAll();
+      }
+    }
+
+    for (final list in lists) {
+      if (list.reminder == null || list.isClosed) {
+        await cancelForList(list.id);
+      } else {
+        await scheduleForList(list);
+      }
+    }
+  }
+
+  int _notificationIdForList(String listId) {
+    final hash = listId.hashCode & 0x7fffffff;
+    return 100000 + (hash % 400000000);
+  }
+
+  int _preNotificationIdForList(String listId) {
+    return _notificationIdForList(listId) + 400000000;
+  }
+
+  Future<void> _scheduleNotification({
+    required int id,
+    required tz.TZDateTime scheduledDate,
+    required String title,
+    required String body,
+    required String payload,
+  }) async {
+    await _plugin.zonedSchedule(
+      id: id,
+      scheduledDate: scheduledDate,
       notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           _channel.id,
@@ -250,54 +393,69 @@ class LocalNotificationsReminderService implements ShoppingReminderService {
           : AndroidScheduleMode.inexactAllowWhileIdle,
       title: title,
       body: body,
-      payload: list.id,
-    );
-
-    _log(
-      'Lembrete agendado para ${list.name} em ${scheduleDate.toString()} (exact=$_canScheduleExactNotifications)',
-      null,
-      null,
+      payload: payload,
     );
   }
 
-  @override
-  Future<void> cancelForList(String listId) async {
-    if (!_initialized) {
-      await initialize();
-    }
-
-    await _plugin.cancel(id: _notificationIdForList(listId));
-  }
-
-  @override
-  Future<void> syncFromLists(
-    List<ShoppingListModel> lists, {
-    bool reset = false,
+  Future<void> _showImmediateNotification({
+    required int id,
+    required String title,
+    required String body,
+    required String payload,
   }) async {
     if (!_initialized) {
       await initialize();
     }
-
-    if (reset) {
-      try {
-        await _plugin.cancelAllPendingNotifications();
-      } catch (_) {
-        await _plugin.cancelAll();
-      }
+    await _refreshAndroidCapabilities(requestIfNeeded: false);
+    if (!_notificationsEnabled) {
+      return;
     }
-
-    for (final list in lists) {
-      if (list.reminder == null || list.isClosed) {
-        await cancelForList(list.id);
-      } else {
-        await scheduleForList(list);
-      }
-    }
+    await _plugin.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channel.id,
+          _channel.name,
+          channelDescription: _channel.description,
+          importance: Importance.max,
+          priority: Priority.high,
+          category: AndroidNotificationCategory.status,
+          visibility: NotificationVisibility.public,
+          playSound: true,
+          enableVibration: true,
+          styleInformation: BigTextStyleInformation(
+            body,
+            contentTitle: title,
+            summaryText: 'Minhas Compras',
+          ),
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          subtitle: 'Minhas Compras',
+        ),
+        macOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          subtitle: 'Minhas Compras',
+        ),
+      ),
+      payload: payload,
+    );
   }
 
-  int _notificationIdForList(String listId) {
-    final hash = listId.hashCode & 0x7fffffff;
-    return 100000 + (hash % 900000000);
+  bool _shouldNotify(String key, {required Duration cooldown}) {
+    final now = DateTime.now();
+    final last = _notificationThrottle[key];
+    if (last != null && now.difference(last) < cooldown) {
+      return false;
+    }
+    _notificationThrottle[key] = now;
+    return true;
   }
 
   String _buildNotificationTitle(ShoppingListModel list, DateTime when) {

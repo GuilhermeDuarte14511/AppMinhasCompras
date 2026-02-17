@@ -86,6 +86,16 @@ abstract class ShoppingReminderService {
 
   Future<void> cancelForList(String listId);
 
+  Future<void> notifyBudgetNearLimit(
+    ShoppingListModel list, {
+    required double budgetUsageRatio,
+  });
+
+  Future<void> notifySyncPending({
+    required int pendingRecords,
+    required bool hasNetworkConnection,
+  });
+
   Future<void> syncFromLists(
     List<ShoppingListModel> lists, {
     bool reset = false,

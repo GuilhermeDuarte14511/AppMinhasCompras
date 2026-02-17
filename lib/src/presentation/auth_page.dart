@@ -179,7 +179,8 @@ class _AuthPageState extends State<AuthPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Scaffold(
       body: AppGradientScene(
         child: Stack(
@@ -188,9 +189,9 @@ class _AuthPageState extends State<AuthPage> {
             SafeArea(
               child: Center(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 520),
+                    constraints: const BoxConstraints(maxWidth: 460),
                     child: _AuthStaggerItem(
                       delay: Duration.zero,
                       child: _AuthSurface(
@@ -201,146 +202,147 @@ class _AuthPageState extends State<AuthPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _AuthStaggerItem(
-                                delay: const Duration(milliseconds: 40),
+                                delay: const Duration(milliseconds: 30),
                                 child: _AuthHeader(
-                                  title: 'Bem-vindo',
+                                  title: 'Entrar',
                                   subtitle:
-                                      'Entre para sincronizar suas listas e continuar de onde parou.',
+                                      'Acesse sua conta para sincronizar suas listas.',
                                   isDarkMode: isDark,
                                   onThemeModeChanged: _setTheme,
                                 ),
                               ),
-                              const SizedBox(height: 14),
-                              _AuthStaggerItem(
-                                delay: const Duration(milliseconds: 80),
-                                child: _BrandIntro(isDarkMode: isDark),
-                              ),
                               const SizedBox(height: 18),
                               _AuthStaggerItem(
-                                delay: const Duration(milliseconds: 120),
-                                child: TextFormField(
-                                  controller: _emailController,
-                                  keyboardType: TextInputType.emailAddress,
-                                  textInputAction: TextInputAction.next,
-                                  autofillHints: const [AutofillHints.email],
-                                  decoration: const InputDecoration(
-                                    labelText: 'E-mail',
-                                    hintText: 'voce@exemplo.com',
-                                    prefixIcon: Icon(
-                                      Icons.alternate_email_rounded,
-                                    ),
-                                  ),
-                                  validator: (value) {
-                                    final email = (value ?? '').trim();
-                                    if (email.isEmpty || !email.contains('@')) {
-                                      return 'Informe um e-mail válido.';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              _AuthStaggerItem(
-                                delay: const Duration(milliseconds: 160),
-                                child: TextFormField(
-                                  controller: _passwordController,
-                                  obscureText: _obscurePassword,
-                                  textInputAction: TextInputAction.done,
-                                  autofillHints: const [AutofillHints.password],
-                                  onFieldSubmitted: (_) => _signInWithEmail(),
-                                  decoration: InputDecoration(
-                                    labelText: 'Senha',
-                                    prefixIcon: const Icon(Icons.lock_rounded),
-                                    suffixIcon: IconButton(
-                                      tooltip: _obscurePassword
-                                          ? 'Mostrar senha'
-                                          : 'Ocultar senha',
-                                      onPressed: () {
-                                        setState(() {
-                                          _obscurePassword = !_obscurePassword;
-                                        });
+                                delay: const Duration(milliseconds: 80),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    TextFormField(
+                                      controller: _emailController,
+                                      keyboardType: TextInputType.emailAddress,
+                                      textInputAction: TextInputAction.next,
+                                      autofillHints: const [
+                                        AutofillHints.email,
+                                      ],
+                                      decoration: const InputDecoration(
+                                        labelText: 'E-mail',
+                                        hintText: 'voce@exemplo.com',
+                                        prefixIcon: Icon(
+                                          Icons.alternate_email_rounded,
+                                        ),
+                                      ),
+                                      validator: (value) {
+                                        final email = (value ?? '').trim();
+                                        if (email.isEmpty ||
+                                            !email.contains('@')) {
+                                          return 'Informe um e-mail valido.';
+                                        }
+                                        return null;
                                       },
-                                      icon: Icon(
-                                        _obscurePassword
-                                            ? Icons.visibility_rounded
-                                            : Icons.visibility_off_rounded,
-                                      ),
                                     ),
-                                  ),
-                                  validator: (value) {
-                                    final password = value ?? '';
-                                    if (password.length < 6) {
-                                      return 'Senha minima de 6 caracteres.';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              _AuthStaggerItem(
-                                delay: const Duration(milliseconds: 200),
-                                child: Align(
-                                  alignment: Alignment.centerRight,
-                                  child: TextButton.icon(
-                                    onPressed: _sendPasswordReset,
-                                    icon: const Icon(
-                                      Icons.mark_email_read_rounded,
-                                    ),
-                                    label: const Text('Esqueci minha senha'),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              _AuthStaggerItem(
-                                delay: const Duration(milliseconds: 230),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  child: FilledButton.icon(
-                                    onPressed: _isBusy
-                                        ? null
-                                        : _signInWithEmail,
-                                    icon: AnimatedSwitcher(
-                                      duration: const Duration(
-                                        milliseconds: 180,
-                                      ),
-                                      transitionBuilder: (child, animation) {
-                                        return FadeTransition(
-                                          opacity: animation,
-                                          child: ScaleTransition(
-                                            scale: Tween<double>(
-                                              begin: 0.92,
-                                              end: 1,
-                                            ).animate(animation),
-                                            child: child,
+                                    const SizedBox(height: 12),
+                                    TextFormField(
+                                      controller: _passwordController,
+                                      obscureText: _obscurePassword,
+                                      textInputAction: TextInputAction.done,
+                                      autofillHints: const [
+                                        AutofillHints.password,
+                                      ],
+                                      onFieldSubmitted: (_) =>
+                                          _signInWithEmail(),
+                                      decoration: InputDecoration(
+                                        labelText: 'Senha',
+                                        prefixIcon: const Icon(
+                                          Icons.lock_rounded,
+                                        ),
+                                        suffixIcon: IconButton(
+                                          tooltip: _obscurePassword
+                                              ? 'Mostrar senha'
+                                              : 'Ocultar senha',
+                                          onPressed: () {
+                                            setState(() {
+                                              _obscurePassword =
+                                                  !_obscurePassword;
+                                            });
+                                          },
+                                          icon: Icon(
+                                            _obscurePassword
+                                                ? Icons.visibility_rounded
+                                                : Icons.visibility_off_rounded,
                                           ),
-                                        );
+                                        ),
+                                      ),
+                                      validator: (value) {
+                                        final password = value ?? '';
+                                        if (password.length < 6) {
+                                          return 'Senha minima de 6 caracteres.';
+                                        }
+                                        return null;
                                       },
-                                      child: _isBusy
-                                          ? const SizedBox(
-                                              key: ValueKey('login_busy'),
-                                              width: 16,
-                                              height: 16,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                              ),
-                                            )
-                                          : const Icon(
-                                              Icons.login_rounded,
-                                              key: ValueKey('login_idle'),
-                                            ),
                                     ),
-                                    label: const Text('Entrar com e-mail'),
-                                  ),
+                                    const SizedBox(height: 8),
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: TextButton(
+                                        onPressed: _sendPasswordReset,
+                                        child: const Text(
+                                          'Esqueci minha senha',
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: FilledButton.icon(
+                                        onPressed: _isBusy
+                                            ? null
+                                            : _signInWithEmail,
+                                        icon: AnimatedSwitcher(
+                                          duration: const Duration(
+                                            milliseconds: 180,
+                                          ),
+                                          transitionBuilder:
+                                              (child, animation) {
+                                                return FadeTransition(
+                                                  opacity: animation,
+                                                  child: ScaleTransition(
+                                                    scale: Tween<double>(
+                                                      begin: 0.92,
+                                                      end: 1,
+                                                    ).animate(animation),
+                                                    child: child,
+                                                  ),
+                                                );
+                                              },
+                                          child: _isBusy
+                                              ? const SizedBox(
+                                                  key: ValueKey('login_busy'),
+                                                  width: 16,
+                                                  height: 16,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                      ),
+                                                )
+                                              : const Icon(
+                                                  Icons.login_rounded,
+                                                  key: ValueKey('login_idle'),
+                                                ),
+                                        ),
+                                        label: const Text('Entrar'),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 14),
+                              const SizedBox(height: 16),
                               const _AuthStaggerItem(
-                                delay: Duration(milliseconds: 260),
-                                child: _AuthSeparator(text: 'ou'),
+                                delay: Duration(milliseconds: 120),
+                                child: _AuthSeparator(text: 'ou continue com'),
                               ),
-                              const SizedBox(height: 14),
+                              const SizedBox(height: 16),
                               _AuthStaggerItem(
-                                delay: const Duration(milliseconds: 290),
+                                delay: const Duration(milliseconds: 150),
                                 child: _GoogleSignInButton(
                                   onPressed: _isGoogleBusy
                                       ? null
@@ -348,27 +350,17 @@ class _AuthPageState extends State<AuthPage> {
                                   isBusy: _isGoogleBusy,
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 16),
                               _AuthStaggerItem(
-                                delay: const Duration(milliseconds: 320),
-                                child: Text(
-                                  'Se a conta Google ainda não existir, ela será criada automaticamente.',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              _AuthStaggerItem(
-                                delay: const Duration(milliseconds: 350),
+                                delay: const Duration(milliseconds: 180),
                                 child: Center(
                                   child: Wrap(
                                     crossAxisAlignment:
                                         WrapCrossAlignment.center,
                                     children: [
                                       Text(
-                                        'Ainda não tem conta? ',
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.bodyMedium,
+                                        'Ainda nao tem conta? ',
+                                        style: theme.textTheme.bodyMedium,
                                       ),
                                       TextButton(
                                         onPressed: _openCreateAccount,
@@ -496,7 +488,8 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Scaffold(
       body: AppGradientScene(
         child: Stack(
@@ -505,9 +498,9 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
             SafeArea(
               child: Center(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 520),
+                    constraints: const BoxConstraints(maxWidth: 460),
                     child: _AuthStaggerItem(
                       delay: Duration.zero,
                       child: _AuthSurface(
@@ -518,7 +511,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _AuthStaggerItem(
-                                delay: const Duration(milliseconds: 40),
+                                delay: const Duration(milliseconds: 30),
                                 child: Row(
                                   children: [
                                     IconButton.filledTonal(
@@ -534,7 +527,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                       child: _AuthHeader(
                                         title: 'Criar conta',
                                         subtitle:
-                                            'Cadastre seu perfil para salvar listas na nuvem.',
+                                            'Cadastre seu perfil para salvar listas.',
                                         isDarkMode: isDark,
                                         onThemeModeChanged: _setTheme,
                                         compact: true,
@@ -543,139 +536,138 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 14),
-                              _AuthStaggerItem(
-                                delay: const Duration(milliseconds: 80),
-                                child: _BrandIntro(isDarkMode: isDark),
-                              ),
                               const SizedBox(height: 18),
                               _AuthStaggerItem(
-                                delay: const Duration(milliseconds: 120),
-                                child: TextFormField(
-                                  controller: _nameController,
-                                  textCapitalization: TextCapitalization.words,
-                                  textInputAction: TextInputAction.next,
-                                  autofillHints: const [AutofillHints.name],
-                                  decoration: const InputDecoration(
-                                    labelText: 'Nome completo',
-                                    prefixIcon: Icon(Icons.badge_rounded),
-                                  ),
-                                  validator: (value) {
-                                    final name = (value ?? '').trim();
-                                    if (name.length < 2) {
-                                      return 'Informe seu nome.';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              _AuthStaggerItem(
-                                delay: const Duration(milliseconds: 150),
-                                child: TextFormField(
-                                  controller: _emailController,
-                                  keyboardType: TextInputType.emailAddress,
-                                  textInputAction: TextInputAction.next,
-                                  autofillHints: const [AutofillHints.email],
-                                  decoration: const InputDecoration(
-                                    labelText: 'E-mail',
-                                    hintText: 'voce@exemplo.com',
-                                    prefixIcon: Icon(
-                                      Icons.alternate_email_rounded,
-                                    ),
-                                  ),
-                                  validator: (value) {
-                                    final email = (value ?? '').trim();
-                                    if (email.isEmpty || !email.contains('@')) {
-                                      return 'Informe um e-mail válido.';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              _AuthStaggerItem(
-                                delay: const Duration(milliseconds: 180),
-                                child: TextFormField(
-                                  controller: _passwordController,
-                                  obscureText: _obscurePassword,
-                                  textInputAction: TextInputAction.next,
-                                  autofillHints: const [
-                                    AutofillHints.newPassword,
-                                  ],
-                                  decoration: InputDecoration(
-                                    labelText: 'Senha',
-                                    prefixIcon: const Icon(Icons.lock_rounded),
-                                    suffixIcon: IconButton(
-                                      tooltip: _obscurePassword
-                                          ? 'Mostrar senha'
-                                          : 'Ocultar senha',
-                                      onPressed: () {
-                                        setState(() {
-                                          _obscurePassword = !_obscurePassword;
-                                        });
-                                      },
-                                      icon: Icon(
-                                        _obscurePassword
-                                            ? Icons.visibility_rounded
-                                            : Icons.visibility_off_rounded,
+                                delay: const Duration(milliseconds: 80),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    TextFormField(
+                                      controller: _nameController,
+                                      textCapitalization:
+                                          TextCapitalization.words,
+                                      textInputAction: TextInputAction.next,
+                                      autofillHints: const [AutofillHints.name],
+                                      decoration: const InputDecoration(
+                                        labelText: 'Nome completo',
+                                        prefixIcon: Icon(Icons.badge_rounded),
                                       ),
-                                    ),
-                                  ),
-                                  validator: (value) {
-                                    final password = value ?? '';
-                                    if (password.length < 6) {
-                                      return 'Senha minima de 6 caracteres.';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              _AuthStaggerItem(
-                                delay: const Duration(milliseconds: 210),
-                                child: TextFormField(
-                                  controller: _confirmPasswordController,
-                                  obscureText: _obscureConfirmPassword,
-                                  textInputAction: TextInputAction.done,
-                                  autofillHints: const [
-                                    AutofillHints.newPassword,
-                                  ],
-                                  onFieldSubmitted: (_) => _createAccount(),
-                                  decoration: InputDecoration(
-                                    labelText: 'Confirmar senha',
-                                    prefixIcon: const Icon(
-                                      Icons.verified_user_rounded,
-                                    ),
-                                    suffixIcon: IconButton(
-                                      tooltip: _obscureConfirmPassword
-                                          ? 'Mostrar senha'
-                                          : 'Ocultar senha',
-                                      onPressed: () {
-                                        setState(() {
-                                          _obscureConfirmPassword =
-                                              !_obscureConfirmPassword;
-                                        });
+                                      validator: (value) {
+                                        final name = (value ?? '').trim();
+                                        if (name.length < 2) {
+                                          return 'Informe seu nome.';
+                                        }
+                                        return null;
                                       },
-                                      icon: Icon(
-                                        _obscureConfirmPassword
-                                            ? Icons.visibility_rounded
-                                            : Icons.visibility_off_rounded,
-                                      ),
                                     ),
-                                  ),
-                                  validator: (value) {
-                                    final confirm = value ?? '';
-                                    if (confirm != _passwordController.text) {
-                                      return 'As senhas não conferem.';
-                                    }
-                                    return null;
-                                  },
+                                    const SizedBox(height: 12),
+                                    TextFormField(
+                                      controller: _emailController,
+                                      keyboardType: TextInputType.emailAddress,
+                                      textInputAction: TextInputAction.next,
+                                      autofillHints: const [
+                                        AutofillHints.email,
+                                      ],
+                                      decoration: const InputDecoration(
+                                        labelText: 'E-mail',
+                                        hintText: 'voce@exemplo.com',
+                                        prefixIcon: Icon(
+                                          Icons.alternate_email_rounded,
+                                        ),
+                                      ),
+                                      validator: (value) {
+                                        final email = (value ?? '').trim();
+                                        if (email.isEmpty ||
+                                            !email.contains('@')) {
+                                          return 'Informe um e-mail valido.';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                    const SizedBox(height: 12),
+                                    TextFormField(
+                                      controller: _passwordController,
+                                      obscureText: _obscurePassword,
+                                      textInputAction: TextInputAction.next,
+                                      autofillHints: const [
+                                        AutofillHints.newPassword,
+                                      ],
+                                      decoration: InputDecoration(
+                                        labelText: 'Senha',
+                                        prefixIcon: const Icon(
+                                          Icons.lock_rounded,
+                                        ),
+                                        suffixIcon: IconButton(
+                                          tooltip: _obscurePassword
+                                              ? 'Mostrar senha'
+                                              : 'Ocultar senha',
+                                          onPressed: () {
+                                            setState(() {
+                                              _obscurePassword =
+                                                  !_obscurePassword;
+                                            });
+                                          },
+                                          icon: Icon(
+                                            _obscurePassword
+                                                ? Icons.visibility_rounded
+                                                : Icons.visibility_off_rounded,
+                                          ),
+                                        ),
+                                      ),
+                                      validator: (value) {
+                                        final password = value ?? '';
+                                        if (password.length < 6) {
+                                          return 'Senha minima de 6 caracteres.';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                    const SizedBox(height: 12),
+                                    TextFormField(
+                                      controller: _confirmPasswordController,
+                                      obscureText: _obscureConfirmPassword,
+                                      textInputAction: TextInputAction.done,
+                                      autofillHints: const [
+                                        AutofillHints.newPassword,
+                                      ],
+                                      onFieldSubmitted: (_) => _createAccount(),
+                                      decoration: InputDecoration(
+                                        labelText: 'Confirmar senha',
+                                        prefixIcon: const Icon(
+                                          Icons.verified_user_rounded,
+                                        ),
+                                        suffixIcon: IconButton(
+                                          tooltip: _obscureConfirmPassword
+                                              ? 'Mostrar senha'
+                                              : 'Ocultar senha',
+                                          onPressed: () {
+                                            setState(() {
+                                              _obscureConfirmPassword =
+                                                  !_obscureConfirmPassword;
+                                            });
+                                          },
+                                          icon: Icon(
+                                            _obscureConfirmPassword
+                                                ? Icons.visibility_rounded
+                                                : Icons.visibility_off_rounded,
+                                          ),
+                                        ),
+                                      ),
+                                      validator: (value) {
+                                        final confirm = value ?? '';
+                                        if (confirm !=
+                                            _passwordController.text) {
+                                          return 'As senhas nao conferem.';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ],
                                 ),
                               ),
                               const SizedBox(height: 16),
                               _AuthStaggerItem(
-                                delay: const Duration(milliseconds: 240),
+                                delay: const Duration(milliseconds: 140),
                                 child: SizedBox(
                                   width: double.infinity,
                                   child: FilledButton.icon(
@@ -714,6 +706,16 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                   ),
                                 ),
                               ),
+                              const SizedBox(height: 8),
+                              Center(
+                                child: TextButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: Text(
+                                    'Ja tenho conta',
+                                    style: theme.textTheme.labelLarge,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -737,36 +739,33 @@ class _AuthSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
     final colorScheme = Theme.of(context).colorScheme;
 
-    return DecoratedBox(
+    return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: LinearGradient(
-          colors: [
-            colorScheme.primary.withValues(alpha: 0.24),
-            colorScheme.tertiary.withValues(alpha: 0.14),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        borderRadius: BorderRadius.circular(26),
+        color: colorScheme.surface.withValues(alpha: 0.9),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
         ),
-        border: Border.all(color: colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: colorScheme.primary.withValues(alpha: 0.1),
-            blurRadius: 28,
-            offset: const Offset(0, 12),
+            color:
+                (brightness == Brightness.dark
+                        ? Colors.black
+                        : colorScheme.primary)
+                    .withValues(
+                      alpha: brightness == Brightness.dark ? 0.3 : 0.08,
+                    ),
+            blurRadius: 32,
+            offset: const Offset(0, 14),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(1),
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
-            child: child,
-          ),
-        ),
+        padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
+        child: child,
       ),
     );
   }
@@ -792,163 +791,55 @@ class _AuthHeader extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            if (!compact) ...[
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  Icons.shopping_cart_checkout_rounded,
-                  color: colorScheme.onPrimaryContainer,
+        if (!compact) ...[
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              Icons.shopping_cart_checkout_rounded,
+              color: colorScheme.onPrimaryContainer,
+            ),
+          ),
+          const SizedBox(width: 12),
+        ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
             ],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            SegmentedButton<ThemeMode>(
-              showSelectedIcon: false,
-              style: ButtonStyle(
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                visualDensity: VisualDensity.compact,
-              ),
-              segments: const [
-                ButtonSegment<ThemeMode>(
-                  value: ThemeMode.light,
-                  icon: Icon(Icons.light_mode_rounded),
-                ),
-                ButtonSegment<ThemeMode>(
-                  value: ThemeMode.dark,
-                  icon: Icon(Icons.dark_mode_rounded),
-                ),
-              ],
-              selected: <ThemeMode>{
-                isDarkMode ? ThemeMode.dark : ThemeMode.light,
-              },
-              onSelectionChanged: (selection) {
-                if (selection.isEmpty) {
-                  return;
-                }
-                onThemeModeChanged(selection.first);
-              },
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _BrandIntro extends StatelessWidget {
-  const _BrandIntro({required this.isDarkMode});
-
-  final bool isDarkMode;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final baseA = isDarkMode
-        ? const Color(0xFF124A5E)
-        : const Color(0xFF8CE9DA);
-    final baseB = isDarkMode
-        ? const Color(0xFF2E355E)
-        : const Color(0xFFA9BCFF);
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        gradient: LinearGradient(
-          colors: [baseA.withValues(alpha: 0.9), baseB.withValues(alpha: 0.85)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Sua compra, sem caos.',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: colorScheme.onPrimaryContainer,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Offline primeiro, sync automático e histórico inteligente.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: colorScheme.onPrimaryContainer.withValues(alpha: 0.9),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                _FeatureChip(text: 'Offline'),
-                _FeatureChip(text: 'Sync auto'),
-                _FeatureChip(text: 'Catálogo'),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FeatureChip extends StatelessWidget {
-  const _FeatureChip({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        child: Text(
-          text,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
           ),
         ),
-      ),
+        const SizedBox(width: 8),
+        IconButton.filledTonal(
+          tooltip: isDarkMode ? 'Usar tema claro' : 'Usar tema escuro',
+          onPressed: () {
+            onThemeModeChanged(isDarkMode ? ThemeMode.light : ThemeMode.dark);
+          },
+          icon: Icon(
+            isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1058,27 +949,19 @@ class _AuthDecorativeBackground extends StatelessWidget {
       child: Stack(
         children: [
           Positioned(
-            top: -140,
-            right: -110,
+            top: -120,
+            right: -90,
             child: _GlowOrb(
-              size: 280,
-              color: colorScheme.tertiary.withValues(alpha: 0.22),
+              size: 220,
+              color: colorScheme.primary.withValues(alpha: 0.18),
             ),
           ),
           Positioned(
-            left: -120,
-            bottom: -100,
+            left: -100,
+            bottom: -90,
             child: _GlowOrb(
-              size: 260,
-              color: colorScheme.primary.withValues(alpha: 0.2),
-            ),
-          ),
-          Positioned(
-            right: 20,
-            top: 160,
-            child: _GlowOrb(
-              size: 96,
-              color: colorScheme.secondary.withValues(alpha: 0.16),
+              size: 200,
+              color: colorScheme.tertiary.withValues(alpha: 0.14),
             ),
           ),
         ],
@@ -1121,11 +1004,13 @@ class _GoogleSignInButton extends StatelessWidget {
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          backgroundColor: isDark ? const Color(0xFF12171A) : Colors.white,
-          side: BorderSide(color: colorScheme.outlineVariant),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          backgroundColor: isDark ? const Color(0xFF101719) : Colors.white,
+          side: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.65),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
         child: Row(
@@ -1158,7 +1043,12 @@ class _GoogleSignInButton extends StatelessWidget {
                     ),
             ),
             const SizedBox(width: 10),
-            const Text('Continuar com Google'),
+            Text(
+              'Continuar com Google',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            ),
           ],
         ),
       ),

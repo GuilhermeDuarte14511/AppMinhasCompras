@@ -355,7 +355,7 @@ class FirestoreUserDataRepository {
         operations.add(
           (batch) => batch.set(
             _userDocRef(firestore, uid),
-            profile.toFirestoreJson(),
+            profile.toFirestoreJson(includeCreatedAt: false),
             SetOptions(merge: true),
           ),
         );

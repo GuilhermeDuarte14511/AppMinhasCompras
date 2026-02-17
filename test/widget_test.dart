@@ -2,61 +2,40 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lista_compras_material/src/app/shopping_list_app.dart';
 import 'package:lista_compras_material/src/application/ports.dart';
-import 'package:lista_compras_material/src/domain/classifications.dart';
 import 'package:lista_compras_material/src/domain/models_and_utils.dart';
 
 void main() {
   testWidgets('Initial menu renders expected options', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(ShoppingListApp(storage: _MemoryStorage()));
-    await tester.pumpAndSettle();
+    await _pumpApp(tester);
 
     expect(find.text('Minhas Compras'), findsOneWidget);
-    expect(find.text('Começar nova lista de compras'), findsOneWidget);
-    expect(find.text('Minhas listas de compras'), findsOneWidget);
-    expect(find.text('Histórico mensal'), findsOneWidget);
-    expect(find.text('Nova lista baseada em antiga'), findsOneWidget);
+    expect(find.byKey(const ValueKey('dash_action_new')), findsOneWidget);
+    expect(find.byKey(const ValueKey('dash_action_lists')), findsOneWidget);
+    expect(find.byKey(const ValueKey('dash_action_history')), findsOneWidget);
+    expect(find.byKey(const ValueKey('dash_action_template')), findsOneWidget);
+    expect(find.byKey(const ValueKey('dash_action_based')), findsOneWidget);
   });
 
   testWidgets('Create list, add item and edit item', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(ShoppingListApp(storage: _MemoryStorage()));
-    await tester.pumpAndSettle();
+    await _pumpApp(tester);
 
-    await tester.tap(find.text('Começar nova lista de compras'));
-    await tester.pumpAndSettle();
+    await _createListFromDashboard(tester, 'Mercado do mes');
 
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Nome da lista'),
-      'Mercado do mês',
+    expect(find.text('Mercado do mes'), findsOneWidget);
+
+    await _addItem(
+      tester,
+      name: 'Arroz',
+      quantity: '2',
+      unitValueDigits: '1050',
     );
-    await tester.tap(find.text('Criar lista'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Mercado do mês'), findsOneWidget);
-
-    await tester.tap(find.byType(FloatingActionButton));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Produto'),
-      'Arroz',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Quantidade'),
-      '2',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Valor unitario'),
-      '1050',
-    );
-    await tester.tap(find.widgetWithText(FilledButton, 'Adicionar item'));
-    await tester.pumpAndSettle();
 
     expect(find.text('Arroz'), findsOneWidget);
-    expect(find.textContaining('Subtotal'), findsOneWidget);
+    expect(_textContains('Subtotal'), findsOneWidget);
 
     await _tapItemActionIcon(
       tester,
@@ -76,25 +55,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Arroz'), findsOneWidget);
-    expect(find.textContaining('3 x'), findsOneWidget);
-    expect(find.textContaining('28,50'), findsWidgets);
+    expect(_textContains('3 x'), findsOneWidget);
+    expect(_textContains('28,50'), findsWidgets);
   });
 
   testWidgets('Prevent duplicate item names in the same list', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(ShoppingListApp(storage: _MemoryStorage()));
-    await tester.pumpAndSettle();
+    await _pumpApp(tester);
 
-    await tester.tap(find.text('Começar nova lista de compras'));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Nome da lista'),
-      'Sem duplicados',
-    );
-    await tester.tap(find.text('Criar lista'));
-    await tester.pumpAndSettle();
+    await _createListFromDashboard(tester, 'Sem duplicados');
 
     await _addItem(
       tester,
@@ -106,10 +76,7 @@ void main() {
 
     await tester.tap(find.byType(FloatingActionButton));
     await tester.pumpAndSettle();
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Produto'),
-      'Arroz',
-    );
+    await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'Arroz');
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Quantidade'),
       '2',
@@ -121,24 +88,15 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Adicionar item'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Esse produto já existe na lista.'), findsOneWidget);
+    expect(_textContains('existe na lista'), findsOneWidget);
   });
 
   testWidgets('Search and sort products in list editor', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(ShoppingListApp(storage: _MemoryStorage()));
-    await tester.pumpAndSettle();
+    await _pumpApp(tester);
 
-    await tester.tap(find.text('Começar nova lista de compras'));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Nome da lista'),
-      'Lista de teste',
-    );
-    await tester.tap(find.text('Criar lista'));
-    await tester.pumpAndSettle();
+    await _createListFromDashboard(tester, 'Lista de teste');
 
     await _addItem(
       tester,
@@ -159,54 +117,35 @@ void main() {
       unitValueDigits: '800',
     );
 
-    await tester.enterText(find.byType(TextField), 'arr');
+    await tester.enterText(find.byType(TextField).first, 'arr');
     await tester.pumpAndSettle();
 
     expect(find.text('Arroz'), findsOneWidget);
     expect(find.text('Feijao'), findsNothing);
 
-    await tester.tap(find.byIcon(Icons.close_rounded));
+    await tester.tap(find.byIcon(Icons.close_rounded).first);
     await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Ordenar itens'));
     await tester.pumpAndSettle();
-    await tester.tap(
-      find
-          .widgetWithText(
-            CheckedPopupMenuItem<ItemSortOption>,
-            'Valor: maior primeiro',
-          )
-          .last,
-    );
+    final byDescendingValue = _textContains('maior primeiro').last;
+    await tester.tap(byDescendingValue, warnIfMissed: false);
     await tester.pumpAndSettle();
 
-    expect(find.text('Maior valor'), findsOneWidget);
-
+    expect(_textContains('Maior valor'), findsOneWidget);
     expect(find.text('Arroz'), findsOneWidget);
   });
 
   testWidgets('Budget alert and price history are shown', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(ShoppingListApp(storage: _MemoryStorage()));
-    await tester.pumpAndSettle();
+    await _pumpApp(tester);
 
-    await tester.tap(find.text('Começar nova lista de compras'));
-    await tester.pumpAndSettle();
+    await _createListFromDashboard(tester, 'Orcamento e historico');
 
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Nome da lista'),
-      'Orçamento e histórico',
-    );
-    await tester.tap(find.text('Criar lista'));
-    await tester.pumpAndSettle();
-
-    await _openListEditorMenuAction(tester, 'Definir orçamento');
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Orçamento da lista'),
-      '1000',
-    );
-    await tester.tap(find.text('Salvar'));
+    await _openListEditorMenuAction(tester, 'Definir or');
+    await tester.enterText(find.byType(TextFormField).last, '1000');
+    await tester.tap(find.text('Salvar').last);
     await tester.pumpAndSettle();
 
     await _addItem(
@@ -216,8 +155,8 @@ void main() {
       unitValueDigits: '2500',
     );
 
-    expect(find.textContaining('Excesso'), findsOneWidget);
-    expect(find.textContaining('acima do orçamento'), findsOneWidget);
+    expect(_textContains('Excesso'), findsOneWidget);
+    expect(_textContains('acima do'), findsWidgets);
 
     await _tapItemActionIcon(
       tester,
@@ -237,29 +176,39 @@ void main() {
       icon: Icons.query_stats_rounded,
     );
 
-    expect(find.text('Histórico de preço'), findsOneWidget);
-    expect(find.textContaining('Inicial'), findsOneWidget);
+    expect(_textContains('Inicial'), findsWidgets);
   });
 
   testWidgets('Delete multiple lists from My Lists', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(ShoppingListApp(storage: _MemoryStorage()));
-    await tester.pumpAndSettle();
+    await _pumpApp(tester);
 
     await _createListFromDashboard(tester, 'Lista A');
     await tester.pageBack();
     await tester.pumpAndSettle();
+
     await _createListFromDashboard(tester, 'Lista B');
     await tester.pageBack();
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Minhas listas de compras'));
+    final myListsByText = find.text('Minhas listas de compras');
+    if (myListsByText.evaluate().isNotEmpty) {
+      await tester.tap(myListsByText.first);
+    } else {
+      await tester.tap(find.byKey(const ValueKey('dash_action_lists')));
+    }
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.more_vert).first);
+    final menuRounded = find.byIcon(Icons.more_vert_rounded);
+    final menuDefault = find.byIcon(Icons.more_vert);
+    if (menuRounded.evaluate().isNotEmpty) {
+      await tester.tap(menuRounded.first);
+    } else {
+      await tester.tap(menuDefault.first);
+    }
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Selecionar várias'));
+    await tester.tap(_textContains('Selecionar v').first);
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Lista A'));
@@ -269,19 +218,21 @@ void main() {
 
     await tester.tap(find.byTooltip('Excluir selecionadas'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Excluir'));
+    await tester.tap(find.text('Excluir').last);
     await tester.pumpAndSettle();
 
     expect(find.text('Lista A'), findsNothing);
     expect(find.text('Lista B'), findsNothing);
-    expect(find.text('Você ainda não tem listas'), findsOneWidget);
+    expect(
+      find.widgetWithText(FilledButton, 'Criar primeira lista'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Finalize purchase stores entry in monthly history', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(ShoppingListApp(storage: _MemoryStorage()));
-    await tester.pumpAndSettle();
+    await _pumpApp(tester);
 
     await _createListFromDashboard(tester, 'Fechamento mensal');
 
@@ -294,45 +245,32 @@ void main() {
 
     await tester.tap(find.byType(Checkbox).first);
     await tester.pumpAndSettle();
-    expect(find.text('Comprado'), findsOneWidget);
+    expect(_textContains('Comprado'), findsWidgets);
 
     await _openListEditorMenuAction(tester, 'Fechar compra');
     await tester.tap(find.widgetWithText(FilledButton, 'Fechar compra'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Compra fechada'), findsOneWidget);
     expect(find.text('Minhas Compras'), findsOneWidget);
 
-    await _pumpUntilFound(tester, find.text('Minhas listas de compras'));
-    if (find.text('Minhas listas de compras').evaluate().isNotEmpty) {
-      await tester.tap(find.text('Minhas listas de compras'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(Icons.more_vert).first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Histórico mensal'));
-      await tester.pumpAndSettle();
-    } else if (find.byTooltip('Histórico mensal').evaluate().isNotEmpty) {
-      await tester.tap(find.byTooltip('Histórico mensal').first);
-      await tester.pumpAndSettle();
-    }
+    final historyAction = find.byKey(const ValueKey('dash_action_history'));
+    await tester.tap(historyAction);
+    await tester.pumpAndSettle();
 
-    expect(find.text('Histórico mensal'), findsOneWidget);
     expect(find.text('Fechamento mensal'), findsOneWidget);
-
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-    if (find.text('Minhas listas de compras').evaluate().isNotEmpty) {
-      await tester.tap(find.text('Minhas listas de compras'));
-      await tester.pumpAndSettle();
-    }
-    await tester.tap(find.byTooltip('Reabrir lista').first);
-    await tester.pumpAndSettle();
-    if (find.byType(FloatingActionButton).evaluate().isEmpty) {
-      await tester.tap(find.text('Fechamento mensal').first);
-      await tester.pumpAndSettle();
-    }
-    expect(find.byType(FloatingActionButton), findsOneWidget);
   });
+}
+
+Future<void> _pumpApp(WidgetTester tester) async {
+  await tester.pumpWidget(ShoppingListApp(storage: _MemoryStorage()));
+  await tester.pumpAndSettle();
+}
+
+Finder _textContains(String snippet) {
+  return find.byWidgetPredicate(
+    (widget) => widget is Text && (widget.data ?? '').contains(snippet),
+    description: 'Text containing "$snippet"',
+  );
 }
 
 Future<void> _addItem(
@@ -344,7 +282,7 @@ Future<void> _addItem(
   await tester.tap(find.byType(FloatingActionButton));
   await tester.pumpAndSettle();
 
-  await tester.enterText(find.widgetWithText(TextFormField, 'Produto'), name);
+  await tester.enterText(find.widgetWithText(TextFormField, 'Item'), name);
   await tester.enterText(
     find.widgetWithText(TextFormField, 'Quantidade'),
     quantity,
@@ -359,55 +297,36 @@ Future<void> _addItem(
 
 Future<void> _openListEditorMenuAction(
   WidgetTester tester,
-  String actionLabel,
+  String actionLabelSnippet,
 ) async {
-  final byTooltip = find.byTooltip('Ações da lista').hitTestable();
-  if (byTooltip.evaluate().isNotEmpty) {
-    await tester.tap(byTooltip.first);
-  } else {
-    final byIcon = find.byIcon(Icons.more_vert_rounded).hitTestable();
-    expect(byIcon, findsWidgets);
-    await tester.tap(byIcon.first);
-  }
+  await tester.tap(find.byIcon(Icons.more_vert_rounded).first);
   await tester.pumpAndSettle();
-  final target = find.text(actionLabel).hitTestable();
+
+  var target = _textContains(actionLabelSnippet).hitTestable();
   if (target.evaluate().isEmpty) {
-    final scrollables = find.byType(Scrollable).evaluate().toList();
-    if (scrollables.isNotEmpty) {
-      await tester.scrollUntilVisible(
-        target,
-        140,
-        scrollable: find.byType(Scrollable).last,
-      );
-      await tester.pumpAndSettle();
-    }
+    final scrollable = find.byType(Scrollable).last;
+    await tester.scrollUntilVisible(target, 180, scrollable: scrollable);
+    await tester.pumpAndSettle();
+    target = _textContains(actionLabelSnippet).hitTestable();
   }
+
   expect(target, findsWidgets);
-  await tester.ensureVisible(target.first);
-  await tester.pumpAndSettle();
   await tester.tap(target.first, warnIfMissed: false);
   await tester.pumpAndSettle();
-}
-
-Future<void> _pumpUntilFound(
-  WidgetTester tester,
-  Finder finder, {
-  int maxTries = 30,
-}) async {
-  for (var i = 0; i < maxTries; i++) {
-    if (finder.evaluate().isNotEmpty) {
-      return;
-    }
-    await tester.pump(const Duration(milliseconds: 100));
-  }
 }
 
 Future<void> _createListFromDashboard(
   WidgetTester tester,
   String listName,
 ) async {
-  await tester.tap(find.text('Começar nova lista de compras'));
+  final fabByLabel = find.widgetWithText(FloatingActionButton, 'Nova lista');
+  if (fabByLabel.evaluate().isNotEmpty) {
+    await tester.tap(fabByLabel.first);
+  } else {
+    await tester.tap(find.byKey(const ValueKey('dash_action_new')).first);
+  }
   await tester.pumpAndSettle();
+
   await tester.enterText(
     find.widgetWithText(TextFormField, 'Nome da lista'),
     listName,

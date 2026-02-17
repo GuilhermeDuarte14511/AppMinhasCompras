@@ -147,7 +147,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
         ? 'U'
         : _resolvedName[0].toUpperCase();
     return Scaffold(
-      appBar: AppBar(title: const Text('Opções')),
+      appBar: AppBar(title: const Text('OpÃ§Ãµes')),
       body: AppGradientScene(
         child: SafeArea(
           child: ListView(
@@ -255,7 +255,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Aparência',
+                        'AparÃªncia',
                         style: textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
@@ -293,7 +293,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
                       const SizedBox(height: 12),
                       Text(
                         _selectedThemeMode == ThemeMode.dark
-                            ? 'Modo escuro ativo com contraste reforçado.'
+                            ? 'Modo escuro ativo com contraste reforÃ§ado.'
                             : 'Modo claro ativo (visual original).',
                         style: textTheme.bodyMedium?.copyWith(
                           color: colorScheme.onSurfaceVariant,
@@ -398,7 +398,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       _showMessage(
-        'Sessão inválida. Faça login novamente.',
+        'SessÃ£o invÃ¡lida. FaÃ§a login novamente.',
         type: AppToastType.error,
       );
       return;
@@ -486,7 +486,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       _showMessage(
-        'Sessão inválida. Faça login novamente.',
+        'SessÃ£o invÃ¡lida. FaÃ§a login novamente.',
         type: AppToastType.error,
       );
       return;
@@ -884,7 +884,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<void> _createBasedOnOld() async {
     if (widget.store.lists.isEmpty) {
-      _showSnack('Você ainda não tem listas para usar como base.');
+      _showSnack('VocÃª ainda Não tem listas para usar como base.');
       return;
     }
 
@@ -939,11 +939,11 @@ class _DashboardPageState extends State<DashboardPage> {
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: _DashboardMenuAction.options,
-                child: Text('Opções'),
+                child: Text('OpÃ§Ãµes'),
               ),
               const PopupMenuItem(
                 value: _DashboardMenuAction.catalog,
-                child: Text('Catálogo de produtos'),
+                child: Text('catálogo de produtos'),
               ),
               if (widget.onSignOut != null)
                 const PopupMenuItem(
@@ -973,7 +973,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 key: const ValueKey('dash_action_new'),
                 delay: const Duration(milliseconds: 40),
                 child: _ActionTile(
-                  title: 'Começar nova lista de compras',
+                  title: 'ComeÃ§ar nova lista de compras',
                   subtitle: 'Crie uma lista do zero e adicione os produtos.',
                   icon: Icons.playlist_add_rounded,
                   onTap: _createNewList,
@@ -995,8 +995,8 @@ class _DashboardPageState extends State<DashboardPage> {
                 key: const ValueKey('dash_action_history'),
                 delay: const Duration(milliseconds: 100),
                 child: _ActionTile(
-                  title: 'Histórico mensal',
-                  subtitle: 'Revise fechamentos e totais por mês.',
+                  title: 'histórico mensal',
+                  subtitle: 'Revise fechamentos e totais por mÃªs.',
                   icon: Icons.event_note_rounded,
                   onTap: _openPurchaseHistory,
                 ),
@@ -1006,7 +1006,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 key: const ValueKey('dash_action_template'),
                 delay: const Duration(milliseconds: 130),
                 child: _ActionTile(
-                  title: 'Catálogo de produtos',
+                  title: 'catálogo de produtos',
                   subtitle:
                       'Gerencie produtos salvos localmente e/ou sincronizados.',
                   icon: Icons.local_offer_rounded,
@@ -1083,6 +1083,8 @@ class _DashboardPageState extends State<DashboardPage> {
 
 enum _CatalogSortOption { updatedAt, name, usage, price }
 
+enum _CatalogPriceFilter { all, withoutPrice }
+
 enum _CatalogProductAction { edit, updatePrice, delete }
 
 class CatalogProductsPage extends StatefulWidget {
@@ -1097,8 +1099,18 @@ class CatalogProductsPage extends StatefulWidget {
 class _CatalogProductsPageState extends State<CatalogProductsPage> {
   final TextEditingController _searchController = TextEditingController();
   _CatalogSortOption _sortOption = _CatalogSortOption.updatedAt;
+  _CatalogPriceFilter _priceFilter = _CatalogPriceFilter.all;
+  ShoppingCategory? _categoryFilter;
+  bool _onlyWithBarcode = false;
+  bool _batchMode = false;
+  final Set<String> _selectedProductIds = <String>{};
 
   String get _searchQuery => _searchController.text.trim();
+  bool get _hasActiveFilters =>
+      _searchQuery.isNotEmpty ||
+      _categoryFilter != null ||
+      _onlyWithBarcode ||
+      _priceFilter != _CatalogPriceFilter.all;
 
   @override
   void initState() {
@@ -1139,7 +1151,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
       case _CatalogSortOption.usage:
         return 'Uso';
       case _CatalogSortOption.price:
-        return 'Preço';
+        return 'preço';
     }
   }
 
@@ -1156,10 +1168,187 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
     }
   }
 
+  void _toggleBatchMode([bool? enabled]) {
+    final next = enabled ?? !_batchMode;
+    setState(() {
+      _batchMode = next;
+      if (!next) {
+        _selectedProductIds.clear();
+      }
+    });
+  }
+
+  void _toggleSelection(String productId, {bool forceSelect = false}) {
+    setState(() {
+      if (!_batchMode) {
+        _batchMode = true;
+      }
+      if (forceSelect) {
+        _selectedProductIds.add(productId);
+      } else if (_selectedProductIds.contains(productId)) {
+        _selectedProductIds.remove(productId);
+      } else {
+        _selectedProductIds.add(productId);
+      }
+      if (_batchMode && _selectedProductIds.isEmpty) {
+        _batchMode = false;
+      }
+    });
+  }
+
+  void _toggleSelectAllVisible(List<CatalogProduct> visibleProducts) {
+    if (visibleProducts.isEmpty) {
+      return;
+    }
+    final visibleIds = visibleProducts.map((entry) => entry.id).toSet();
+    final allSelected = visibleIds.every(_selectedProductIds.contains);
+    setState(() {
+      _batchMode = true;
+      if (allSelected) {
+        _selectedProductIds.removeAll(visibleIds);
+      } else {
+        _selectedProductIds.addAll(visibleIds);
+      }
+      if (_selectedProductIds.isEmpty) {
+        _batchMode = false;
+      }
+    });
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _searchController.clear();
+      _categoryFilter = null;
+      _onlyWithBarcode = false;
+      _priceFilter = _CatalogPriceFilter.all;
+    });
+  }
+
+  Future<void> _deleteSelectedProducts() async {
+    final count = _selectedProductIds.length;
+    if (count == 0) {
+      return;
+    }
+    final shouldDelete = await showAppDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir selecionados?'),
+        content: Text('Deseja excluir $count produto(s) do catalogo?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || shouldDelete != true) {
+      return;
+    }
+    final updated = widget.store.catalogProducts
+        .where((entry) => !_selectedProductIds.contains(entry.id))
+        .toList(growable: false);
+    await widget.store.replaceCatalogProducts(updated);
+    if (!mounted) {
+      return;
+    }
+    _toggleBatchMode(false);
+    _showSnack('$count produto(s) removido(s).', type: AppToastType.success);
+  }
+
+  Future<void> _updateCategoryForSelectedProducts() async {
+    final selected = widget.store.catalogProducts
+        .where((entry) => _selectedProductIds.contains(entry.id))
+        .toList(growable: false);
+    if (selected.isEmpty) {
+      return;
+    }
+
+    ShoppingCategory selectedCategory = selected.first.category;
+    final result = await showAppDialog<ShoppingCategory>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Categoria em lote'),
+          content: DropdownButtonFormField<ShoppingCategory>(
+            initialValue: selectedCategory,
+            decoration: const InputDecoration(
+              labelText: 'Categoria',
+              prefixIcon: Icon(Icons.category_rounded),
+            ),
+            items: ShoppingCategory.values
+                .map(
+                  (entry) => DropdownMenuItem<ShoppingCategory>(
+                    value: entry,
+                    child: Text(entry.label),
+                  ),
+                )
+                .toList(growable: false),
+            onChanged: (value) {
+              if (value == null) {
+                return;
+              }
+              setDialogState(() {
+                selectedCategory = value;
+              });
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, selectedCategory),
+              child: const Text('Aplicar'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (!mounted || result == null) {
+      return;
+    }
+    final now = DateTime.now();
+    final updated = widget.store.catalogProducts
+        .map(
+          (entry) => _selectedProductIds.contains(entry.id)
+              ? entry.copyWith(category: result, updatedAt: now)
+              : entry,
+        )
+        .toList(growable: false);
+    await widget.store.replaceCatalogProducts(updated);
+    if (!mounted) {
+      return;
+    }
+    _showSnack(
+      'Categoria aplicada em ${_selectedProductIds.length} produto(s).',
+      type: AppToastType.success,
+    );
+  }
+
   List<CatalogProduct> _visibleProducts(List<CatalogProduct> source) {
     final normalizedQuery = normalizeQuery(_searchQuery);
     final filtered = source
         .where((product) {
+          if (_categoryFilter != null && product.category != _categoryFilter) {
+            return false;
+          }
+          if (_onlyWithBarcode &&
+              (product.barcode == null || product.barcode!.trim().isEmpty)) {
+            return false;
+          }
+          if (_priceFilter == _CatalogPriceFilter.withoutPrice &&
+              product.unitPrice != null &&
+              product.unitPrice! > 0) {
+            return false;
+          }
           if (normalizedQuery.isEmpty) {
             return true;
           }
@@ -1316,7 +1505,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
               validator: (value) {
                 final parsed = BrlCurrencyInputFormatter.tryParse(value ?? '');
                 if (parsed == null || parsed <= 0) {
-                  return 'Informe um preço válido.';
+                  return 'Informe um preço vÃ¡lido.';
                 }
                 return null;
               },
@@ -1365,7 +1554,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
     if (!mounted) {
       return;
     }
-    _showSnack('Preço atualizado.', type: AppToastType.success);
+    _showSnack('preço atualizado.', type: AppToastType.success);
   }
 
   Future<void> _deleteCatalogProduct(CatalogProduct product) async {
@@ -1406,12 +1595,55 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Catálogo de produtos')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _createCatalogProduct,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Adicionar produto'),
+      appBar: AppBar(
+        title: Text(
+          _batchMode
+              ? 'Catalogo (${_selectedProductIds.length})'
+              : 'Catalogo de produtos',
+        ),
+        actions: [
+          if (_batchMode)
+            IconButton(
+              tooltip: 'Selecionar visiveis',
+              onPressed: () => _toggleSelectAllVisible(
+                _visibleProducts(widget.store.catalogProducts),
+              ),
+              icon: const Icon(Icons.select_all_rounded),
+            ),
+          IconButton(
+            tooltip: _batchMode ? 'Sair da selecao' : 'Selecao em lote',
+            onPressed: () => _toggleBatchMode(),
+            icon: Icon(
+              _batchMode
+                  ? Icons.checklist_rtl_rounded
+                  : Icons.checklist_rounded,
+            ),
+          ),
+          if (_batchMode)
+            IconButton(
+              tooltip: 'Categoria em lote',
+              onPressed: _selectedProductIds.isEmpty
+                  ? null
+                  : _updateCategoryForSelectedProducts,
+              icon: const Icon(Icons.category_rounded),
+            ),
+          if (_batchMode)
+            IconButton(
+              tooltip: 'Excluir selecionados',
+              onPressed: _selectedProductIds.isEmpty
+                  ? null
+                  : _deleteSelectedProducts,
+              icon: const Icon(Icons.delete_rounded),
+            ),
+        ],
       ),
+      floatingActionButton: _batchMode
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _createCatalogProduct,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Adicionar produto'),
+            ),
       body: AppGradientScene(
         child: SafeArea(
           child: AnimatedBuilder(
@@ -1429,7 +1661,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
                           controller: _searchController,
                           decoration: const InputDecoration(
                             prefixIcon: Icon(Icons.search_rounded),
-                            hintText: 'Buscar no catálogo por nome ou código',
+                            hintText: 'Buscar no catálogo por nome ou cÃ³digo',
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -1442,6 +1674,28 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
+                            if (_batchMode) ...[
+                              const SizedBox(width: 8),
+                              DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primaryContainer,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  child: Text(
+                                    '${_selectedProductIds.length} selecionado(s)',
+                                    style: textTheme.labelMedium?.copyWith(
+                                      color: colorScheme.onPrimaryContainer,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                             const Spacer(),
                             PopupMenuButton<_CatalogSortOption>(
                               onSelected: (value) {
@@ -1495,158 +1749,294 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<ShoppingCategory?>(
+                                initialValue: _categoryFilter,
+                                decoration: const InputDecoration(
+                                  labelText: 'Categoria',
+                                  prefixIcon: Icon(Icons.category_rounded),
+                                ),
+                                items: [
+                                  const DropdownMenuItem<ShoppingCategory?>(
+                                    value: null,
+                                    child: Text('Todas as categorias'),
+                                  ),
+                                  ...ShoppingCategory.values.map(
+                                    (entry) =>
+                                        DropdownMenuItem<ShoppingCategory?>(
+                                          value: entry,
+                                          child: Text(entry.label),
+                                        ),
+                                  ),
+                                ],
+                                onChanged: (value) {
+                                  setState(() {
+                                    _categoryFilter = value;
+                                  });
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child:
+                                  DropdownButtonFormField<_CatalogPriceFilter>(
+                                    initialValue: _priceFilter,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Preco',
+                                      prefixIcon: Icon(
+                                        Icons.attach_money_rounded,
+                                      ),
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(
+                                        value: _CatalogPriceFilter.all,
+                                        child: Text('Todos'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: _CatalogPriceFilter.withoutPrice,
+                                        child: Text('Sem preco'),
+                                      ),
+                                    ],
+                                    onChanged: (value) {
+                                      if (value == null) {
+                                        return;
+                                      }
+                                      setState(() {
+                                        _priceFilter = value;
+                                      });
+                                    },
+                                  ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            FilterChip(
+                              selected: _onlyWithBarcode,
+                              onSelected: (value) {
+                                setState(() {
+                                  _onlyWithBarcode = value;
+                                });
+                              },
+                              avatar: const Icon(Icons.qr_code_2_rounded),
+                              label: const Text('Com codigo de barras'),
+                            ),
+                            if (_hasActiveFilters)
+                              ActionChip(
+                                avatar: const Icon(Icons.clear_all_rounded),
+                                label: const Text('Limpar filtros'),
+                                onPressed: _clearFilters,
+                              ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
                   Expanded(
                     child: visibleProducts.isEmpty
                         ? _CatalogEmptyState(
-                            hasQuery: _searchQuery.isNotEmpty,
+                            hasQuery: _hasActiveFilters,
                             onCreateProduct: _createCatalogProduct,
                           )
                         : ListView.separated(
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                            padding: EdgeInsets.fromLTRB(
+                              16,
+                              0,
+                              16,
+                              _batchMode ? 120 : 100,
+                            ),
                             itemCount: visibleProducts.length,
                             separatorBuilder: (context, index) =>
                                 const SizedBox(height: 10),
                             itemBuilder: (context, index) {
                               final product = visibleProducts[index];
+                              final isSelected = _selectedProductIds.contains(
+                                product.id,
+                              );
                               return Card(
                                 clipBehavior: Clip.antiAlias,
-                                child: Padding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    12,
-                                    10,
-                                    8,
-                                    10,
+                                color: isSelected
+                                    ? colorScheme.primaryContainer.withValues(
+                                        alpha: 0.45,
+                                      )
+                                    : null,
+                                child: InkWell(
+                                  onLongPress: () => _toggleSelection(
+                                    product.id,
+                                    forceSelect: true,
                                   ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  product.name,
-                                                  maxLines: 2,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style: textTheme.titleMedium
-                                                      ?.copyWith(
-                                                        fontWeight:
-                                                            FontWeight.w800,
+                                  onTap: _batchMode
+                                      ? () => _toggleSelection(product.id)
+                                      : () => _editCatalogProduct(product),
+                                  child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      12,
+                                      10,
+                                      8,
+                                      10,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            if (_batchMode)
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                  right: 8,
+                                                  top: 2,
+                                                ),
+                                                child: Checkbox(
+                                                  value: isSelected,
+                                                  onChanged: (_) =>
+                                                      _toggleSelection(
+                                                        product.id,
                                                       ),
                                                 ),
-                                                const SizedBox(height: 4),
-                                                Wrap(
-                                                  spacing: 8,
-                                                  runSpacing: 6,
-                                                  children: [
-                                                    _SummaryPill(
-                                                      icon:
-                                                          product.category.icon,
-                                                      label: 'Categoria',
-                                                      value: product
-                                                          .category
-                                                          .label,
-                                                    ),
-                                                    _SummaryPill(
-                                                      icon: Icons
-                                                          .history_toggle_off_rounded,
-                                                      label: 'Uso',
-                                                      value:
-                                                          '${product.usageCount}',
-                                                    ),
-                                                    if (product.barcode !=
-                                                            null &&
-                                                        product
-                                                            .barcode!
-                                                            .isNotEmpty)
+                                              ),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    product.name,
+                                                    maxLines: 2,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: textTheme.titleMedium
+                                                        ?.copyWith(
+                                                          fontWeight:
+                                                              FontWeight.w800,
+                                                        ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Wrap(
+                                                    spacing: 8,
+                                                    runSpacing: 6,
+                                                    children: [
+                                                      _SummaryPill(
+                                                        icon: product
+                                                            .category
+                                                            .icon,
+                                                        label: 'Categoria',
+                                                        value: product
+                                                            .category
+                                                            .label,
+                                                      ),
                                                       _SummaryPill(
                                                         icon: Icons
-                                                            .qr_code_2_rounded,
-                                                        label: 'Código',
-                                                        value: product.barcode!,
+                                                            .history_toggle_off_rounded,
+                                                        label: 'Uso',
+                                                        value:
+                                                            '${product.usageCount}',
                                                       ),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          PopupMenuButton<
-                                            _CatalogProductAction
-                                          >(
-                                            onSelected: (action) {
-                                              switch (action) {
-                                                case _CatalogProductAction.edit:
-                                                  _editCatalogProduct(product);
-                                                  return;
-                                                case _CatalogProductAction
-                                                    .updatePrice:
-                                                  _updateCatalogPrice(product);
-                                                  return;
-                                                case _CatalogProductAction
-                                                    .delete:
-                                                  _deleteCatalogProduct(
-                                                    product,
-                                                  );
-                                                  return;
-                                              }
-                                            },
-                                            itemBuilder: (context) => const [
-                                              PopupMenuItem(
-                                                value:
-                                                    _CatalogProductAction.edit,
-                                                child: Text('Editar produto'),
-                                              ),
-                                              PopupMenuItem(
-                                                value: _CatalogProductAction
-                                                    .updatePrice,
-                                                child: Text('Atualizar preço'),
-                                              ),
-                                              PopupMenuItem(
-                                                value: _CatalogProductAction
-                                                    .delete,
-                                                child: Text('Excluir produto'),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          Text(
-                                            product.unitPrice == null
-                                                ? 'Sem preço'
-                                                : formatCurrency(
-                                                    product.unitPrice!,
+                                                      if (product.barcode !=
+                                                              null &&
+                                                          product
+                                                              .barcode!
+                                                              .isNotEmpty)
+                                                        _SummaryPill(
+                                                          icon: Icons
+                                                              .qr_code_2_rounded,
+                                                          label: 'CÃ³digo',
+                                                          value:
+                                                              product.barcode!,
+                                                        ),
+                                                    ],
                                                   ),
-                                            style: textTheme.titleMedium
-                                                ?.copyWith(
-                                                  color: colorScheme.primary,
-                                                  fontWeight: FontWeight.w900,
-                                                ),
-                                          ),
-                                          const Spacer(),
-                                          Text(
-                                            'Atualizado em ${formatShortDate(product.updatedAt)}',
-                                            style: textTheme.bodySmall
-                                                ?.copyWith(
-                                                  color: colorScheme
-                                                      .onSurfaceVariant,
-                                                ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
+                                                ],
+                                              ),
+                                            ),
+                                            if (!_batchMode)
+                                              PopupMenuButton<
+                                                _CatalogProductAction
+                                              >(
+                                                onSelected: (action) {
+                                                  switch (action) {
+                                                    case _CatalogProductAction
+                                                        .edit:
+                                                      _editCatalogProduct(
+                                                        product,
+                                                      );
+                                                      return;
+                                                    case _CatalogProductAction
+                                                        .updatePrice:
+                                                      _updateCatalogPrice(
+                                                        product,
+                                                      );
+                                                      return;
+                                                    case _CatalogProductAction
+                                                        .delete:
+                                                      _deleteCatalogProduct(
+                                                        product,
+                                                      );
+                                                      return;
+                                                  }
+                                                },
+                                                itemBuilder: (context) => const [
+                                                  PopupMenuItem(
+                                                    value: _CatalogProductAction
+                                                        .edit,
+                                                    child: Text(
+                                                      'Editar produto',
+                                                    ),
+                                                  ),
+                                                  PopupMenuItem(
+                                                    value: _CatalogProductAction
+                                                        .updatePrice,
+                                                    child: Text(
+                                                      'Atualizar preço',
+                                                    ),
+                                                  ),
+                                                  PopupMenuItem(
+                                                    value: _CatalogProductAction
+                                                        .delete,
+                                                    child: Text(
+                                                      'Excluir produto',
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              product.unitPrice == null
+                                                  ? 'Sem preço'
+                                                  : formatCurrency(
+                                                      product.unitPrice!,
+                                                    ),
+                                              style: textTheme.titleMedium
+                                                  ?.copyWith(
+                                                    color: colorScheme.primary,
+                                                    fontWeight: FontWeight.w900,
+                                                  ),
+                                            ),
+                                            const Spacer(),
+                                            Text(
+                                              'Atualizado em ${formatShortDate(product.updatedAt)}',
+                                              style: textTheme.bodySmall
+                                                  ?.copyWith(
+                                                    color: colorScheme
+                                                        .onSurfaceVariant,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               );
@@ -1842,7 +2232,7 @@ class _MyListsPageState extends State<MyListsPage> {
     if (!mounted) {
       return;
     }
-    _showSnack('Lista excluída.');
+    _showSnack('Lista excluÃ­da.');
   }
 
   Future<void> _reopenList(ShoppingListModel list) async {
@@ -2086,7 +2476,7 @@ class _MyListsPageState extends State<MyListsPage> {
           appBar: AppBar(
             leading: _selectionMode
                 ? IconButton(
-                    tooltip: 'Cancelar seleção',
+                    tooltip: 'Cancelar seleÃ§Ã£o',
                     onPressed: _exitSelectionMode,
                     icon: const Icon(Icons.close_rounded),
                   )
@@ -2138,11 +2528,11 @@ class _MyListsPageState extends State<MyListsPage> {
                   itemBuilder: (context) => const [
                     PopupMenuItem(
                       value: _MyListsMenuAction.viewHistory,
-                      child: Text('Histórico mensal'),
+                      child: Text('histórico mensal'),
                     ),
                     PopupMenuItem(
                       value: _MyListsMenuAction.selectMany,
-                      child: Text('Selecionar várias'),
+                      child: Text('Selecionar vÃ¡rias'),
                     ),
                     PopupMenuItem(
                       value: _MyListsMenuAction.importBackup,
@@ -2350,7 +2740,7 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
     }
     AppToast.show(
       context,
-      message: 'Histórico mensal limpo com sucesso.',
+      message: 'histórico mensal limpo com sucesso.',
       type: AppToastType.success,
       duration: const Duration(seconds: 4),
     );
@@ -2369,7 +2759,7 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Histórico mensal'),
+            title: const Text('histórico mensal'),
             actions: [
               IconButton(
                 tooltip: 'Limpar histórico',
@@ -2771,7 +3161,7 @@ class _CompletedPurchaseDetailsSheet extends StatelessWidget {
             if (purchase.hasBudget)
               _PillLabel(
                 icon: Icons.account_balance_wallet_rounded,
-                text: 'Orçamento ${formatCurrency(purchase.budget!)}',
+                text: 'OrÃ§amento ${formatCurrency(purchase.budget!)}',
               ),
             if (purchase.hasPaymentBalances)
               _PillLabel(
@@ -2948,6 +3338,8 @@ enum _ListEditorMenuAction {
   clearPurchased,
 }
 
+enum _ListItemSwipeQuickAction { edit, duplicate, delete }
+
 class _ListEditorActionsSheet extends StatelessWidget {
   const _ListEditorActionsSheet({
     required this.isReadOnly,
@@ -3028,14 +3420,14 @@ class _ListEditorActionsSheet extends StatelessWidget {
         case _ListEditorMenuAction.openCatalog:
           return _ListEditorActionMeta(
             label: 'Abrir catálogo de produtos',
-            shortLabel: 'Catálogo',
+            shortLabel: 'catálogo',
             icon: Icons.local_offer_rounded,
             color: const Color(0xFF0277BD),
           );
         case _ListEditorMenuAction.viewHistory:
           return _ListEditorActionMeta(
-            label: 'Histórico mensal',
-            shortLabel: 'Histórico',
+            label: 'histórico mensal',
+            shortLabel: 'histórico',
             icon: Icons.event_note_rounded,
             color: const Color(0xFF6D4C41),
           );
@@ -3050,8 +3442,8 @@ class _ListEditorActionsSheet extends StatelessWidget {
           );
         case _ListEditorMenuAction.editBudget:
           return _ListEditorActionMeta(
-            label: 'Definir orçamento',
-            shortLabel: 'Orçamento',
+            label: 'Definir orÃ§amento',
+            shortLabel: 'OrÃ§amento',
             icon: Icons.account_balance_wallet_rounded,
             color: const Color(0xFF3949AB),
           );
@@ -3096,19 +3488,19 @@ class _ListEditorActionsSheet extends StatelessWidget {
         padding: EdgeInsets.fromLTRB(16, 8, 16, 20 + bottomInset),
         children: [
           Text(
-            'Ações da lista',
+            'AÃ§Ãµes da lista',
             style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 4),
           Text(
-            'Tudo em um único menu, com atalhos para as ações principais.',
+            'Tudo em um Ãºnico menu, com atalhos para as aÃ§Ãµes principais.',
             style: textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 12),
           Text(
-            'Ações rápidas',
+            'AÃ§Ãµes rÃ¡pidas',
             style: textTheme.labelLarge?.copyWith(
               color: colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.w700,
@@ -3138,7 +3530,7 @@ class _ListEditorActionsSheet extends StatelessWidget {
           if (settingsActions.isNotEmpty) ...[
             const SizedBox(height: 8),
             _ListEditorActionSection(
-              title: 'Configurações',
+              title: 'ConfiguraÃ§Ãµes',
               actions: settingsActions,
               resolveMeta: resolveMeta,
               onTap: (action) => Navigator.pop(context, action),
@@ -3315,6 +3707,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   bool _marketModeEnabled = false;
   bool _summaryCollapsed = true;
   bool _didShowBudgetWarning = false;
+  bool _didShowBudgetNearLimitWarning = false;
 
   String get _searchQuery => _searchController.text.trim();
   bool get _isReadOnly => _list.isClosed;
@@ -3411,6 +3804,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     }
     _list = fromStore.deepCopy();
     _didShowBudgetWarning = _list.isOverBudget;
+    _didShowBudgetNearLimitWarning = false;
   }
 
   @override
@@ -3618,7 +4012,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     }
 
     if (addedCount == 0 && mergedCount == 0) {
-      _showSnack('Nenhum item válido foi extraído do cupom.');
+      _showSnack('Nenhum item vÃ¡lido foi extraído do cupom.');
       return;
     }
 
@@ -3655,6 +4049,96 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     final items = [..._list.items];
     items[index] = item.copyWith(quantity: max(1, item.quantity + delta));
     _updateList(_list.copyWith(items: items));
+  }
+
+  String _buildDuplicateName(String baseName) {
+    final existingNames = _list.items
+        .map((entry) => normalizeQuery(entry.name))
+        .toSet();
+    var candidate = '$baseName (copia)';
+    var counter = 2;
+    while (existingNames.contains(normalizeQuery(candidate))) {
+      candidate = '$baseName (copia $counter)';
+      counter++;
+    }
+    return candidate;
+  }
+
+  void _duplicateItem(ShoppingItem item) {
+    if (!_ensureEditable()) {
+      return;
+    }
+    final index = _list.items.indexWhere((entry) => entry.id == item.id);
+    if (index == -1) {
+      return;
+    }
+    final duplicate = item.copyWith(
+      id: uniqueId(),
+      name: _buildDuplicateName(item.name),
+      isPurchased: false,
+    );
+    final items = [..._list.items];
+    items.insert(index + 1, duplicate);
+    _updateList(
+      _list.copyWith(items: items),
+      message: '"${item.name}" duplicado.',
+    );
+  }
+
+  Future<void> _showSwipeQuickActions(ShoppingItem item) async {
+    final action = await showAppModalBottomSheet<_ListItemSwipeQuickAction>(
+      context: context,
+      showDragHandle: true,
+      useSafeArea: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.edit_rounded),
+                  title: const Text('Editar item'),
+                  onTap: () =>
+                      Navigator.pop(context, _ListItemSwipeQuickAction.edit),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.copy_rounded),
+                  title: const Text('Duplicar item'),
+                  onTap: () => Navigator.pop(
+                    context,
+                    _ListItemSwipeQuickAction.duplicate,
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.delete_rounded),
+                  title: const Text('Excluir item'),
+                  onTap: () =>
+                      Navigator.pop(context, _ListItemSwipeQuickAction.delete),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (!mounted || action == null) {
+      return;
+    }
+
+    switch (action) {
+      case _ListItemSwipeQuickAction.edit:
+        await _openItemForm(existing: item);
+        return;
+      case _ListItemSwipeQuickAction.duplicate:
+        _duplicateItem(item);
+        return;
+      case _ListItemSwipeQuickAction.delete:
+        await _deleteItem(item);
+        return;
+    }
   }
 
   Future<void> _deleteItem(ShoppingItem item) async {
@@ -3753,10 +4237,34 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   }
 
   void _maybeWarnBudgetExceeded(ShoppingListModel updatedList) {
+    if (updatedList.hasBudget) {
+      final budget = updatedList.budget ?? 0;
+      if (budget > 0) {
+        final usageRatio = (updatedList.totalValue / budget).clamp(0.0, 1.5);
+        final isNearLimit = usageRatio >= 0.85 && usageRatio < 1.0;
+        if (isNearLimit && !_didShowBudgetNearLimitWarning) {
+          _didShowBudgetNearLimitWarning = true;
+          _showSnack(
+            'OrÃ§amento em 85% ou mais. Restante: ${formatCurrency(updatedList.budgetRemaining)}.',
+          );
+          unawaited(
+            widget.store.notifyBudgetNearLimit(
+              updatedList,
+              budgetUsageRatio: usageRatio,
+            ),
+          );
+        } else if (usageRatio < 0.8) {
+          _didShowBudgetNearLimitWarning = false;
+        }
+      }
+    } else {
+      _didShowBudgetNearLimitWarning = false;
+    }
+
     if (updatedList.isOverBudget && !_didShowBudgetWarning) {
       _didShowBudgetWarning = true;
       _showSnack(
-        'Orçamento excedido em ${formatCurrency(updatedList.overBudgetAmount)}.',
+        'OrÃ§amento excedido em ${formatCurrency(updatedList.overBudgetAmount)}.',
       );
       return;
     }
@@ -3782,7 +4290,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     if (result.clear) {
       _updateList(
         _list.copyWith(clearBudget: true),
-        message: 'Orçamento removido.',
+        message: 'OrÃ§amento removido.',
       );
       return;
     }
@@ -3794,7 +4302,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
 
     _updateList(
       _list.copyWith(budget: value),
-      message: 'Orçamento atualizado.',
+      message: 'OrÃ§amento atualizado.',
     );
   }
 
@@ -3833,7 +4341,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     _updateList(
       _list.copyWith(paymentBalances: updatedBalances, budget: nextBudget),
       message:
-          'Saldos atualizados. Orçamento ajustado para ${formatCurrency(nextBudget)}.',
+          'Saldos atualizados. OrÃ§amento ajustado para ${formatCurrency(nextBudget)}.',
     );
   }
 
@@ -3914,13 +4422,14 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     setState(() {
       _list = updated.deepCopy();
       _didShowBudgetWarning = _list.isOverBudget;
+      _didShowBudgetNearLimitWarning = false;
     });
     _showSnack('Lista reaberta. Edicoes liberadas.');
   }
 
   Future<void> _finalizePurchase() async {
     if (_isReadOnly) {
-      _showSnack('A lista já está fechada. Toque em reabrir para editar.');
+      _showSnack('A lista jÃ¡ está fechada. Toque em reabrir para editar.');
       return;
     }
     if (_list.items.isEmpty) {
@@ -4022,7 +4531,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   Widget build(BuildContext context) {
     if (_notFound) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Lista não encontrada')),
+        appBar: AppBar(title: const Text('Lista Não encontrada')),
         body: Center(
           child: FilledButton(
             onPressed: () => Navigator.pop(context),
@@ -4039,7 +4548,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         title: Text(_list.name),
         actions: [
           IconButton(
-            tooltip: 'Ações da lista',
+            tooltip: 'AÃ§Ãµes da lista',
             onPressed: _showListActionsSheet,
             icon: const Icon(Icons.more_vert_rounded),
           ),
@@ -4128,16 +4637,53 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
                               delay: Duration(
                                 milliseconds: min(160, index * 24),
                               ),
-                              child: _ShoppingItemCard(
-                                item: item,
-                                readOnly: _isReadOnly,
-                                onPurchasedChanged: (value) =>
-                                    _togglePurchased(item, value),
-                                onIncrement: () => _changeQuantity(item, 1),
-                                onDecrement: () => _changeQuantity(item, -1),
-                                onEdit: () => _openItemForm(existing: item),
-                                onViewHistory: () => _showPriceHistory(item),
-                                onDelete: () => _deleteItem(item),
+                              child: Dismissible(
+                                key: ValueKey('list_item_${item.id}'),
+                                direction: _isReadOnly
+                                    ? DismissDirection.none
+                                    : DismissDirection.horizontal,
+                                confirmDismiss: (direction) async {
+                                  if (_isReadOnly) {
+                                    return false;
+                                  }
+                                  if (direction ==
+                                      DismissDirection.startToEnd) {
+                                    _togglePurchased(item, !item.isPurchased);
+                                    return false;
+                                  }
+                                  if (direction ==
+                                      DismissDirection.endToStart) {
+                                    await _showSwipeQuickActions(item);
+                                    return false;
+                                  }
+                                  return false;
+                                },
+                                background: _MarketSwipeBackground(
+                                  icon: item.isPurchased
+                                      ? Icons.undo_rounded
+                                      : Icons.check_rounded,
+                                  label: item.isPurchased
+                                      ? 'Marcar pendente'
+                                      : 'Marcar comprado',
+                                  alignRight: false,
+                                ),
+                                secondaryBackground:
+                                    const _MarketSwipeBackground(
+                                      icon: Icons.bolt_rounded,
+                                      label: 'Acoes rapidas',
+                                      alignRight: true,
+                                    ),
+                                child: _ShoppingItemCard(
+                                  item: item,
+                                  readOnly: _isReadOnly,
+                                  onPurchasedChanged: (value) =>
+                                      _togglePurchased(item, value),
+                                  onIncrement: () => _changeQuantity(item, 1),
+                                  onDecrement: () => _changeQuantity(item, -1),
+                                  onEdit: () => _openItemForm(existing: item),
+                                  onViewHistory: () => _showPriceHistory(item),
+                                  onDelete: () => _deleteItem(item),
+                                ),
                               ),
                             );
                           },
@@ -4547,7 +5093,7 @@ class _MarketModeItemCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${item.category.label} • ${formatCurrency(item.unitPrice)}',
+                        '${item.category.label} â€¢ ${formatCurrency(item.unitPrice)}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -4908,7 +5454,7 @@ class _CloudSyncStatusCard extends StatelessWidget {
             const SizedBox(height: 10),
             if (compact)
               Text(
-                '$lastSyncLabel • Listas: $listRecords • Histórico: $historyRecords • Catálogo: $catalogRecords',
+                '$lastSyncLabel â€¢ Listas: $listRecords â€¢ histórico: $historyRecords â€¢ catálogo: $catalogRecords',
                 style: textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
@@ -4937,13 +5483,13 @@ class _CloudSyncStatusCard extends StatelessWidget {
                       ),
                       Expanded(
                         child: Text(
-                          'Histórico: $historyRecords',
+                          'histórico: $historyRecords',
                           style: textTheme.bodySmall,
                         ),
                       ),
                       Expanded(
                         child: Text(
-                          'Catálogo: $catalogRecords',
+                          'catálogo: $catalogRecords',
                           style: textTheme.bodySmall,
                         ),
                       ),
@@ -5001,8 +5547,8 @@ class _CloudSyncStatusCard extends StatelessWidget {
         secondaryColor: colorScheme.errorContainer,
         title: 'Modo offline',
         description: pending > 0
-            ? 'Sem internet. $pending registros aguardam conexão.'
-            : 'Sem internet. Alterações continuam salvas no aparelho.',
+            ? 'Sem internet. $pending registros aguardam conexÃ£o.'
+            : 'Sem internet. AlteraÃ§Ãµes continuam salvas no aparelho.',
         showLoading: false,
       );
     }
@@ -5012,7 +5558,7 @@ class _CloudSyncStatusCard extends StatelessWidget {
         icon: Icons.sync_rounded,
         color: colorScheme.primary,
         secondaryColor: colorScheme.secondary,
-        title: 'Alterações pendentes',
+        title: 'AlteraÃ§Ãµes pendentes',
         description: '$pending registros aguardando sincronização.',
         showLoading: true,
       );
@@ -5548,7 +6094,7 @@ class _EmptyListsState extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             Text(
-              'Você ainda não tem listas',
+              'VocÃª ainda Não tem listas',
               style: Theme.of(
                 context,
               ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
@@ -5866,8 +6412,8 @@ class _ListSummaryPanel extends StatelessWidget {
                       _QuickSummaryActionChip(
                         icon: Icons.account_balance_wallet_rounded,
                         label: list.hasBudget
-                            ? 'Editar orçamento'
-                            : 'Definir orçamento',
+                            ? 'Editar orÃ§amento'
+                            : 'Definir orÃ§amento',
                         onTap: onBudgetTap,
                       ),
                       _QuickSummaryActionChip(
@@ -5939,7 +6485,7 @@ class _ListSummaryPanel extends StatelessWidget {
                       ),
                       _MetricTag(
                         icon: Icons.account_balance_wallet_rounded,
-                        label: 'Orçamento disponível',
+                        label: 'OrÃ§amento disponÃ­vel',
                         value: list.hasBudget
                             ? formatCurrency(max(0, list.budgetRemaining))
                             : 'Não definido',
@@ -6014,7 +6560,7 @@ class _ListSummaryPanel extends StatelessWidget {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Valor total acima do orçamento por ${formatCurrency(list.overBudgetAmount)}.',
+                                'Valor total acima do orÃ§amento por ${formatCurrency(list.overBudgetAmount)}.',
                                 style: textTheme.bodyMedium?.copyWith(
                                   color: colorScheme.onErrorContainer,
                                   fontWeight: FontWeight.w600,
@@ -6570,13 +7116,13 @@ class _ShoppingItemCard extends StatelessWidget {
                     icon: const Icon(Icons.edit_rounded),
                   ),
                 IconButton(
-                  tooltip: 'Histórico de preço',
+                  tooltip: 'histórico de preço',
                   onPressed: onViewHistory,
                   icon: const Icon(Icons.query_stats_rounded),
                 ),
                 if (!readOnly)
                   PopupMenuButton<_ShoppingItemCardAction>(
-                    tooltip: 'Mais ações',
+                    tooltip: 'Mais aÃ§Ãµes',
                     onSelected: (action) {
                       if (action == _ShoppingItemCardAction.delete) {
                         onDelete();
@@ -6621,7 +7167,7 @@ class _PriceHistorySheet extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(16, 8, 16, 20 + bottomInset),
       children: [
         Text(
-          'Histórico de preço',
+          'histórico de preço',
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
@@ -6773,7 +7319,7 @@ class _EmptyItemsState extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Adicione o primeiro produto e acompanhe subtotal e total automáticos.',
+                  'Adicione o primeiro produto e acompanhe subtotal e total automÃ¡ticos.',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),

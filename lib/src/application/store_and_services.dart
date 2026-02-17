@@ -279,6 +279,26 @@ class ShoppingListsStore extends ChangeNotifier {
     await _persistAndNotify();
   }
 
+  Future<void> notifyBudgetNearLimit(
+    ShoppingListModel list, {
+    required double budgetUsageRatio,
+  }) async {
+    await _reminderService.notifyBudgetNearLimit(
+      list,
+      budgetUsageRatio: budgetUsageRatio,
+    );
+  }
+
+  Future<void> notifySyncPending({
+    required int pendingRecords,
+    required bool hasNetworkConnection,
+  }) async {
+    await _reminderService.notifySyncPending(
+      pendingRecords: pendingRecords,
+      hasNetworkConnection: hasNetworkConnection,
+    );
+  }
+
   String exportBackupJson() {
     final payload = <String, dynamic>{
       'version': 3,
