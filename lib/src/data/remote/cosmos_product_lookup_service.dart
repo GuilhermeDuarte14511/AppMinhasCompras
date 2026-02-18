@@ -58,9 +58,10 @@ class CosmosProductLookupService implements ProductLookupService {
 
       final data = Map<String, dynamic>.from(decoded);
       final name = _pickFirstNonEmpty(<String?>[
-        data['description'] as String?,
+        _readString(data['description']),
+        _readString(data['name']),
         (data['brand'] is Map
-            ? (data['brand'] as Map)['name'] as String?
+            ? _readString((data['brand'] as Map)['name'])
             : null),
       ]);
       final category = _extractCategory(data);
@@ -87,15 +88,9 @@ class CosmosProductLookupService implements ProductLookupService {
   }
 
   double? _extractPrice(Map<String, dynamic> data) {
-    final avg = data['avg_price'];
-    if (avg is num && avg > 0) {
-      return avg.toDouble();
-    }
-    final max = data['max_price'];
-    if (max is num && max > 0) {
-      return max.toDouble();
-    }
-    return null;
+    return _coercePositiveDouble(data['avg_price']) ??
+        _coercePositiveDouble(data['max_price']) ??
+        _coercePositiveDouble(data['price']);
   }
 
   String? _pickFirstNonEmpty(List<String?> values) {
@@ -106,6 +101,51 @@ class CosmosProductLookupService implements ProductLookupService {
       }
     }
     return null;
+  }
+
+  String? _readString(dynamic value) {
+    if (value is String) {
+      final trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+    if (value is num || value is bool) {
+      return value.toString();
+    }
+    return null;
+  }
+
+  double? _coercePositiveDouble(dynamic value) {
+    if (value is num) {
+      final parsed = value.toDouble();
+      return parsed > 0 ? parsed : null;
+    }
+    if (value is String) {
+      final parsed = _parseCurrencyString(value);
+      if (parsed != null && parsed > 0) {
+        return parsed;
+      }
+    }
+    return null;
+  }
+
+  double? _parseCurrencyString(String raw) {
+    final cleaned = raw.replaceAll(RegExp(r'[^0-9,.\-]'), '').trim();
+    if (cleaned.isEmpty) {
+      return null;
+    }
+
+    String normalized = cleaned;
+    if (cleaned.contains(',') && cleaned.contains('.')) {
+      if (cleaned.lastIndexOf(',') > cleaned.lastIndexOf('.')) {
+        normalized = cleaned.replaceAll('.', '').replaceAll(',', '.');
+      } else {
+        normalized = cleaned.replaceAll(',', '');
+      }
+    } else if (cleaned.contains(',')) {
+      normalized = cleaned.replaceAll('.', '').replaceAll(',', '.');
+    }
+
+    return double.tryParse(normalized);
   }
 
   ShoppingCategory? _extractCategory(Map<String, dynamic> data) {

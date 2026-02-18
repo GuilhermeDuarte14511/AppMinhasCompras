@@ -77,7 +77,7 @@ class _OpenFactsProductLookupService implements ProductLookupService {
         String
       >{
         'fields':
-            'product_name,product_name_pt,product_name_br,generic_name,generic_name_pt,brands,categories,categories_tags,categories_hierarchy',
+            'product_name,product_name_pt,product_name_br,generic_name,generic_name_pt,generic_name_br,brands,categories,categories_tags,categories_hierarchy',
       });
 
       final response = await client
@@ -100,8 +100,14 @@ class _OpenFactsProductLookupService implements ProductLookupService {
       }
       final json = Map<String, dynamic>.from(decoded);
       final status = json['status'];
-      if (status is num && status.toInt() != 1) {
-        return null;
+      if (status is num) {
+        if (status.toInt() != 1) {
+          return null;
+        }
+      } else if (status is String) {
+        if (status.trim() != '1') {
+          return null;
+        }
       }
 
       final productRaw = json['product'];
@@ -111,11 +117,13 @@ class _OpenFactsProductLookupService implements ProductLookupService {
       final product = Map<String, dynamic>.from(productRaw);
 
       final name = _pickFirstNonEmpty(<String?>[
-        product['product_name_pt'] as String?,
-        product['product_name_br'] as String?,
-        product['product_name'] as String?,
-        product['generic_name_pt'] as String?,
-        product['generic_name'] as String?,
+        _readString(product['product_name_pt']),
+        _readString(product['product_name_br']),
+        _readString(product['product_name']),
+        _readString(product['generic_name_pt']),
+        _readString(product['generic_name_br']),
+        _readString(product['generic_name']),
+        _readString(product['brands']),
       ]);
       final category = _extractCategory(product);
 
@@ -148,6 +156,17 @@ class _OpenFactsProductLookupService implements ProductLookupService {
     return null;
   }
 
+  String? _readString(dynamic value) {
+    if (value is String) {
+      final trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+    if (value is num || value is bool) {
+      return value.toString();
+    }
+    return null;
+  }
+
   ShoppingCategory? _extractCategory(Map<String, dynamic> product) {
     final pool = StringBuffer();
 
@@ -159,6 +178,12 @@ class _OpenFactsProductLookupService implements ProductLookupService {
         if (value.trim().isNotEmpty) {
           pool.write(' ');
           pool.write(value);
+        }
+        return;
+      }
+      if (value is Map) {
+        for (final entry in value.values) {
+          append(entry);
         }
         return;
       }
