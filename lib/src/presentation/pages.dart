@@ -4,18 +4,21 @@ import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../application/ports.dart';
 import '../application/store_and_services.dart';
 import '../core/utils/format_utils.dart';
+import '../data/remote/shared_lists_repository.dart';
 import '../data/remote/firebase_user_data_repository.dart';
 import '../domain/classifications.dart';
 import '../domain/models_and_utils.dart';
 import 'dialogs_and_sheets.dart';
 import 'extensions/classification_ui_extensions.dart';
 import 'launch.dart';
+import 'shared_lists_pages.dart';
 import 'theme/app_tokens.dart';
 import 'utils/app_modal.dart';
 import 'utils/app_page_route.dart';
@@ -844,6 +847,7 @@ class DashboardPage extends StatefulWidget {
     super.key,
     required this.store,
     required this.backupService,
+    this.sharedListsRepository,
     required this.themeMode,
     required this.onThemeModeChanged,
     this.userDisplayName,
@@ -868,6 +872,7 @@ class DashboardPage extends StatefulWidget {
 
   final ShoppingListsStore store;
   final ShoppingBackupService backupService;
+  final SharedListsRepository? sharedListsRepository;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
   final String? userDisplayName;
@@ -926,12 +931,18 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _openMyLists() async {
+    final sharedRepository = widget.sharedListsRepository;
+    final currentUserUid = sharedRepository == null
+        ? null
+        : FirebaseAuth.instance.currentUser?.uid;
     await Navigator.push<void>(
       context,
       buildAppPageRoute(
         builder: (_) => MyListsPage(
           store: widget.store,
           backupService: widget.backupService,
+          sharedListsRepository: sharedRepository,
+          currentUserUid: currentUserUid,
         ),
       ),
     );
@@ -1006,7 +1017,11 @@ class _DashboardPageState extends State<DashboardPage> {
       context,
       buildAppPageRoute(
         builder: (_) =>
-            ShoppingListEditorPage(store: widget.store, listId: created.id),
+            ShoppingListEditorPage(
+              store: widget.store,
+              listId: created.id,
+              sharedListsRepository: widget.sharedListsRepository,
+            ),
       ),
     );
   }
@@ -1029,6 +1044,83 @@ class _DashboardPageState extends State<DashboardPage> {
     await _createNewList(basedOn: source);
   }
 
+  Future<void> _openSharedListEditor(String listId) async {
+    final repository = widget.sharedListsRepository;
+    if (repository == null) {
+      _showSnack('Compartilhamento indisponivel neste modo.');
+      return;
+    }
+    await Navigator.push<void>(
+      context,
+      buildAppPageRoute(
+        builder: (_) => SharedListEditorPage(
+          repository: repository,
+          store: widget.store,
+          listId: listId,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _joinSharedListByCode() async {
+    final repository = widget.sharedListsRepository;
+    final uid = FirebaseAuth.instance.currentUser?.uid.trim() ?? '';
+    if (repository == null) {
+      _showSnack('Compartilhamento indisponivel neste modo.');
+      return;
+    }
+    if (uid.isEmpty) {
+      _showSnack('Faca login para entrar em lista compartilhada.');
+      return;
+    }
+    final controller = TextEditingController();
+    final rawCode = await showAppDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Entrar na lista com codigo'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.characters,
+          textInputAction: TextInputAction.done,
+          decoration: const InputDecoration(
+            labelText: 'Codigo',
+            hintText: 'Ex.: A1B2C3D4',
+            prefixIcon: Icon(Icons.qr_code_rounded),
+          ),
+          onSubmitted: (value) => Navigator.pop(context, value.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Entrar'),
+          ),
+        ],
+      ),
+    );
+    final inviteCode = (rawCode ?? '').trim();
+    if (!mounted || inviteCode.isEmpty) {
+      return;
+    }
+    try {
+      final listId = await repository.joinByCode(inviteCode: inviteCode, uid: uid);
+      if (!mounted) {
+        return;
+      }
+      _showSnack('Entrada confirmada. Abrindo lista compartilhada...');
+      await _openSharedListEditor(listId);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showSnack('Nao foi possivel entrar com o codigo: $error');
+    }
+  }
+
   void _showSnack(String message) {
     AppToast.show(
       context,
@@ -1046,6 +1138,11 @@ class _DashboardPageState extends State<DashboardPage> {
       0,
       (sum, list) => sum + list.totalValue,
     );
+    final sharedRepository = widget.sharedListsRepository;
+    final currentUid = sharedRepository == null
+        ? ''
+        : (FirebaseAuth.instance.currentUser?.uid.trim() ?? '');
+    final canUseSharing = sharedRepository != null && currentUid.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -1119,6 +1216,20 @@ class _DashboardPageState extends State<DashboardPage> {
                   onTap: _openMyLists,
                 ),
               ),
+              if (canUseSharing) ...[
+                const SizedBox(height: 10),
+                _EntryAnimation(
+                  key: const ValueKey('dash_action_join_code'),
+                  delay: const Duration(milliseconds: 84),
+                  child: _ActionTile(
+                    title: 'Entrar na lista com codigo',
+                    subtitle:
+                        'Digite o codigo compartilhado para entrar em uma lista.',
+                    icon: Icons.group_add_rounded,
+                    onTap: _joinSharedListByCode,
+                  ),
+                ),
+              ],
               const SizedBox(height: 10),
               _EntryAnimation(
                 key: const ValueKey('dash_action_history'),
@@ -1189,6 +1300,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               builder: (_) => ShoppingListEditorPage(
                                 store: widget.store,
                                 listId: list.id,
+                                sharedListsRepository: widget.sharedListsRepository,
                               ),
                             ),
                           );
@@ -1197,6 +1309,74 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                   );
                 }),
+              if (canUseSharing) ...[
+                const SizedBox(height: 14),
+                _EntryAnimation(
+                  key: const ValueKey('dash_shared_title'),
+                  delay: const Duration(milliseconds: 210),
+                  child: Text(
+                    'Listas compartilhadas',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                StreamBuilder<List<SharedShoppingListSummary>>(
+                  stream: sharedRepository.watchSharedLists(currentUid),
+                  builder: (context, sharedSnapshot) {
+                    if (sharedSnapshot.connectionState == ConnectionState.waiting &&
+                        !sharedSnapshot.hasData) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 18),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+                    final sharedLists =
+                        sharedSnapshot.data ?? const <SharedShoppingListSummary>[];
+                    if (sharedLists.isEmpty) {
+                      return Card(
+                        elevation: 0,
+                        child: ListTile(
+                          leading: const Icon(Icons.group_off_rounded),
+                          title: const Text('Nenhuma lista compartilhada'),
+                          subtitle: const Text(
+                            'Use "Entrar na lista com codigo" ou compartilhe uma lista sua.',
+                          ),
+                          trailing: TextButton(
+                            onPressed: _joinSharedListByCode,
+                            child: const Text('Entrar'),
+                          ),
+                        ),
+                      );
+                    }
+                    return Column(
+                      children: sharedLists.take(5).map((shared) {
+                        final isOwner = shared.isOwner(currentUid);
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Card(
+                            elevation: 0,
+                            child: ListTile(
+                              onTap: () => _openSharedListEditor(shared.id),
+                              leading: Icon(
+                                isOwner
+                                    ? Icons.verified_user_rounded
+                                    : Icons.group_rounded,
+                              ),
+                              title: Text(shared.name),
+                              subtitle: Text(
+                                '${shared.memberCount} membro(s) - ${isOwner ? 'Dono' : 'Membro'}',
+                              ),
+                              trailing: const Icon(Icons.chevron_right_rounded),
+                            ),
+                          ),
+                        );
+                      }).toList(growable: false),
+                    );
+                  },
+                ),
+              ],
             ],
           ),
         ),
@@ -2246,10 +2426,14 @@ class MyListsPage extends StatefulWidget {
     super.key,
     required this.store,
     required this.backupService,
+    this.sharedListsRepository,
+    this.currentUserUid,
   });
 
   final ShoppingListsStore store;
   final ShoppingBackupService backupService;
+  final SharedListsRepository? sharedListsRepository;
+  final String? currentUserUid;
 
   @override
   State<MyListsPage> createState() => _MyListsPageState();
@@ -2272,8 +2456,29 @@ class _MyListsPageState extends State<MyListsPage> {
     await Navigator.push<void>(
       context,
       buildAppPageRoute(
-        builder: (_) =>
-            ShoppingListEditorPage(store: widget.store, listId: list.id),
+        builder: (_) => ShoppingListEditorPage(
+          store: widget.store,
+          listId: list.id,
+          sharedListsRepository: widget.sharedListsRepository,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openSharedList(SharedShoppingListSummary shared) async {
+    final repository = widget.sharedListsRepository;
+    if (repository == null) {
+      _showSnack('Compartilhamento indisponivel neste modo.');
+      return;
+    }
+    await Navigator.push<void>(
+      context,
+      buildAppPageRoute(
+        builder: (_) => SharedListEditorPage(
+          repository: repository,
+          store: widget.store,
+          listId: shared.id,
+        ),
       ),
     );
   }
@@ -2592,6 +2797,30 @@ class _MyListsPageState extends State<MyListsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final repository = widget.sharedListsRepository;
+    final uid = widget.currentUserUid?.trim() ?? '';
+    if (repository == null || uid.isEmpty) {
+      return _buildWithSharedSourceMap(const <String, SharedShoppingListSummary>{});
+    }
+    return StreamBuilder<List<SharedShoppingListSummary>>(
+      stream: repository.watchOwnedSharedLists(uid),
+      builder: (context, snapshot) {
+        final sharedBySource = <String, SharedShoppingListSummary>{};
+        for (final entry in snapshot.data ?? const <SharedShoppingListSummary>[]) {
+          final sourceId = entry.sourceLocalListId;
+          if (sourceId == null || sourceId.isEmpty) {
+            continue;
+          }
+          sharedBySource[sourceId] = entry;
+        }
+        return _buildWithSharedSourceMap(sharedBySource);
+      },
+    );
+  }
+
+  Widget _buildWithSharedSourceMap(
+    Map<String, SharedShoppingListSummary> sharedBySource,
+  ) {
     return AnimatedBuilder(
       animation: widget.store,
       builder: (context, _) {
@@ -2692,6 +2921,7 @@ class _MyListsPageState extends State<MyListsPage> {
                   itemCount: lists.length,
                   itemBuilder: (context, index) {
                     final list = lists[index];
+                    final sharedSummary = sharedBySource[list.id];
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _EntryAnimation(
@@ -2699,6 +2929,8 @@ class _MyListsPageState extends State<MyListsPage> {
                         delay: Duration(milliseconds: min(140, index * 20)),
                         child: _MyListCard(
                           list: list,
+                          sharedSummary: sharedSummary,
+                          currentUserUid: widget.currentUserUid,
                           selectionMode: _selectionMode,
                           isSelected: _selectedListIds.contains(list.id),
                           onToggleSelection: () =>
@@ -2709,8 +2941,15 @@ class _MyListsPageState extends State<MyListsPage> {
                               _toggleListSelection(list.id);
                               return;
                             }
+                            if (sharedSummary != null) {
+                              _openSharedList(sharedSummary);
+                              return;
+                            }
                             _openList(list);
                           },
+                          onOpenShared: sharedSummary == null
+                              ? null
+                              : () => _openSharedList(sharedSummary),
                           onReopen: () => _reopenList(list),
                           onCreateFromThis: () => _createFromSource(list),
                           onDelete: () => _deleteList(list),
@@ -3454,6 +3693,7 @@ enum _MyListsMenuAction {
 
 enum _ListEditorMenuAction {
   reopenList,
+  shareList,
   importFiscalReceipt,
   finalizePurchase,
   openMarketMode,
@@ -3504,6 +3744,7 @@ class _ListEditorActionsSheet extends StatelessWidget {
       ],
       if (isReadOnly) _ListEditorMenuAction.reopenList,
       if (isReadOnly) _ListEditorMenuAction.openCatalog,
+      _ListEditorMenuAction.shareList,
       _ListEditorMenuAction.viewHistory,
     ];
     final settingsActions = isReadOnly
@@ -3524,6 +3765,13 @@ class _ListEditorActionsSheet extends StatelessWidget {
             shortLabel: 'Reabrir',
             icon: Icons.lock_open_rounded,
             color: const Color(0xFF1E88E5),
+          );
+        case _ListEditorMenuAction.shareList:
+          return _ListEditorActionMeta(
+            label: 'Gerar codigo de compartilhamento',
+            shortLabel: 'Compartilhar',
+            icon: Icons.qr_code_rounded,
+            color: const Color(0xFF1565C0),
           );
         case _ListEditorMenuAction.importFiscalReceipt:
           return _ListEditorActionMeta(
@@ -3818,10 +4066,12 @@ class ShoppingListEditorPage extends StatefulWidget {
     super.key,
     required this.store,
     required this.listId,
+    this.sharedListsRepository,
   });
 
   final ShoppingListsStore store;
   final String listId;
+  final SharedListsRepository? sharedListsRepository;
 
   @override
   State<ShoppingListEditorPage> createState() => _ShoppingListEditorPageState();
@@ -4502,6 +4752,98 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     );
   }
 
+  Future<void> _shareListWithCode() async {
+    final repository = widget.sharedListsRepository;
+    if (repository == null) {
+      _showSnack('Compartilhamento indisponivel neste modo.');
+      return;
+    }
+    final uid = FirebaseAuth.instance.currentUser?.uid.trim() ?? '';
+    if (uid.isEmpty) {
+      _showSnack('Faca login para compartilhar a lista.');
+      return;
+    }
+    try {
+      final sharedList = await repository.createOrGetSharedListFromLocal(
+        localList: _list,
+        ownerUid: uid,
+      );
+      var code = sharedList.inviteCode;
+      if (code == null || code.isEmpty) {
+        code = await repository.generateInviteCode(
+          listId: sharedList.id,
+          requesterUid: uid,
+        );
+      }
+      if (!mounted) {
+        return;
+      }
+      final action = await showAppDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Codigo gerado'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Compartilhe este codigo para convidar outra pessoa:'),
+              const SizedBox(height: 10),
+              SelectableText(
+                code ?? '',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.1,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Fechar'),
+            ),
+            OutlinedButton(
+              onPressed: () => Navigator.pop(context, 'copy'),
+              child: const Text('Copiar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, 'open'),
+              child: const Text('Abrir lista compartilhada'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) {
+        return;
+      }
+      if (action == 'copy') {
+        await Clipboard.setData(ClipboardData(text: code));
+        if (!mounted) {
+          return;
+        }
+        _showSnack('Codigo copiado.');
+        return;
+      }
+      if (action == 'open') {
+        await Navigator.push<void>(
+          context,
+          buildAppPageRoute(
+            builder: (_) => SharedListEditorPage(
+              repository: repository,
+              store: widget.store,
+              listId: sharedList.id,
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showSnack('Nao foi possivel compartilhar a lista: $error');
+    }
+  }
+
   Future<void> _openMarketShoppingMode() async {
     if (!_ensureEditable()) {
       return;
@@ -4597,6 +4939,9 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     switch (action) {
       case _ListEditorMenuAction.reopenList:
         _reopenListForEditing();
+        return;
+      case _ListEditorMenuAction.shareList:
+        _shareListWithCode();
         return;
       case _ListEditorMenuAction.importFiscalReceipt:
         _importFromFiscalReceipt();
@@ -6119,31 +6464,72 @@ class _RecentListCard extends StatelessWidget {
 }
 
 class _PillLabel extends StatelessWidget {
-  const _PillLabel({required this.icon, required this.text});
+  const _PillLabel({
+    required this.icon,
+    required this.text,
+    this.backgroundColor,
+    this.foregroundColor,
+    this.onTap,
+    this.tooltip,
+  });
 
   final IconData icon;
   final String text;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
+  final VoidCallback? onTap;
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(14),
+    final bg = backgroundColor ??
+        colorScheme.surfaceContainerHighest.withValues(alpha: 0.7);
+    final fg = foregroundColor ?? colorScheme.onSurface;
+    final label = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: fg),
+          const SizedBox(width: 5),
+          Text(
+            text,
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(color: fg, fontWeight: FontWeight.w700),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16),
-            const SizedBox(width: 5),
-            Text(text),
-          ],
+    );
+
+    if (onTap == null) {
+      return DecoratedBox(
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(14)),
+        child: label,
+      );
+    }
+
+    final interactiveChip = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Ink(
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: label,
         ),
       ),
+    );
+    if (tooltip == null || tooltip!.isEmpty) {
+      return interactiveChip;
+    }
+    return Tooltip(
+      message: tooltip!,
+      child: interactiveChip,
     );
   }
 }
@@ -6253,22 +6639,28 @@ class _EmptyListsState extends StatelessWidget {
 class _MyListCard extends StatelessWidget {
   const _MyListCard({
     required this.list,
+    this.sharedSummary,
+    this.currentUserUid,
     required this.selectionMode,
     required this.isSelected,
     required this.onToggleSelection,
     required this.onLongPress,
     required this.onOpen,
+    this.onOpenShared,
     required this.onReopen,
     required this.onCreateFromThis,
     required this.onDelete,
   });
 
   final ShoppingListModel list;
+  final SharedShoppingListSummary? sharedSummary;
+  final String? currentUserUid;
   final bool selectionMode;
   final bool isSelected;
   final VoidCallback onToggleSelection;
   final VoidCallback onLongPress;
   final VoidCallback onOpen;
+  final VoidCallback? onOpenShared;
   final VoidCallback onReopen;
   final VoidCallback onCreateFromThis;
   final VoidCallback onDelete;
@@ -6276,16 +6668,34 @@ class _MyListCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isShared = sharedSummary != null;
+    final resolvedUid = currentUserUid?.trim() ?? '';
+    final isSharedOwner = isShared && sharedSummary!.isOwner(resolvedUid);
+    final sharedRoleLabel = isSharedOwner ? 'Dono' : 'Membro';
+    final sharedRoleIcon = isSharedOwner
+        ? Icons.verified_user_rounded
+        : Icons.people_alt_rounded;
+    final sharedLabelBg = colorScheme.tertiaryContainer.withValues(alpha: 0.72);
+    final sharedLabelFg = colorScheme.onTertiaryContainer;
+    final sharedMemberLabel =
+        '${sharedSummary?.memberCount ?? 0} membro${(sharedSummary?.memberCount ?? 0) == 1 ? '' : 's'}';
     final isSelectedState = selectionMode && isSelected;
     final backgroundColor = isSelectedState
         ? colorScheme.primaryContainer.withValues(alpha: 0.55)
         : list.isClosed
         ? colorScheme.surfaceContainerLow.withValues(alpha: 0.85)
+        : isShared
+        ? Color.alphaBlend(
+            colorScheme.tertiaryContainer.withValues(alpha: 0.32),
+            colorScheme.surface,
+          )
         : colorScheme.surface;
     final borderColor = isSelectedState
         ? colorScheme.primary.withValues(alpha: 0.55)
         : list.isClosed
         ? colorScheme.outline.withValues(alpha: 0.3)
+        : isShared
+        ? colorScheme.tertiary.withValues(alpha: 0.42)
         : colorScheme.outlineVariant.withValues(alpha: 0.24);
 
     return Card(
@@ -6334,6 +6744,39 @@ class _MyListCard extends StatelessWidget {
                     ),
                   ],
                 ),
+                if (sharedSummary != null) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _PillLabel(
+                        icon: Icons.group_rounded,
+                        text: 'Compartilhada',
+                        backgroundColor: sharedLabelBg,
+                        foregroundColor: sharedLabelFg,
+                        onTap: onOpenShared,
+                        tooltip: 'Abrir compartilhamento',
+                      ),
+                      _PillLabel(
+                        icon: sharedRoleIcon,
+                        text: sharedRoleLabel,
+                        backgroundColor: sharedLabelBg,
+                        foregroundColor: sharedLabelFg,
+                        onTap: onOpenShared,
+                        tooltip: 'Abrir compartilhamento',
+                      ),
+                      _PillLabel(
+                        icon: Icons.group_add_rounded,
+                        text: sharedMemberLabel,
+                        backgroundColor: sharedLabelBg,
+                        foregroundColor: sharedLabelFg,
+                        onTap: onOpenShared,
+                        tooltip: 'Abrir compartilhamento',
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 10),
                 Row(
                   children: [

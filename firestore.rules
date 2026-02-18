@@ -226,6 +226,172 @@ service cloud.firestore {
         isDateLike(d.updatedAt);
     }
 
+    function isSharedListMemberFromData(data) {
+      return signedIn() &&
+        data.memberUids is list &&
+        request.auth.uid in data.memberUids;
+    }
+
+    function sharedListExists(listId) {
+      return exists(/databases/$(database)/documents/shared_lists/$(listId));
+    }
+
+    function sharedListData(listId) {
+      return get(/databases/$(database)/documents/shared_lists/$(listId)).data;
+    }
+
+    function isSharedListMember(listId) {
+      return signedIn() &&
+        sharedListExists(listId) &&
+        request.auth.uid in sharedListData(listId).memberUids;
+    }
+
+    function validInviteCode(value) {
+      return value == null || isString(value, 6, 16);
+    }
+
+    function validSharedListCommon(listId, d) {
+      return d.keys().hasOnly([
+          'id',
+          'name',
+          'ownerUid',
+          'memberUids',
+          'createdAt',
+          'updatedAt',
+          'inviteCode',
+          'sourceLocalListId'
+        ]) &&
+        d.keys().hasAll([
+          'id',
+          'name',
+          'ownerUid',
+          'memberUids',
+          'createdAt',
+          'updatedAt',
+          'inviteCode'
+        ]) &&
+        d.id == listId &&
+        isString(d.name, 1, 120) &&
+        isString(d.ownerUid, 1, 200) &&
+        d.memberUids is list &&
+        d.memberUids.size() >= 1 &&
+        d.memberUids.size() <= 30 &&
+        isDateLike(d.createdAt) &&
+        isDateLike(d.updatedAt) &&
+        validInviteCode(d.inviteCode) &&
+        (
+          !d.keys().hasAny(['sourceLocalListId']) ||
+          d.sourceLocalListId == null ||
+          isString(d.sourceLocalListId, 1, 120)
+        );
+    }
+
+    function validSharedListCreate(listId) {
+      let d = request.resource.data;
+      return validSharedListCommon(listId, d) &&
+        d.ownerUid == request.auth.uid &&
+        request.auth.uid in d.memberUids;
+    }
+
+    function validSharedListUpdate(listId) {
+      let d = request.resource.data;
+      let previous = resource.data;
+      return validSharedListCommon(listId, d) &&
+        isSharedListMemberFromData(d) &&
+        d.ownerUid == previous.ownerUid &&
+        d.createdAt == previous.createdAt &&
+        (
+          previous.ownerUid == request.auth.uid ||
+          (
+            d.memberUids == previous.memberUids &&
+            d.inviteCode == previous.inviteCode &&
+            d.sourceLocalListId == previous.sourceLocalListId
+          )
+        );
+    }
+
+    function validSharedItemCommon(itemId, d) {
+      return d.keys().hasOnly([
+          'id',
+          'name',
+          'quantity',
+          'unitPrice',
+          'isPurchased',
+          'updatedBy',
+          'updatedAt',
+          'createdAt',
+          'category',
+          'barcode'
+        ]) &&
+        d.keys().hasAll([
+          'id',
+          'name',
+          'quantity',
+          'unitPrice',
+          'isPurchased',
+          'updatedBy',
+          'updatedAt',
+          'createdAt',
+          'category',
+          'barcode'
+        ]) &&
+        d.id == itemId &&
+        isString(d.name, 1, 180) &&
+        d.quantity is int &&
+        d.quantity >= 1 &&
+        d.quantity <= 9999 &&
+        isNumber(d.unitPrice) &&
+        d.unitPrice >= 0 &&
+        d.isPurchased is bool &&
+        isString(d.updatedBy, 1, 200) &&
+        isDateLike(d.updatedAt) &&
+        isDateLike(d.createdAt) &&
+        validCategory(d.category) &&
+        (d.barcode == null || isString(d.barcode, 8, 64));
+    }
+
+    function validSharedItemCreate(itemId) {
+      let d = request.resource.data;
+      return validSharedItemCommon(itemId, d);
+    }
+
+    function validSharedItemUpdate(itemId) {
+      let d = request.resource.data;
+      return validSharedItemCommon(itemId, d) &&
+        d.createdAt == resource.data.createdAt;
+    }
+
+    function validInviteDoc(code, d) {
+      return d.keys().hasOnly([
+          'code',
+          'listId',
+          'ownerUid',
+          'active',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        d.keys().hasAll([
+          'code',
+          'listId',
+          'ownerUid',
+          'active',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        d.code == code &&
+        isString(d.code, 6, 16) &&
+        isString(d.listId, 1, 120) &&
+        isString(d.ownerUid, 1, 200) &&
+        d.active is bool &&
+        isDateLike(d.createdAt) &&
+        isDateLike(d.updatedAt);
+    }
+
+    function inviteMatchesOwnedList(listId, ownerUid) {
+      return sharedListExists(listId) &&
+        sharedListData(listId).ownerUid == ownerUid;
+    }
+
     match /users/{uid} {
       allow read: if isOwner(uid);
       allow create: if isOwner(uid) && validUserRootCreate();
@@ -255,6 +421,49 @@ service cloud.firestore {
         allow create, update: if isOwner(uid) && validSettingsDoc(docId);
         allow delete: if isOwner(uid);
       }
+    }
+
+    match /shared_lists/{listId} {
+      allow read: if isSharedListMemberFromData(resource.data);
+      allow create: if signedIn() && validSharedListCreate(listId);
+      allow update: if isSharedListMemberFromData(resource.data) &&
+        validSharedListUpdate(listId);
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+
+      match /items/{itemId} {
+        allow read: if isSharedListMember(listId);
+        allow create: if isSharedListMember(listId) &&
+          validSharedItemCreate(itemId);
+        allow update: if isSharedListMember(listId) &&
+          validSharedItemUpdate(itemId);
+        allow delete: if isSharedListMember(listId);
+      }
+    }
+
+    match /list_invites/{code} {
+      allow get: if signedIn() && resource.data.active == true;
+      allow list: if false;
+      allow create: if signedIn() &&
+        validInviteDoc(code, request.resource.data) &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        inviteMatchesOwnedList(
+          request.resource.data.listId,
+          request.auth.uid,
+        );
+      allow update: if signedIn() &&
+        validInviteDoc(code, request.resource.data) &&
+        resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.ownerUid == resource.data.ownerUid &&
+        request.resource.data.listId == resource.data.listId &&
+        request.resource.data.code == resource.data.code &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        inviteMatchesOwnedList(
+          request.resource.data.listId,
+          request.auth.uid,
+        );
+      allow delete: if signedIn() &&
+        resource.data.ownerUid == request.auth.uid &&
+        inviteMatchesOwnedList(resource.data.listId, request.auth.uid);
     }
 
     match /{document=**} {

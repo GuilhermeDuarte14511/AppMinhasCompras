@@ -279,7 +279,15 @@ Future<void> _addItem(
   required String quantity,
   required String unitValueDigits,
 }) async {
-  await tester.tap(find.byType(FloatingActionButton));
+  final addItemFab = find.widgetWithText(
+    FloatingActionButton,
+    'Adicionar item',
+  );
+  if (addItemFab.evaluate().isNotEmpty) {
+    await tester.tap(addItemFab.first);
+  } else {
+    await tester.tap(find.byIcon(Icons.add_shopping_cart_rounded).first);
+  }
   await tester.pumpAndSettle();
 
   await tester.enterText(find.widgetWithText(TextFormField, 'Item'), name);

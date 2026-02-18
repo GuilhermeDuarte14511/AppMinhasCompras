@@ -13,6 +13,7 @@ import '../data/local/storages.dart';
 import '../data/remote/cosmos_product_lookup_service.dart';
 import '../data/remote/firebase_user_data_repository.dart';
 import '../data/remote/open_food_facts_product_lookup_service.dart';
+import '../data/remote/shared_lists_repository.dart';
 import '../data/repositories/product_catalog_repository.dart';
 import '../data/services/backup_service.dart';
 import '../data/services/home_widget_service.dart';
@@ -83,6 +84,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   late final ShoppingBackupService _backupService;
   late final Future<void> _launchDelay;
   FirestoreUserDataRepository? _cloudRepository;
+  SharedListsRepository? _sharedListsRepository;
 
   StreamSubscription<User?>? _authSubscription;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
@@ -144,6 +146,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     _launchDelay = Future<void>.delayed(launchDuration);
     if (widget._storage == null) {
       _cloudRepository = FirestoreUserDataRepository();
+      _sharedListsRepository = SharedListsRepository();
       unawaited(_restoreThemeMode());
       unawaited(_startConnectivityTracking());
       _store.addListener(_handleStoreChanged);
@@ -1322,6 +1325,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
                   child: DashboardPage(
                     store: _store,
                     backupService: _backupService,
+                    sharedListsRepository: _sharedListsRepository,
                     themeMode: _themeMode,
                     onThemeModeChanged: _setThemeMode,
                     userDisplayName: user.displayName,
@@ -1352,6 +1356,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
                 child: DashboardPage(
                   store: _store,
                   backupService: _backupService,
+                  sharedListsRepository: _sharedListsRepository,
                   themeMode: _themeMode,
                   onThemeModeChanged: _setThemeMode,
                   userDisplayName: null,

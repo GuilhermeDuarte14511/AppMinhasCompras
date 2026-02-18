@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -1870,7 +1870,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                           _currencyFormatter,
                         ],
                         decoration: const InputDecoration(
-                          labelText: 'Valor unitário',
+                          labelText: 'Valor unitario',
                           prefixIcon: Icon(Icons.monetization_on_rounded),
                           hintText: 'R\$ 0,00',
                         ),

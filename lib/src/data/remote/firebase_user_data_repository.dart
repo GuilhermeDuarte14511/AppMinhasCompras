@@ -162,7 +162,11 @@ class FirestoreUserDataSnapshot {
 class FirestoreUserDataRepository {
   FirestoreUserDataRepository({FirebaseFirestore? firestore})
     : _defaultFirestore = FirebaseFirestore.instanceFor(app: Firebase.app()),
-      _activeFirestore = firestore ?? _buildPreferredFirestore();
+      _activeFirestore = firestore ?? _buildPreferredFirestore(),
+      _allowDefaultFallback = firestore == null,
+      _usingDefaultFirestore = firestore == null
+          ? _resolveConfiguredDatabaseId() == '(default)'
+          : false;
 
   static const String _firestoreDatabaseIdFromDefine = String.fromEnvironment(
     'FIRESTORE_DATABASE_ID',
@@ -177,7 +181,9 @@ class FirestoreUserDataRepository {
   };
 
   final FirebaseFirestore _defaultFirestore;
+  final bool _allowDefaultFallback;
   FirebaseFirestore _activeFirestore;
+  bool _usingDefaultFirestore;
 
   static FirebaseFirestore _buildPreferredFirestore() {
     final configuredId = _resolveConfiguredDatabaseId();
@@ -486,12 +492,24 @@ class FirestoreUserDataRepository {
     try {
       return await action(_activeFirestore);
     } on FirebaseException catch (error) {
-      final usingDefault = _activeFirestore.databaseId == '(default)';
-      if (usingDefault || !_shouldFallbackToDefaultDatabase(error)) {
+      if (_usingDefaultFirestore ||
+          !_allowDefaultFallback ||
+          !_shouldFallbackToDefaultDatabase(error)) {
         rethrow;
       }
-      _activeFirestore = _defaultFirestore;
-      return action(_activeFirestore);
+      _activateDefaultFirestoreFallback();
+      return await action(_activeFirestore);
+    } on LateInitializationError {
+      if (_usingDefaultFirestore || !_allowDefaultFallback) {
+        rethrow;
+      }
+      _activateDefaultFirestoreFallback();
+      return await action(_activeFirestore);
     }
+  }
+
+  void _activateDefaultFirestoreFallback() {
+    _activeFirestore = _defaultFirestore;
+    _usingDefaultFirestore = true;
   }
 }
