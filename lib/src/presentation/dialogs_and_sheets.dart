@@ -1128,14 +1128,14 @@ class _FiscalReceiptImportSheetState extends State<_FiscalReceiptImportSheet> {
                       ? null
                       : () => _importFromImage(ImageSource.gallery),
                   icon: const Icon(Icons.photo_library_rounded),
-                  label: const Text('OCR galeria'),
+                  label: const Text('OCR Galeria'),
                 ),
                 FilledButton.tonalIcon(
                   onPressed: _isExtractingFromImage
                       ? null
                       : () => _importFromImage(ImageSource.camera),
                   icon: const Icon(Icons.photo_camera_rounded),
-                  label: const Text('OCR camera'),
+                  label: const Text('OCR Câmera'),
                 ),
                 if (hasInput)
                   OutlinedButton.icon(
@@ -1506,7 +1506,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
         _isLookingUpCatalog = false;
         final latestPrice = result.unitPrice;
         _lookupFeedback = latestPrice != null && latestPrice > 0
-            ? 'Sugestão local aplicada com último preçoo salvo (${formatCurrency(latestPrice)}).'
+            ? 'Sugestão local aplicada com último preço salvo (${formatCurrency(latestPrice)}).'
             : 'Sugestão local aplicada a partir do catálogo.';
       });
     } catch (_) {
@@ -1557,7 +1557,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     };
     final latestPriceMessage =
         (result.unitPrice != null && result.unitPrice! > 0)
-        ? ' Último preçoo salvo: ${formatCurrency(result.unitPrice!)}.'
+        ? ' Último preço salvo: ${formatCurrency(result.unitPrice!)}.'
         : '';
     setState(() {
       _isLookingUpBarcode = false;
@@ -1834,7 +1834,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                       value ?? '',
                     );
                     if (parsed == null || parsed <= 0) {
-                      return 'Invalido';
+                      return 'Inválido';
                     }
                     return null;
                   },
@@ -1854,7 +1854,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                         validator: (value) {
                           final parsed = int.tryParse((value ?? '').trim());
                           if (parsed == null || parsed < 1) {
-                            return 'Invalida';
+                            return 'Inválida';
                           }
                           return null;
                         },
@@ -1870,7 +1870,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                           _currencyFormatter,
                         ],
                         decoration: const InputDecoration(
-                          labelText: 'Valor unitario',
+                          labelText: 'Valor unitário',
                           prefixIcon: Icon(Icons.monetization_on_rounded),
                           hintText: 'R\$ 0,00',
                         ),
@@ -1879,7 +1879,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                             value ?? '',
                           );
                           if (parsed == null || parsed <= 0) {
-                            return 'Invalido';
+                            return 'Inválido';
                           }
                           return null;
                         },
@@ -1931,7 +1931,7 @@ class _CatalogPriceHint extends StatelessWidget {
         ? null
         : ((latestPrice - previousPrice) / previousPrice) * 100;
     final variationText = variation == null
-        ? 'Primeiro preçoo salvo no catálogo.'
+        ? 'Primeiro preço salvo no catálogo.'
         : variation > 0
         ? 'Subiu ${variation.abs().toStringAsFixed(1)}% em relação ao registro anterior.'
         : variation < 0

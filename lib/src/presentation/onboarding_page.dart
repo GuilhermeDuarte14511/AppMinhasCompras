@@ -304,7 +304,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                 const SizedBox(height: 6),
                 Text(
                   _isLastPage
-                      ? 'Você pode revisar este onboarding em Opções.'
+                      ? 'Você pode revisar este Onboarding em Opções.'
                       : 'Dica: você pode pular agora e revisar depois em Opções.',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,

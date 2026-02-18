@@ -72,11 +72,11 @@ extension ShoppingCategoryMetadata on ShoppingCategory {
       case ShoppingCategory.seafood:
         return 'Peixes e frutos do mar';
       case ShoppingCategory.dairy:
-        return 'Laticinios';
+        return 'Laticínios';
       case ShoppingCategory.eggs:
         return 'Ovos';
       case ShoppingCategory.grainsAndPasta:
-        return 'Graos e massas';
+        return 'Grãos e massas';
       case ShoppingCategory.frozen:
         return 'Congelados';
       case ShoppingCategory.snacks:
@@ -94,7 +94,7 @@ extension ShoppingCategoryMetadata on ShoppingCategory {
       case ShoppingCategory.personalCare:
         return 'Higiene';
       case ShoppingCategory.baby:
-        return 'Bebe';
+        return 'Bebê';
       case ShoppingCategory.pet:
         return 'Pet';
       case ShoppingCategory.other:

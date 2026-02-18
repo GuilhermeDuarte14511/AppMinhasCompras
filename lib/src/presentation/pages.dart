@@ -108,7 +108,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
   String _buildResolvedName({String? displayName, String? email}) {
     final fallbackName = (email != null && email.contains('@'))
         ? email.split('@').first
-        : 'Usuario';
+        : 'Usuário';
     return (displayName != null && displayName.isNotEmpty)
         ? displayName
         : fallbackName;
@@ -381,7 +381,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.auto_awesome_rounded),
-                  title: const Text('Rever onboarding'),
+                  title: const Text('Rever Onboarding'),
                   subtitle: const Text(
                     'Veja novamente o tour inicial com as principais dicas.',
                   ),
@@ -675,7 +675,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
         : trimmedName.substring(0, 1).toUpperCase();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Meus dados')),
+      appBar: AppBar(title: const Text('Meus Dados')),
       body: AppGradientScene(
         child: SafeArea(
           child: ListView(
@@ -790,10 +790,10 @@ class _MyProfilePageState extends State<MyProfilePage> {
                           validator: (value) {
                             final trimmed = value?.trim() ?? '';
                             if (trimmed.length < 2) {
-                              return 'Informe um nome valido.';
+                              return 'Informe um nome válido.';
                             }
                             if (trimmed.length > 80) {
-                              return 'Nome muito longo (maximo 80).';
+                              return 'Nome muito longo (máximo 80).';
                             }
                             return null;
                           },
@@ -822,7 +822,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
                                   )
                                 : const Icon(Icons.save_rounded),
                             label: Text(
-                              _isSaving ? 'Salvando...' : 'Salvar meus dados',
+                              _isSaving ? 'Salvando...' : 'Salvar Meus Dados',
                             ),
                           ),
                         ),
@@ -2302,7 +2302,7 @@ class _MyListsPageState extends State<MyListsPage> {
   Future<void> _createFromPicker() async {
     final lists = widget.store.lists;
     if (lists.isEmpty) {
-      _showSnack('Não ha listas antigas para copiar.');
+      _showSnack('Não há listas antigas para copiar.');
       return;
     }
 
@@ -3563,7 +3563,7 @@ class _ListEditorActionsSheet extends StatelessWidget {
         case _ListEditorMenuAction.editReminder:
           return _ListEditorActionMeta(
             label: 'Configurar lembrete',
-            shortLabel: hasReminder ? 'Lembrete on' : 'Lembrete off',
+            shortLabel: hasReminder ? 'Lembrete Ativo' : 'Lembrete Inativo',
             icon: hasReminder
                 ? Icons.notifications_active_rounded
                 : Icons.notifications_none_rounded,
@@ -3915,7 +3915,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     }
     _showSnack(
       message ??
-          'Esta lista esta fechada. Reabra a lista para editar produtos.',
+          'Esta lista está fechada. Reabra a lista para editar produtos.',
     );
     return false;
   }
@@ -4184,10 +4184,10 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     final existingNames = _list.items
         .map((entry) => normalizeQuery(entry.name))
         .toSet();
-    var candidate = '$baseName (copia)';
+    var candidate = '$baseName (cópia)';
     var counter = 2;
     while (existingNames.contains(normalizeQuery(candidate))) {
-      candidate = '$baseName (copia $counter)';
+      candidate = '$baseName (cópia $counter)';
       counter++;
     }
     return candidate;
@@ -4553,7 +4553,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       _didShowBudgetWarning = _list.isOverBudget;
       _didShowBudgetNearLimitWarning = false;
     });
-    _showSnack('Lista reaberta. Edicoes liberadas.');
+    _showSnack('Lista reaberta. Edições liberadas.');
   }
 
   Future<void> _finalizePurchase() async {
@@ -5222,7 +5222,7 @@ class _MarketModeItemCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${item.category.label} â€¢ ${formatCurrency(item.unitPrice)}',
+                        '${item.category.label} • ${formatCurrency(item.unitPrice)}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -5331,8 +5331,8 @@ class _EmptyMarketModeState extends StatelessWidget {
     final description = hasQuery
         ? 'Ajuste sua busca para localizar produtos.'
         : showOnlyPending
-        ? 'Parabens. Todos os itens estao marcados como comprados.'
-        : 'Sua lista esta vazia.';
+        ? 'Parabéns. Todos os itens estão marcados como comprados.'
+        : 'Sua lista está vazia.';
 
     return Center(
       child: Padding(
@@ -5583,7 +5583,7 @@ class _CloudSyncStatusCard extends StatelessWidget {
             const SizedBox(height: 10),
             if (compact)
               Text(
-                '$lastSyncLabel â€¢ Listas: $listRecords â€¢ histórico: $historyRecords â€¢ catálogo: $catalogRecords',
+                '$lastSyncLabel • Listas: $listRecords • histórico: $historyRecords • catálogo: $catalogRecords',
                 style: textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
@@ -5712,7 +5712,7 @@ class _CloudSyncStatusCard extends StatelessWidget {
       color: colorScheme.primary,
       secondaryColor: colorScheme.secondary,
       title: 'Pronto para sincronizar',
-      description: 'Suas listas serao sincronizadas automaticamente online.',
+      description: 'Suas listas serão sincronizadas automaticamente online.',
       showLoading: false,
     );
   }
@@ -6362,7 +6362,7 @@ class _MyListCard extends StatelessWidget {
                           icon: const Icon(Icons.lock_open_rounded),
                         ),
                       IconButton(
-                        tooltip: 'Criar baseada nesta',
+                        tooltip: 'Criar Baseada Nesta',
                         onPressed: onCreateFromThis,
                         icon: const Icon(Icons.copy_all_rounded),
                       ),
@@ -6942,24 +6942,37 @@ class _CategoryFilterChip extends StatelessWidget {
     required this.onSelected,
   });
 
+  static const String _allCategoriesMenuValue = '__all_categories__';
+
   final ShoppingCategory? selectedCategory;
   final ValueChanged<ShoppingCategory?> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<ShoppingCategory?>(
+    return PopupMenuButton<String>(
       tooltip: 'Filtrar categoria',
-      onSelected: onSelected,
+      onSelected: (value) {
+        if (value == _allCategoriesMenuValue) {
+          onSelected(null);
+          return;
+        }
+        for (final category in ShoppingCategory.values) {
+          if (category.key == value) {
+            onSelected(category);
+            return;
+          }
+        }
+      },
       itemBuilder: (context) {
         return [
-          CheckedPopupMenuItem<ShoppingCategory?>(
-            value: null,
+          CheckedPopupMenuItem<String>(
+            value: _allCategoriesMenuValue,
             checked: selectedCategory == null,
             child: const Text('Todas as categorias'),
           ),
           ...ShoppingCategory.values.map(
-            (category) => CheckedPopupMenuItem<ShoppingCategory?>(
-              value: category,
+            (category) => CheckedPopupMenuItem<String>(
+              value: category.key,
               checked: selectedCategory == category,
               child: Row(
                 children: [
@@ -7296,7 +7309,7 @@ class _PriceHistorySheet extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(16, 8, 16, 20 + bottomInset),
       children: [
         Text(
-          'histórico de preço',
+          'Histórico de Preço',
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
@@ -7438,7 +7451,7 @@ class _EmptyItemsState extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  'Esta lista esta vazia',
+                  'Esta lista está vazia',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -7454,7 +7467,7 @@ class _EmptyItemsState extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Use o botao "Adicionar item" para incluir o primeiro produto.',
+                  'Use o botão "Adicionar item" para incluir o primeiro produto.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
