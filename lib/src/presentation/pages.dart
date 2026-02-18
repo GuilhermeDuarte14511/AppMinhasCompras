@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -421,11 +422,15 @@ class MyProfilePage extends StatefulWidget {
     required this.initialDisplayName,
     required this.initialEmail,
     required this.initialPhotoUrl,
+    this.firestoreInstance,
   });
 
   final String initialDisplayName;
   final String? initialEmail;
   final String? initialPhotoUrl;
+  /// Instância pré-inicializada do Firestore (necessária na Web para evitar
+  /// LateInitializationError com databaseId customizado).
+  final FirebaseFirestore? firestoreInstance;
 
   @override
   State<MyProfilePage> createState() => _MyProfilePageState();
@@ -434,7 +439,7 @@ class MyProfilePage extends StatefulWidget {
 class _MyProfilePageState extends State<MyProfilePage> {
   final _formKey = GlobalKey<FormState>();
   final _imagePicker = ImagePicker();
-  final _profileRepository = FirestoreUserDataRepository();
+  late final FirestoreUserDataRepository _profileRepository;
   late final TextEditingController _nameController;
   late final TextEditingController _photoUrlController;
 
@@ -445,6 +450,9 @@ class _MyProfilePageState extends State<MyProfilePage> {
   @override
   void initState() {
     super.initState();
+    _profileRepository = FirestoreUserDataRepository(
+      firestore: widget.firestoreInstance,
+    );
     final initialPhoto = _cleanNullable(widget.initialPhotoUrl);
     _photoUrl = initialPhoto;
     _nameController = TextEditingController(text: widget.initialDisplayName);

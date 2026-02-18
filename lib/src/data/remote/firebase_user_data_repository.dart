@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
 
 import '../../domain/models_and_utils.dart';
 
@@ -161,17 +160,8 @@ class FirestoreUserDataSnapshot {
 
 class FirestoreUserDataRepository {
   FirestoreUserDataRepository({FirebaseFirestore? firestore})
-    : _defaultFirestore = FirebaseFirestore.instanceFor(app: Firebase.app()),
-      _activeFirestore = firestore ?? _buildPreferredFirestore(),
-      _allowDefaultFallback = firestore == null,
-      _usingDefaultFirestore = firestore == null
-          ? _resolveConfiguredDatabaseId() == '(default)'
-          : false;
+    : _firestore = firestore ?? _buildFirestore();
 
-  static const String _firestoreDatabaseIdFromDefine = String.fromEnvironment(
-    'FIRESTORE_DATABASE_ID',
-  );
-  static const String _firestoreDatabaseIdHardcoded = 'minhascompras';
   static const int _maxBatchOperations = 450;
   static const Set<String> _transientCodes = <String>{
     'unavailable',
@@ -180,29 +170,11 @@ class FirestoreUserDataRepository {
     'resource-exhausted',
   };
 
-  final FirebaseFirestore _defaultFirestore;
-  final bool _allowDefaultFallback;
-  FirebaseFirestore _activeFirestore;
-  bool _usingDefaultFirestore;
+  final FirebaseFirestore _firestore;
 
-  static FirebaseFirestore _buildPreferredFirestore() {
-    final configuredId = _resolveConfiguredDatabaseId();
-    return FirebaseFirestore.instanceFor(
-      app: Firebase.app(),
-      databaseId: configuredId,
-    );
-  }
-
-  static String _resolveConfiguredDatabaseId() {
-    final fromDefine = _firestoreDatabaseIdFromDefine.trim();
-    if (fromDefine.isNotEmpty) {
-      return fromDefine;
-    }
-    final hardcoded = _firestoreDatabaseIdHardcoded.trim();
-    if (hardcoded.isNotEmpty) {
-      return hardcoded;
-    }
-    return '(default)';
+  static FirebaseFirestore _buildFirestore() {
+    // Usa sempre o banco (default) em todas as plataformas.
+    return FirebaseFirestore.instance;
   }
 
   CollectionReference<Map<String, dynamic>> _listsRef(
@@ -268,10 +240,18 @@ class FirestoreUserDataRepository {
     Source? source,
   }) async {
     final getOptions = source == null ? null : GetOptions(source: source);
+
+    // A primeira chamada é feita de forma sequencial para garantir que o
+    // delegate interno do Firestore Web seja inicializado antes de disparar
+    // múltiplas chamadas em paralelo. Fazer todas as chamadas simultâneas com
+    // Future.wait causa LateInitializationError no SDK Web (race condition no
+    // delegate interno que usa campo `late`).
+    final userSnapshot = getOptions == null
+        ? await _userDocRef(firestore, uid).get()
+        : await _userDocRef(firestore, uid).get(getOptions);
+
+    // Demais chamadas em paralelo — delegate já está inicializado.
     final responses = await Future.wait<dynamic>([
-      getOptions == null
-          ? _userDocRef(firestore, uid).get()
-          : _userDocRef(firestore, uid).get(getOptions),
       getOptions == null
           ? _listsRef(firestore, uid).get()
           : _listsRef(firestore, uid).get(getOptions),
@@ -285,12 +265,11 @@ class FirestoreUserDataRepository {
           ? _settingsDocRef(firestore, uid).get()
           : _settingsDocRef(firestore, uid).get(getOptions),
     ]);
-    final userSnapshot = responses[0] as DocumentSnapshot<Map<String, dynamic>>;
-    final listsSnapshot = responses[1] as QuerySnapshot<Map<String, dynamic>>;
-    final historySnapshot = responses[2] as QuerySnapshot<Map<String, dynamic>>;
-    final catalogSnapshot = responses[3] as QuerySnapshot<Map<String, dynamic>>;
+    final listsSnapshot = responses[0] as QuerySnapshot<Map<String, dynamic>>;
+    final historySnapshot = responses[1] as QuerySnapshot<Map<String, dynamic>>;
+    final catalogSnapshot = responses[2] as QuerySnapshot<Map<String, dynamic>>;
     final settingsSnapshot =
-        responses[4] as DocumentSnapshot<Map<String, dynamic>>;
+        responses[3] as DocumentSnapshot<Map<String, dynamic>>;
 
     final lists = <ShoppingListModel>[];
     for (final doc in listsSnapshot.docs) {
@@ -351,16 +330,18 @@ class FirestoreUserDataRepository {
       QuerySnapshot<Map<String, dynamic>>? remoteHistory;
       QuerySnapshot<Map<String, dynamic>>? remoteCatalog;
       try {
+        // A primeira chamada é sequencial para garantir que o delegate interno
+        // do Firestore Web seja inicializado antes das chamadas paralelas.
+        // Fazer todas simultâneas com Future.wait causa LateInitializationError.
+        remoteLists = await listsCollection.get();
         final remoteResponses = await Future.wait<dynamic>([
-          listsCollection.get(),
           historyCollection.get(),
           catalogCollection.get(),
         ]);
-        remoteLists = remoteResponses[0] as QuerySnapshot<Map<String, dynamic>>;
         remoteHistory =
-            remoteResponses[1] as QuerySnapshot<Map<String, dynamic>>;
+            remoteResponses[0] as QuerySnapshot<Map<String, dynamic>>;
         remoteCatalog =
-            remoteResponses[2] as QuerySnapshot<Map<String, dynamic>>;
+            remoteResponses[1] as QuerySnapshot<Map<String, dynamic>>;
       } on FirebaseException catch (error) {
         if (!_isTransientError(error)) {
           rethrow;
@@ -477,39 +458,9 @@ class FirestoreUserDataRepository {
     return _transientCodes.contains(error.code.trim().toLowerCase());
   }
 
-  bool _shouldFallbackToDefaultDatabase(FirebaseException error) {
-    final code = error.code.trim().toLowerCase();
-    return code == 'not-found' ||
-        code == 'failed-precondition' ||
-        code == 'invalid-argument' ||
-        code == 'unavailable' ||
-        code == 'deadline-exceeded';
-  }
-
   Future<T> _runWithDatabaseFallback<T>(
     Future<T> Function(FirebaseFirestore firestore) action,
   ) async {
-    try {
-      return await action(_activeFirestore);
-    } on FirebaseException catch (error) {
-      if (_usingDefaultFirestore ||
-          !_allowDefaultFallback ||
-          !_shouldFallbackToDefaultDatabase(error)) {
-        rethrow;
-      }
-      _activateDefaultFirestoreFallback();
-      return await action(_activeFirestore);
-    } on LateInitializationError {
-      if (_usingDefaultFirestore || !_allowDefaultFallback) {
-        rethrow;
-      }
-      _activateDefaultFirestoreFallback();
-      return await action(_activeFirestore);
-    }
-  }
-
-  void _activateDefaultFirestoreFallback() {
-    _activeFirestore = _defaultFirestore;
-    _usingDefaultFirestore = true;
+    return action(_firestore);
   }
 }

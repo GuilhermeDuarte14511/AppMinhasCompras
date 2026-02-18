@@ -24,7 +24,7 @@
   },
   "firestore": [
     {
-      "database": "minhascompras",
+      "database": "(default)",
       "rules": "firestore.rules",
       "indexes": "firestore.indexes.json"
     }

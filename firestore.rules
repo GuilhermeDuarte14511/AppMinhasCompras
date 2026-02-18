@@ -426,8 +426,24 @@ service cloud.firestore {
     match /shared_lists/{listId} {
       allow read: if isSharedListMemberFromData(resource.data);
       allow create: if signedIn() && validSharedListCreate(listId);
-      allow update: if isSharedListMemberFromData(resource.data) &&
-        validSharedListUpdate(listId);
+      allow update: if (
+          // Caso normal: membro existente editando a lista
+          isSharedListMemberFromData(resource.data) &&
+          validSharedListUpdate(listId)
+        ) || (
+          // Caso especial: entrar na lista pelo código de convite (joinByCode)
+          // Permite que um usuário autenticado adicione apenas a si mesmo como membro,
+          // desde que a lista tenha um inviteCode ativo e o limite não seja ultrapassado.
+          signedIn() &&
+          resource.data.inviteCode != null &&
+          resource.data.inviteCode is string &&
+          resource.data.inviteCode.size() >= 6 &&
+          request.resource.data.ownerUid == resource.data.ownerUid &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.memberUids.hasAll(resource.data.memberUids) &&
+          request.auth.uid in request.resource.data.memberUids &&
+          request.resource.data.memberUids.size() <= 30
+        );
       allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
 
       match /items/{itemId} {

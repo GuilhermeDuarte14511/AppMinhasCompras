@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
 
 import '../../domain/classifications.dart';
 import '../../domain/models_and_utils.dart';
@@ -240,10 +239,6 @@ class SharedListsRepository {
   SharedListsRepository({FirebaseFirestore? firestore})
     : _firestore = firestore ?? _buildPreferredFirestore();
 
-  static const String _firestoreDatabaseIdFromDefine = String.fromEnvironment(
-    'FIRESTORE_DATABASE_ID',
-  );
-  static const String _firestoreDatabaseIdHardcoded = 'minhascompras';
   static const String _sharedListsCollection = 'shared_lists';
   static const String _listInvitesCollection = 'list_invites';
   static const String _itemsSubCollection = 'items';
@@ -254,22 +249,8 @@ class SharedListsRepository {
   final Random _random = Random.secure();
 
   static FirebaseFirestore _buildPreferredFirestore() {
-    return FirebaseFirestore.instanceFor(
-      app: Firebase.app(),
-      databaseId: _resolveConfiguredDatabaseId(),
-    );
-  }
-
-  static String _resolveConfiguredDatabaseId() {
-    final fromDefine = _firestoreDatabaseIdFromDefine.trim();
-    if (fromDefine.isNotEmpty) {
-      return fromDefine;
-    }
-    final hardcoded = _firestoreDatabaseIdHardcoded.trim();
-    if (hardcoded.isNotEmpty) {
-      return hardcoded;
-    }
-    return '(default)';
+    // Usa sempre o banco (default) em todas as plataformas.
+    return FirebaseFirestore.instance;
   }
 
   CollectionReference<Map<String, dynamic>> get _sharedListsRef =>
