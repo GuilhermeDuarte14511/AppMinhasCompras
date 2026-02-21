@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import '../../domain/models_and_utils.dart';
 
 class FirestoreUserProfile {
@@ -420,12 +422,82 @@ class FirestoreUserDataRepository {
   }
 
   Future<void> saveUserProfile({required FirestoreUserProfile profile}) async {
-    await _runWithDatabaseFallback((firestore) async {
-      await _userDocRef(firestore, profile.uid).set(
+  await _runWithDatabaseFallback((firestore) async {
+    final docRef = _userDocRef(firestore, profile.uid);
+
+    try {
+      await docRef.set(
         profile.toFirestoreJson(includeCreatedAt: false),
         SetOptions(merge: true),
       );
-    });
+    } on FirebaseException catch (e) {
+      final msg = (e.message ?? '');
+
+      if (kIsWeb && msg.contains('INTERNAL ASSERTION FAILED')) {
+        try {
+          await docRef.get(const GetOptions(source: Source.server));
+          return; // trata como sucesso
+        } catch (_) {
+        }
+      }
+      rethrow;
+    }
+  });
+}
+
+  Future<bool> migrateProfilePhotoToStoragePath({
+    required User user,
+  }) async {
+    final rawUrl = user.photoURL?.trim() ?? '';
+    if (rawUrl.isEmpty) {
+      return false;
+    }
+
+    final isStorageUrl = rawUrl.startsWith('gs://') ||
+        rawUrl.contains('firebasestorage.googleapis.com') ||
+        rawUrl.contains('storage.googleapis.com');
+    if (!isStorageUrl) {
+      return false;
+    }
+    if (rawUrl.startsWith('gs://')) {
+      return false;
+    }
+
+    try {
+      final ref = FirebaseStorage.instance.refFromURL(rawUrl);
+      final storagePath = 'gs://${ref.bucket}/${ref.fullPath}';
+      await user.updatePhotoURL(storagePath);
+      await user.reload();
+      final refreshed = FirebaseAuth.instance.currentUser;
+      if (refreshed == null) {
+        return false;
+      }
+      await saveUserProfile(
+        profile: FirestoreUserProfile(
+          uid: refreshed.uid,
+          displayName: refreshed.displayName,
+          email: refreshed.email,
+          photoUrl: refreshed.photoURL,
+          provider: _resolveProviderId(refreshed),
+          themeMode: null,
+          isOnboardingCompleted: null,
+        ),
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  String _resolveProviderId(User user) {
+    for (final info in user.providerData) {
+      final providerId = info.providerId.trim();
+      if (providerId.isEmpty || providerId == 'firebase') {
+        continue;
+      }
+      return providerId;
+    }
+    return 'password';
   }
 
   Future<void> _commitOperationsInChunks(

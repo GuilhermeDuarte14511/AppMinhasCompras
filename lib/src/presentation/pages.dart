@@ -1,11 +1,12 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
@@ -26,6 +27,153 @@ import 'utils/app_page_route.dart';
 import 'utils/app_toast.dart';
 
 enum _DashboardMenuAction { options, catalog, signOut }
+
+class _StorageAvatar extends StatefulWidget {
+  const _StorageAvatar({
+    super.key,
+    required this.photoUrl,
+    required this.radius,
+    required this.backgroundColor,
+    required this.foregroundColor,
+    required this.fallback,
+    this.onLoadError,
+    this.cacheKey,
+  });
+
+  final String? photoUrl;
+  final double radius;
+  final Color backgroundColor;
+  final Color foregroundColor;
+  final Widget fallback;
+  final VoidCallback? onLoadError;
+  final int? cacheKey;
+
+  @override
+  State<_StorageAvatar> createState() => _StorageAvatarState();
+}
+
+class _StorageAvatarState extends State<_StorageAvatar> {
+  Future<Uint8List?>? _bytesFuture;
+  bool _useNetwork = false;
+  bool _reportedError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _prepare();
+  }
+
+  @override
+  void didUpdateWidget(covariant _StorageAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.photoUrl != widget.photoUrl ||
+        oldWidget.cacheKey != widget.cacheKey) {
+      _prepare();
+    }
+  }
+
+  bool _isFirebaseStorageUrl(String url) {
+    return url.startsWith('gs://') ||
+        url.contains('firebasestorage.googleapis.com') ||
+        url.contains('storage.googleapis.com');
+  }
+
+  String _stripQuery(String url) {
+    final index = url.indexOf('?');
+    if (index == -1) {
+      return url;
+    }
+    return url.substring(0, index);
+  }
+
+  void _prepare() {
+    final url = widget.photoUrl?.trim();
+    _reportedError = false;
+    if (url == null || url.isEmpty) {
+      _useNetwork = false;
+      _bytesFuture = null;
+      return;
+    }
+    if (_isFirebaseStorageUrl(url)) {
+      _useNetwork = false;
+      final cleanUrl = _stripQuery(url);
+      _bytesFuture = FirebaseStorage.instance
+          .refFromURL(cleanUrl)
+          .getData(8 * 1024 * 1024);
+      return;
+    }
+    _useNetwork = true;
+    _bytesFuture = null;
+  }
+
+  void _notifyErrorOnce() {
+    if (_reportedError || widget.onLoadError == null) {
+      return;
+    }
+    _reportedError = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      widget.onLoadError?.call();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final url = widget.photoUrl?.trim();
+    if (url == null || url.isEmpty) {
+      return CircleAvatar(
+        radius: widget.radius,
+        backgroundColor: widget.backgroundColor,
+        foregroundColor: widget.foregroundColor,
+        child: widget.fallback,
+      );
+    }
+
+    if (_useNetwork) {
+      return CircleAvatar(
+        radius: widget.radius,
+        backgroundColor: widget.backgroundColor,
+        foregroundColor: widget.foregroundColor,
+        backgroundImage: NetworkImage(url),
+        onBackgroundImageError: (error, stackTrace) => _notifyErrorOnce(),
+        child: widget.fallback,
+      );
+    }
+
+    return FutureBuilder<Uint8List?>(
+      future: _bytesFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return CircleAvatar(
+            radius: widget.radius,
+            backgroundColor: widget.backgroundColor,
+            foregroundColor: widget.foregroundColor,
+            child: widget.fallback,
+          );
+        }
+        final bytes = snapshot.data;
+        if (snapshot.hasError || bytes == null || bytes.isEmpty) {
+          _notifyErrorOnce();
+          return CircleAvatar(
+            radius: widget.radius,
+            backgroundColor: widget.backgroundColor,
+            foregroundColor: widget.foregroundColor,
+            child: widget.fallback,
+          );
+        }
+        return CircleAvatar(
+          radius: widget.radius,
+          backgroundColor: widget.backgroundColor,
+          foregroundColor: widget.foregroundColor,
+          backgroundImage: MemoryImage(bytes),
+          child: widget.fallback,
+        );
+      },
+    );
+  }
+}
 
 class AppOptionsPage extends StatefulWidget {
   const AppOptionsPage({
@@ -78,6 +226,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
   late String _resolvedName;
   late String? _resolvedEmail;
   String? _resolvedPhotoUrl;
+  int _photoCacheKey = 0;
 
   @override
   void initState() {
@@ -138,6 +287,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
         email: _resolvedEmail,
       );
       _resolvedPhotoUrl = _cleanNullable(result.photoUrl);
+      _photoCacheKey = DateTime.now().millisecondsSinceEpoch;
     });
     final refresh = widget.onProfileUpdated;
     if (refresh != null) {
@@ -159,9 +309,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
         children: [
           Text(
             title,
-            style: textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w900,
-            ),
+            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 2),
           Text(
@@ -201,21 +349,29 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
                     children: [
                       Row(
                         children: [
-                          CircleAvatar(
+                          _StorageAvatar(
+                            key: ValueKey(
+                              'options_avatar_${_resolvedPhotoUrl ?? ''}_$_photoCacheKey',
+                            ),
+                            photoUrl: _resolvedPhotoUrl,
                             radius: 22,
                             backgroundColor: colorScheme.primaryContainer,
                             foregroundColor: colorScheme.onPrimaryContainer,
-                            backgroundImage: _resolvedPhotoUrl != null
-                                ? NetworkImage(_resolvedPhotoUrl!)
-                                : null,
-                            child: _resolvedPhotoUrl == null
-                                ? Text(
-                                    avatarLabel,
-                                    style: textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  )
-                                : null,
+                            fallback: Text(
+                              avatarLabel,
+                              style: textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            onLoadError: () {
+                              if (!mounted) {
+                                return;
+                              }
+                              setState(() {
+                                _resolvedPhotoUrl = null;
+                              });
+                            },
+                            cacheKey: _photoCacheKey,
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -428,6 +584,7 @@ class MyProfilePage extends StatefulWidget {
   final String initialDisplayName;
   final String? initialEmail;
   final String? initialPhotoUrl;
+
   /// Instância pré-inicializada do Firestore (necessária na Web para evitar
   /// LateInitializationError com databaseId customizado).
   final FirebaseFirestore? firestoreInstance;
@@ -485,6 +642,47 @@ class _MyProfilePageState extends State<MyProfilePage> {
     return 'password';
   }
 
+  bool _isFirebaseStorageUrl(String url) {
+    return url.startsWith('gs://') ||
+        url.contains('firebasestorage.googleapis.com') ||
+        url.contains('storage.googleapis.com');
+  }
+
+  String _stripQuery(String url) {
+    final index = url.indexOf('?');
+    if (index == -1) {
+      return url;
+    }
+    return url.substring(0, index);
+  }
+
+  Future<void> _deleteOldAvatar({
+    required String previousUrl,
+    required String uid,
+    String? newFullPath,
+  }) async {
+    final trimmedUrl = previousUrl.trim();
+    if (trimmedUrl.isEmpty || !_isFirebaseStorageUrl(trimmedUrl)) {
+      return;
+    }
+    try {
+      final previousRef =
+          FirebaseStorage.instance.refFromURL(_stripQuery(trimmedUrl));
+      if (!previousRef.fullPath.startsWith('users/$uid/profile/')) {
+        return;
+      }
+      if (newFullPath != null && previousRef.fullPath == newFullPath) {
+        return;
+      }
+      await previousRef.delete();
+    } catch (error) {
+      developer.log(
+        'Falha ao remover foto antiga: $error',
+        name: 'profile_photo_cleanup',
+      );
+    }
+  }
+
   void _showMessage(
     String message, {
     AppToastType type = AppToastType.info,
@@ -497,6 +695,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
     if (_isUploadingPhoto || _isSaving) {
       return;
     }
+
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       _showMessage(
@@ -505,58 +704,77 @@ class _MyProfilePageState extends State<MyProfilePage> {
       );
       return;
     }
+
     try {
+      final previousPhotoUrl = _cleanNullable(user.photoURL ?? _photoUrl);
       final image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
         maxWidth: 1600,
         maxHeight: 1600,
         imageQuality: 90,
       );
+
       if (image == null) {
         return;
       }
-      setState(() {
-        _isUploadingPhoto = true;
-      });
+
+      setState(() => _isUploadingPhoto = true);
 
       final bytes = await image.readAsBytes();
+
       final lowerName = image.name.toLowerCase();
       final isPng = lowerName.endsWith('.png');
       final extension = isPng ? 'png' : 'jpg';
       final contentType = isPng ? 'image/png' : 'image/jpeg';
+
+      final fileName =
+          'avatar_${DateTime.now().millisecondsSinceEpoch}.$extension';
+
       final ref = FirebaseStorage.instance
           .ref()
           .child('users')
           .child(user.uid)
           .child('profile')
-          .child('avatar_${DateTime.now().millisecondsSinceEpoch}.$extension');
+          .child(fileName);
 
       await ref.putData(bytes, SettableMetadata(contentType: contentType));
-      final downloadUrl = await ref.getDownloadURL();
 
-      if (!mounted) {
-        return;
-      }
+      final storagePath = 'gs://${ref.bucket}/${ref.fullPath}';
+
+      await user.updatePhotoURL(storagePath);
+      await user.reload();
+
+      if (!mounted) return;
+
       setState(() {
-        _photoUrl = downloadUrl;
-        _photoUrlController.text = downloadUrl;
+        _photoUrl = storagePath;
+        _photoUrlController.text = storagePath;
       });
+
+      if (previousPhotoUrl != null &&
+          _stripQuery(previousPhotoUrl) != _stripQuery(storagePath)) {
+        await _deleteOldAvatar(
+          previousUrl: previousPhotoUrl,
+          uid: user.uid,
+          newFullPath: ref.fullPath,
+        );
+      }
+
       _showMessage('Foto enviada com sucesso.', type: AppToastType.success);
     } on FirebaseException catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
+
       final details = (error.message ?? '').trim();
       final suffix = details.isEmpty ? '' : ' - $details';
+
       _showMessage(
         'Falha ao enviar foto (${error.code})$suffix',
         type: AppToastType.error,
         duration: const Duration(seconds: 6),
       );
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
+
       _showMessage(
         'Falha ao enviar foto: $error',
         type: AppToastType.error,
@@ -564,9 +782,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
       );
     } finally {
       if (mounted) {
-        setState(() {
-          _isUploadingPhoto = false;
-        });
+        setState(() => _isUploadingPhoto = false);
       }
     }
   }
@@ -702,21 +918,33 @@ class _MyProfilePageState extends State<MyProfilePage> {
                       children: [
                         Row(
                           children: [
-                            CircleAvatar(
+                            _StorageAvatar(
+                              key: ValueKey(
+                                'profile_avatar_${_photoUrl ?? ''}',
+                              ),
+                              photoUrl: _photoUrl,
                               radius: 38,
                               backgroundColor: colorScheme.primaryContainer,
                               foregroundColor: colorScheme.onPrimaryContainer,
-                              backgroundImage: _photoUrl != null
-                                  ? NetworkImage(_photoUrl!)
-                                  : null,
-                              child: _photoUrl == null
-                                  ? Text(
-                                      avatarLabel,
-                                      style: textTheme.titleLarge?.copyWith(
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    )
-                                  : null,
+                              fallback: Text(
+                                avatarLabel,
+                                style: textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              onLoadError: () {
+                                if (!mounted) {
+                                  return;
+                                }
+                                setState(() {
+                                  _photoUrl = null;
+                                  _photoUrlController.clear();
+                                });
+                                _showMessage(
+                                  'Não foi possível carregar a foto.',
+                                  type: AppToastType.warning,
+                                );
+                              },
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -1024,12 +1252,11 @@ class _DashboardPageState extends State<DashboardPage> {
     await Navigator.push<void>(
       context,
       buildAppPageRoute(
-        builder: (_) =>
-            ShoppingListEditorPage(
-              store: widget.store,
-              listId: created.id,
-              sharedListsRepository: widget.sharedListsRepository,
-            ),
+        builder: (_) => ShoppingListEditorPage(
+          store: widget.store,
+          listId: created.id,
+          sharedListsRepository: widget.sharedListsRepository,
+        ),
       ),
     );
   }
@@ -1115,7 +1342,10 @@ class _DashboardPageState extends State<DashboardPage> {
       return;
     }
     try {
-      final listId = await repository.joinByCode(inviteCode: inviteCode, uid: uid);
+      final listId = await repository.joinByCode(
+        inviteCode: inviteCode,
+        uid: uid,
+      );
       if (!mounted) {
         return;
       }
@@ -1308,7 +1538,8 @@ class _DashboardPageState extends State<DashboardPage> {
                               builder: (_) => ShoppingListEditorPage(
                                 store: widget.store,
                                 listId: list.id,
-                                sharedListsRepository: widget.sharedListsRepository,
+                                sharedListsRepository:
+                                    widget.sharedListsRepository,
                               ),
                             ),
                           );
@@ -1324,16 +1555,17 @@ class _DashboardPageState extends State<DashboardPage> {
                   delay: const Duration(milliseconds: 210),
                   child: Text(
                     'Listas compartilhadas',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 10),
                 StreamBuilder<List<SharedShoppingListSummary>>(
                   stream: sharedRepository.watchSharedLists(currentUid),
                   builder: (context, sharedSnapshot) {
-                    if (sharedSnapshot.connectionState == ConnectionState.waiting &&
+                    if (sharedSnapshot.connectionState ==
+                            ConnectionState.waiting &&
                         !sharedSnapshot.hasData) {
                       return const Padding(
                         padding: EdgeInsets.symmetric(vertical: 18),
@@ -1341,7 +1573,8 @@ class _DashboardPageState extends State<DashboardPage> {
                       );
                     }
                     final sharedLists =
-                        sharedSnapshot.data ?? const <SharedShoppingListSummary>[];
+                        sharedSnapshot.data ??
+                        const <SharedShoppingListSummary>[];
                     if (sharedLists.isEmpty) {
                       return Card(
                         elevation: 0,
@@ -1359,28 +1592,33 @@ class _DashboardPageState extends State<DashboardPage> {
                       );
                     }
                     return Column(
-                      children: sharedLists.take(5).map((shared) {
-                        final isOwner = shared.isOwner(currentUid);
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: Card(
-                            elevation: 0,
-                            child: ListTile(
-                              onTap: () => _openSharedListEditor(shared.id),
-                              leading: Icon(
-                                isOwner
-                                    ? Icons.verified_user_rounded
-                                    : Icons.group_rounded,
+                      children: sharedLists
+                          .take(5)
+                          .map((shared) {
+                            final isOwner = shared.isOwner(currentUid);
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Card(
+                                elevation: 0,
+                                child: ListTile(
+                                  onTap: () => _openSharedListEditor(shared.id),
+                                  leading: Icon(
+                                    isOwner
+                                        ? Icons.verified_user_rounded
+                                        : Icons.group_rounded,
+                                  ),
+                                  title: Text(shared.name),
+                                  subtitle: Text(
+                                    '${shared.memberCount} membro(s) - ${isOwner ? 'Dono' : 'Membro'}',
+                                  ),
+                                  trailing: const Icon(
+                                    Icons.chevron_right_rounded,
+                                  ),
+                                ),
                               ),
-                              title: Text(shared.name),
-                              subtitle: Text(
-                                '${shared.memberCount} membro(s) - ${isOwner ? 'Dono' : 'Membro'}',
-                              ),
-                              trailing: const Icon(Icons.chevron_right_rounded),
-                            ),
-                          ),
-                        );
-                      }).toList(growable: false),
+                            );
+                          })
+                          .toList(growable: false),
                     );
                   },
                 ),
@@ -2808,13 +3046,16 @@ class _MyListsPageState extends State<MyListsPage> {
     final repository = widget.sharedListsRepository;
     final uid = widget.currentUserUid?.trim() ?? '';
     if (repository == null || uid.isEmpty) {
-      return _buildWithSharedSourceMap(const <String, SharedShoppingListSummary>{});
+      return _buildWithSharedSourceMap(
+        const <String, SharedShoppingListSummary>{},
+      );
     }
     return StreamBuilder<List<SharedShoppingListSummary>>(
       stream: repository.watchOwnedSharedLists(uid),
       builder: (context, snapshot) {
         final sharedBySource = <String, SharedShoppingListSummary>{};
-        for (final entry in snapshot.data ?? const <SharedShoppingListSummary>[]) {
+        for (final entry
+            in snapshot.data ?? const <SharedShoppingListSummary>[]) {
           final sourceId = entry.sourceLocalListId;
           if (sourceId == null || sourceId.isEmpty) {
             continue;
@@ -4623,6 +4864,11 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     );
   }
 
+  void _logShare(String message) {
+    debugPrint('[share_flow] $message');
+    developer.log(message, name: 'share_flow');
+  }
+
   void _maybeWarnBudgetExceeded(ShoppingListModel updatedList) {
     if (updatedList.hasBudget) {
       final budget = updatedList.budget ?? 0;
@@ -4761,92 +5007,71 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   }
 
   Future<void> _shareListWithCode() async {
+    _logShare(
+      'click share listId=${_list.id} name="${_list.name}" items=${_list.items.length}',
+    );
     final repository = widget.sharedListsRepository;
     if (repository == null) {
+      _logShare('share repository is null');
       _showSnack('Compartilhamento indisponivel neste modo.');
       return;
     }
     final uid = FirebaseAuth.instance.currentUser?.uid.trim() ?? '';
     if (uid.isEmpty) {
+      _logShare('share blocked: uid vazio');
       _showSnack('Faca login para compartilhar a lista.');
       return;
     }
     try {
+      _logShare('createOrGetSharedListFromLocal start uid=$uid');
       final sharedList = await repository.createOrGetSharedListFromLocal(
         localList: _list,
         ownerUid: uid,
       );
-      var code = sharedList.inviteCode;
-      if (code == null || code.isEmpty) {
-        code = await repository.generateInviteCode(
+      _logShare(
+        'createOrGetSharedListFromLocal ok sharedId=${sharedList.id} invite=${sharedList.inviteCode ?? '-'}',
+      );
+      if (sharedList.inviteCode == null || sharedList.inviteCode!.isEmpty) {
+        _logShare('invite vazio, gerando novo codigo...');
+        await repository.generateInviteCode(
           listId: sharedList.id,
           requesterUid: uid,
         );
+        _logShare('generateInviteCode ok');
       }
       if (!mounted) {
+        _logShare('share flow aborted: widget unmounted');
         return;
       }
-      final action = await showAppDialog<String>(
+      await showSharedInviteSheet(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Codigo gerado'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Compartilhe este codigo para convidar outra pessoa:'),
-              const SizedBox(height: 10),
-              SelectableText(
-                code ?? '',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.1,
-                ),
+        repository: repository,
+        listId: sharedList.id,
+        currentUid: uid,
+        onOpenSharedList: () async {
+          _logShare('open shared list id=${sharedList.id}');
+          await Navigator.push<void>(
+            context,
+            buildAppPageRoute(
+              builder: (_) => SharedListEditorPage(
+                repository: repository,
+                store: widget.store,
+                listId: sharedList.id,
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Fechar'),
             ),
-            OutlinedButton(
-              onPressed: () => Navigator.pop(context, 'copy'),
-              child: const Text('Copiar'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, 'open'),
-              child: const Text('Abrir lista compartilhada'),
-            ),
-          ],
-        ),
+          );
+        },
       );
-      if (!mounted) {
-        return;
-      }
-      if (action == 'copy') {
-        await Clipboard.setData(ClipboardData(text: code));
-        if (!mounted) {
-          return;
-        }
-        _showSnack('Codigo copiado.');
-        return;
-      }
-      if (action == 'open') {
-        await Navigator.push<void>(
-          context,
-          buildAppPageRoute(
-            builder: (_) => SharedListEditorPage(
-              repository: repository,
-              store: widget.store,
-              listId: sharedList.id,
-            ),
-          ),
-        );
-      }
     } catch (error) {
       if (!mounted) {
         return;
+      }
+      if (error is FirebaseException) {
+        _logShare(
+          'share error FirebaseException code=${error.code} message=${error.message}',
+        );
+      } else {
+        _logShare('share error $error');
       }
       _showSnack('Nao foi possivel compartilhar a lista: $error');
     }
@@ -6491,7 +6716,8 @@ class _PillLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final bg = backgroundColor ??
+    final bg =
+        backgroundColor ??
         colorScheme.surfaceContainerHighest.withValues(alpha: 0.7);
     final fg = foregroundColor ?? colorScheme.onSurface;
     final label = Padding(
@@ -6503,9 +6729,10 @@ class _PillLabel extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             text,
-            style: Theme.of(
-              context,
-            ).textTheme.labelMedium?.copyWith(color: fg, fontWeight: FontWeight.w700),
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: fg,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -6513,7 +6740,10 @@ class _PillLabel extends StatelessWidget {
 
     if (onTap == null) {
       return DecoratedBox(
-        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(14)),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(14),
+        ),
         child: label,
       );
     }
@@ -6535,10 +6765,7 @@ class _PillLabel extends StatelessWidget {
     if (tooltip == null || tooltip!.isEmpty) {
       return interactiveChip;
     }
-    return Tooltip(
-      message: tooltip!,
-      child: interactiveChip,
-    );
+    return Tooltip(message: tooltip!, child: interactiveChip);
   }
 }
 

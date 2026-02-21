@@ -279,6 +279,18 @@ class ShoppingListsStore extends ChangeNotifier {
     await _persistAndNotify();
   }
 
+  Future<void> clearAllLocalData() async {
+    _lists.clear();
+    _history.clear();
+    _invalidateListSuggestionCache();
+    await _productCatalog.replaceAllProducts(const <CatalogProduct>[]);
+    await _reminderService.syncFromLists(
+      const <ShoppingListModel>[],
+      reset: true,
+    );
+    await _persistAndNotify();
+  }
+
   Future<void> notifyBudgetNearLimit(
     ShoppingListModel list, {
     required double budgetUsageRatio,
@@ -297,6 +309,10 @@ class ShoppingListsStore extends ChangeNotifier {
       pendingRecords: pendingRecords,
       hasNetworkConnection: hasNetworkConnection,
     );
+  }
+
+  Future<void> syncExternalReminder(ShoppingListModel list) async {
+    await _reminderService.scheduleForList(list);
   }
 
   String exportBackupJson() {

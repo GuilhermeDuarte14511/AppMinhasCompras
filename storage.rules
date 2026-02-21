@@ -22,6 +22,7 @@ service firebase.storage {
     // Foto de perfil do usuario:
     // caminho usado no app: users/{uid}/profile/avatar_<timestamp>.<ext>
     match /users/{uid}/profile/{fileName} {
+      // Leitura autenticada (o app usa Firebase Storage com auth).
       allow read: if isOwner(uid);
       allow create, update: if isOwner(uid) &&
         fileName.matches('avatar_[A-Za-z0-9._-]+\\.(jpg|jpeg|png|webp)') &&

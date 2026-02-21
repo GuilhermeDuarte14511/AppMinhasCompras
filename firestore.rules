@@ -1,489 +1,557 @@
-rules_version = '2';
+  rules_version = '2';
 
-service cloud.firestore {
-  match /databases/{database}/documents {
-    function signedIn() {
-      return request.auth != null;
-    }
+  service cloud.firestore {
+    match /databases/{database}/documents {
+      function signedIn() {
+        return request.auth != null;
+      }
 
-    function isOwner(uid) {
-      return signedIn() && request.auth.uid == uid;
-    }
+      function isOwner(uid) {
+        return signedIn() && request.auth.uid == uid;
+      }
 
-    function isString(v, min, max) {
-      return v is string && v.size() >= min && v.size() <= max;
-    }
+      function isString(v, min, max) {
+        return v is string && v.size() >= min && v.size() <= max;
+      }
 
-    function isDateString(v) {
-      return v is string && v.size() >= 10 && v.size() <= 40;
-    }
+      function isDateString(v) {
+        return v is string && v.size() >= 10 && v.size() <= 40;
+      }
 
-    function isDateLike(v) {
-      return v is timestamp || isDateString(v);
-    }
+      function isDateLike(v) {
+        return v is timestamp || isDateString(v);
+      }
 
-    function isNumber(v) {
-      return v is int || v is float;
-    }
+      function isNumber(v) {
+        return v is int || v is float;
+      }
 
-    function isNumberOrNull(v) {
-      return v == null || isNumber(v);
-    }
+      function isNumberOrNull(v) {
+        return v == null || isNumber(v);
+      }
 
-    function validTheme(v) {
-      return v == null || v in ['light', 'dark'];
-    }
+      function validTheme(v) {
+        return v == null || v in ['light', 'dark'];
+      }
 
-    function validProvider(v) {
-      return v == null || v in ['password', 'google.com'];
-    }
+      function validProvider(v) {
+        return v == null || v in ['password', 'google.com'];
+      }
 
-    function validCategory(v) {
-      return v in [
-        'produce',
-        'bakery',
-        'meat',
-        'seafood',
-        'dairy',
-        'eggs',
-        'grains_pasta',
-        'frozen',
-        'snacks',
-        'sweets',
-        'condiments',
-        'grocery',
-        'beverages',
-        'cleaning',
-        'personal_care',
-        'baby',
-        'pet',
-        'other'
-      ];
-    }
+      function validCategory(v) {
+        return v in [
+          'produce',
+          'bakery',
+          'meat',
+          'seafood',
+          'dairy',
+          'eggs',
+          'grains_pasta',
+          'frozen',
+          'snacks',
+          'sweets',
+          'condiments',
+          'grocery',
+          'beverages',
+          'cleaning',
+          'personal_care',
+          'baby',
+          'pet',
+          'other'
+        ];
+      }
 
-    function validReminder(reminder) {
-      return reminder == null || (
-        reminder is map &&
-        reminder.keys().hasOnly(['scheduledAt']) &&
-        reminder.keys().hasAll(['scheduledAt']) &&
-        isDateLike(reminder.scheduledAt)
-      );
-    }
+      function validReminder(reminder) {
+        return reminder == null || (
+          reminder is map &&
+          reminder.keys().hasOnly(['scheduledAt']) &&
+          reminder.keys().hasAll(['scheduledAt']) &&
+          isDateLike(reminder.scheduledAt)
+        );
+      }
 
-    function validUserRootCommon(d) {
-      return d.keys().hasOnly([
-          'displayName',
-          'email',
-          'photoUrl',
-          'provider',
-          'createdAt',
-          'updatedAt',
-          'themeMode',
-          'isOnboardingCompleted'
-        ]) &&
-        d.keys().hasAny(['updatedAt']) &&
-        (!d.keys().hasAny(['displayName']) || isString(d.displayName, 1, 80)) &&
-        (!d.keys().hasAny(['email']) || isString(d.email, 3, 200)) &&
-        (!d.keys().hasAny(['photoUrl']) ||
-          d.photoUrl == null ||
-          isString(d.photoUrl, 5, 2000)) &&
-        (!d.keys().hasAny(['provider']) || validProvider(d.provider)) &&
-        (!d.keys().hasAny(['createdAt']) || isDateLike(d.createdAt)) &&
-        isDateLike(d.updatedAt) &&
-        (!d.keys().hasAny(['themeMode']) || validTheme(d.themeMode)) &&
-        (!d.keys().hasAny(['isOnboardingCompleted']) ||
-          d.isOnboardingCompleted is bool);
-    }
+      function validUserRootCommon(d) {
+        return d.keys().hasOnly([
+            'displayName',
+            'email',
+            'photoUrl',
+            'provider',
+            'createdAt',
+            'updatedAt',
+            'themeMode',
+            'isOnboardingCompleted'
+          ]) &&
+          d.keys().hasAny(['updatedAt']) &&
+          (!d.keys().hasAny(['displayName']) || isString(d.displayName, 1, 80)) &&
+          (!d.keys().hasAny(['email']) || isString(d.email, 3, 200)) &&
+          (!d.keys().hasAny(['photoUrl']) ||
+            d.photoUrl == null ||
+            isString(d.photoUrl, 5, 2000)) &&
+          (!d.keys().hasAny(['provider']) || validProvider(d.provider)) &&
+          (!d.keys().hasAny(['createdAt']) || isDateLike(d.createdAt)) &&
+          isDateLike(d.updatedAt) &&
+          (!d.keys().hasAny(['themeMode']) || validTheme(d.themeMode)) &&
+          (!d.keys().hasAny(['isOnboardingCompleted']) ||
+            d.isOnboardingCompleted is bool);
+      }
 
-    function validUserRootCreate() {
-      let d = request.resource.data;
-      return validUserRootCommon(d);
-    }
+      function validUserRootCreate() {
+        let d = request.resource.data;
+        return validUserRootCommon(d);
+      }
 
-    function validUserRootUpdate() {
-      let d = request.resource.data;
-      return validUserRootCommon(d) &&
-        (
-          !resource.data.keys().hasAny(['createdAt']) ||
+      function validUserRootUpdate() {
+        let d = request.resource.data;
+        return validUserRootCommon(d) &&
           (
-            d.keys().hasAny(['createdAt']) &&
-            d.createdAt == resource.data.createdAt
-          )
-        );
-    }
+            !resource.data.keys().hasAny(['createdAt']) ||
+            (
+              d.keys().hasAny(['createdAt']) &&
+              d.createdAt == resource.data.createdAt
+            )
+          );
+      }
 
-    function validListDoc(listId) {
-      let d = request.resource.data;
-      return d.keys().hasOnly([
-          'id',
-          'name',
-          'createdAt',
-          'updatedAt',
-          'items',
-          'budget',
-          'reminder',
-          'paymentBalances',
-          'isClosed',
-          'closedAt'
-        ]) &&
-        d.keys().hasAll([
-          'id',
-          'name',
-          'createdAt',
-          'updatedAt',
-          'items',
-          'budget',
-          'reminder',
-          'paymentBalances',
-          'isClosed',
-          'closedAt'
-        ]) &&
-        d.id == listId &&
-        isString(d.name, 1, 120) &&
-        isDateLike(d.createdAt) &&
-        isDateLike(d.updatedAt) &&
-        d.items is list &&
-        d.items.size() <= 2000 &&
-        isNumberOrNull(d.budget) &&
-        validReminder(d.reminder) &&
-        d.paymentBalances is list &&
-        d.paymentBalances.size() <= 30 &&
-        d.isClosed is bool &&
-        (d.closedAt == null || isDateLike(d.closedAt));
-    }
+      function validListDoc(listId) {
+        let d = request.resource.data;
+        return d.keys().hasOnly([
+            'id',
+            'name',
+            'createdAt',
+            'updatedAt',
+            'items',
+            'budget',
+            'reminder',
+            'paymentBalances',
+            'isClosed',
+            'closedAt'
+          ]) &&
+          d.keys().hasAll([
+            'id',
+            'name',
+            'createdAt',
+            'updatedAt',
+            'items',
+            'budget',
+            'reminder',
+            'paymentBalances',
+            'isClosed',
+            'closedAt'
+          ]) &&
+          d.id == listId &&
+          isString(d.name, 1, 120) &&
+          isDateLike(d.createdAt) &&
+          isDateLike(d.updatedAt) &&
+          d.items is list &&
+          d.items.size() <= 2000 &&
+          isNumberOrNull(d.budget) &&
+          validReminder(d.reminder) &&
+          d.paymentBalances is list &&
+          d.paymentBalances.size() <= 30 &&
+          d.isClosed is bool &&
+          (d.closedAt == null || isDateLike(d.closedAt));
+      }
 
-    function validHistoryDoc(historyId) {
-      let d = request.resource.data;
-      return d.keys().hasOnly([
-          'id',
-          'listId',
-          'listName',
-          'closedAt',
-          'items',
-          'budget',
-          'paymentBalances'
-        ]) &&
-        d.keys().hasAll([
-          'id',
-          'listId',
-          'listName',
-          'closedAt',
-          'items',
-          'budget',
-          'paymentBalances'
-        ]) &&
-        d.id == historyId &&
-        isString(d.listId, 1, 120) &&
-        isString(d.listName, 1, 120) &&
-        isDateLike(d.closedAt) &&
-        d.items is list &&
-        d.items.size() <= 3000 &&
-        isNumberOrNull(d.budget) &&
-        d.paymentBalances is list &&
-        d.paymentBalances.size() <= 30;
-    }
+      function validHistoryDoc(historyId) {
+        let d = request.resource.data;
+        return d.keys().hasOnly([
+            'id',
+            'listId',
+            'listName',
+            'closedAt',
+            'items',
+            'budget',
+            'paymentBalances'
+          ]) &&
+          d.keys().hasAll([
+            'id',
+            'listId',
+            'listName',
+            'closedAt',
+            'items',
+            'budget',
+            'paymentBalances'
+          ]) &&
+          d.id == historyId &&
+          isString(d.listId, 1, 120) &&
+          isString(d.listName, 1, 120) &&
+          isDateLike(d.closedAt) &&
+          d.items is list &&
+          d.items.size() <= 3000 &&
+          isNumberOrNull(d.budget) &&
+          d.paymentBalances is list &&
+          d.paymentBalances.size() <= 30;
+      }
 
-    function validCatalogDoc(productId) {
-      let d = request.resource.data;
-      return d.keys().hasOnly([
-          'id',
-          'name',
-          'category',
-          'unitPrice',
-          'barcode',
-          'usageCount',
-          'updatedAt',
-          'priceHistory'
-        ]) &&
-        d.keys().hasAll([
-          'id',
-          'name',
-          'category',
-          'unitPrice',
-          'barcode',
-          'usageCount',
-          'updatedAt',
-          'priceHistory'
-        ]) &&
-        d.id == productId &&
-        isString(d.name, 1, 180) &&
-        validCategory(d.category) &&
-        isNumberOrNull(d.unitPrice) &&
-        (d.barcode == null || isString(d.barcode, 8, 64)) &&
-        d.usageCount is int &&
-        d.usageCount >= 0 &&
-        isDateLike(d.updatedAt) &&
-        d.priceHistory is list &&
-        d.priceHistory.size() <= 500;
-    }
+      function validCatalogDoc(productId) {
+        let d = request.resource.data;
+        return d.keys().hasOnly([
+            'id',
+            'name',
+            'category',
+            'unitPrice',
+            'barcode',
+            'usageCount',
+            'updatedAt',
+            'priceHistory'
+          ]) &&
+          d.keys().hasAll([
+            'id',
+            'name',
+            'category',
+            'unitPrice',
+            'barcode',
+            'usageCount',
+            'updatedAt',
+            'priceHistory'
+          ]) &&
+          d.id == productId &&
+          isString(d.name, 1, 180) &&
+          validCategory(d.category) &&
+          isNumberOrNull(d.unitPrice) &&
+          (d.barcode == null || isString(d.barcode, 8, 64)) &&
+          d.usageCount is int &&
+          d.usageCount >= 0 &&
+          isDateLike(d.updatedAt) &&
+          d.priceHistory is list &&
+          d.priceHistory.size() <= 500;
+      }
 
-    function validSettingsDoc(docId) {
-      let d = request.resource.data;
-      return docId == 'app' &&
-        d.keys().hasOnly(['themeMode', 'updatedAt']) &&
-        d.keys().hasAll(['themeMode', 'updatedAt']) &&
-        validTheme(d.themeMode) &&
-        isDateLike(d.updatedAt);
-    }
+      function validSettingsDoc(docId) {
+        let d = request.resource.data;
+        return docId == 'app' &&
+          d.keys().hasOnly(['themeMode', 'updatedAt']) &&
+          d.keys().hasAll(['themeMode', 'updatedAt']) &&
+          validTheme(d.themeMode) &&
+          isDateLike(d.updatedAt);
+      }
 
-    function isSharedListMemberFromData(data) {
-      return signedIn() &&
-        data.memberUids is list &&
-        request.auth.uid in data.memberUids;
-    }
-
-    function sharedListExists(listId) {
-      return exists(/databases/$(database)/documents/shared_lists/$(listId));
-    }
-
-    function sharedListData(listId) {
-      return get(/databases/$(database)/documents/shared_lists/$(listId)).data;
-    }
-
-    function isSharedListMember(listId) {
-      return signedIn() &&
-        sharedListExists(listId) &&
-        request.auth.uid in sharedListData(listId).memberUids;
-    }
-
-    function validInviteCode(value) {
-      return value == null || isString(value, 6, 16);
-    }
-
-    function validSharedListCommon(listId, d) {
-      return d.keys().hasOnly([
-          'id',
-          'name',
-          'ownerUid',
-          'memberUids',
-          'createdAt',
-          'updatedAt',
-          'inviteCode',
-          'sourceLocalListId'
-        ]) &&
-        d.keys().hasAll([
-          'id',
-          'name',
-          'ownerUid',
-          'memberUids',
-          'createdAt',
-          'updatedAt',
-          'inviteCode'
-        ]) &&
-        d.id == listId &&
-        isString(d.name, 1, 120) &&
-        isString(d.ownerUid, 1, 200) &&
-        d.memberUids is list &&
-        d.memberUids.size() >= 1 &&
-        d.memberUids.size() <= 30 &&
-        isDateLike(d.createdAt) &&
-        isDateLike(d.updatedAt) &&
-        validInviteCode(d.inviteCode) &&
-        (
-          !d.keys().hasAny(['sourceLocalListId']) ||
-          d.sourceLocalListId == null ||
-          isString(d.sourceLocalListId, 1, 120)
-        );
-    }
-
-    function validSharedListCreate(listId) {
-      let d = request.resource.data;
-      return validSharedListCommon(listId, d) &&
-        d.ownerUid == request.auth.uid &&
-        request.auth.uid in d.memberUids;
-    }
-
-    function validSharedListUpdate(listId) {
-      let d = request.resource.data;
-      let previous = resource.data;
-      return validSharedListCommon(listId, d) &&
-        isSharedListMemberFromData(d) &&
-        d.ownerUid == previous.ownerUid &&
-        d.createdAt == previous.createdAt &&
-        (
-          previous.ownerUid == request.auth.uid ||
+      function isSharedListMemberFromData(data) {
+        return signedIn() &&
           (
-            d.memberUids == previous.memberUids &&
-            d.inviteCode == previous.inviteCode &&
-            d.sourceLocalListId == previous.sourceLocalListId
-          )
-        );
-    }
-
-    function validSharedItemCommon(itemId, d) {
-      return d.keys().hasOnly([
-          'id',
-          'name',
-          'quantity',
-          'unitPrice',
-          'isPurchased',
-          'updatedBy',
-          'updatedAt',
-          'createdAt',
-          'category',
-          'barcode'
-        ]) &&
-        d.keys().hasAll([
-          'id',
-          'name',
-          'quantity',
-          'unitPrice',
-          'isPurchased',
-          'updatedBy',
-          'updatedAt',
-          'createdAt',
-          'category',
-          'barcode'
-        ]) &&
-        d.id == itemId &&
-        isString(d.name, 1, 180) &&
-        d.quantity is int &&
-        d.quantity >= 1 &&
-        d.quantity <= 9999 &&
-        isNumber(d.unitPrice) &&
-        d.unitPrice >= 0 &&
-        d.isPurchased is bool &&
-        isString(d.updatedBy, 1, 200) &&
-        isDateLike(d.updatedAt) &&
-        isDateLike(d.createdAt) &&
-        validCategory(d.category) &&
-        (d.barcode == null || isString(d.barcode, 8, 64));
-    }
-
-    function validSharedItemCreate(itemId) {
-      let d = request.resource.data;
-      return validSharedItemCommon(itemId, d);
-    }
-
-    function validSharedItemUpdate(itemId) {
-      let d = request.resource.data;
-      return validSharedItemCommon(itemId, d) &&
-        d.createdAt == resource.data.createdAt;
-    }
-
-    function validInviteDoc(code, d) {
-      return d.keys().hasOnly([
-          'code',
-          'listId',
-          'ownerUid',
-          'active',
-          'createdAt',
-          'updatedAt'
-        ]) &&
-        d.keys().hasAll([
-          'code',
-          'listId',
-          'ownerUid',
-          'active',
-          'createdAt',
-          'updatedAt'
-        ]) &&
-        d.code == code &&
-        isString(d.code, 6, 16) &&
-        isString(d.listId, 1, 120) &&
-        isString(d.ownerUid, 1, 200) &&
-        d.active is bool &&
-        isDateLike(d.createdAt) &&
-        isDateLike(d.updatedAt);
-    }
-
-    function inviteMatchesOwnedList(listId, ownerUid) {
-      return sharedListExists(listId) &&
-        sharedListData(listId).ownerUid == ownerUid;
-    }
-
-    match /users/{uid} {
-      allow read: if isOwner(uid);
-      allow create: if isOwner(uid) && validUserRootCreate();
-      allow update: if isOwner(uid) && validUserRootUpdate();
-      allow delete: if isOwner(uid);
-
-      match /lists/{listId} {
-        allow read: if isOwner(uid);
-        allow create, update: if isOwner(uid) && validListDoc(listId);
-        allow delete: if isOwner(uid);
+            (data.memberUids is list && request.auth.uid in data.memberUids) ||
+            (data.ownerUid is string && data.ownerUid == request.auth.uid)
+          );
       }
 
-      match /history/{historyId} {
-        allow read: if isOwner(uid);
-        allow create, update: if isOwner(uid) && validHistoryDoc(historyId);
-        allow delete: if isOwner(uid);
+      function sharedListExists(listId) {
+        return exists(/databases/$(database)/documents/shared_lists/$(listId));
       }
 
-      match /catalog/{productId} {
-        allow read: if isOwner(uid);
-        allow create, update: if isOwner(uid) && validCatalogDoc(productId);
-        allow delete: if isOwner(uid);
+      function sharedListData(listId) {
+        return get(/databases/$(database)/documents/shared_lists/$(listId)).data;
       }
 
-      match /settings/{docId} {
-        allow read: if isOwner(uid);
-        allow create, update: if isOwner(uid) && validSettingsDoc(docId);
-        allow delete: if isOwner(uid);
+      function isSharedListMember(listId) {
+        return signedIn() &&
+          sharedListExists(listId) &&
+          (
+            request.auth.uid in sharedListData(listId).memberUids ||
+            sharedListData(listId).ownerUid == request.auth.uid
+          );
       }
-    }
 
-    match /shared_lists/{listId} {
-      allow read: if isSharedListMemberFromData(resource.data);
-      allow create: if signedIn() && validSharedListCreate(listId);
-      allow update: if (
-          // Caso normal: membro existente editando a lista
-          isSharedListMemberFromData(resource.data) &&
-          validSharedListUpdate(listId)
-        ) || (
-          // Caso especial: entrar na lista pelo código de convite (joinByCode)
-          // Permite que um usuário autenticado adicione apenas a si mesmo como membro,
-          // desde que a lista tenha um inviteCode ativo e o limite não seja ultrapassado.
-          signedIn() &&
-          resource.data.inviteCode != null &&
-          resource.data.inviteCode is string &&
-          resource.data.inviteCode.size() >= 6 &&
+      function validInviteCode(value) {
+        return value == null || isString(value, 6, 16);
+      }
+
+      function validSharedListCommon(listId, d) {
+        return d.keys().hasOnly([
+            'id',
+            'name',
+            'ownerUid',
+            'memberUids',
+            'createdAt',
+            'updatedAt',
+            'budget',
+            'reminder',
+            'paymentBalances',
+            'isClosed',
+            'closedAt',
+            'inviteCode',
+            'sourceLocalListId'
+          ]) &&
+          d.keys().hasAll([
+            'id',
+            'name',
+            'ownerUid',
+            'memberUids',
+            'createdAt',
+            'updatedAt',
+            'inviteCode'
+          ]) &&
+          d.id == listId &&
+          isString(d.name, 1, 120) &&
+          isString(d.ownerUid, 1, 200) &&
+          d.memberUids is list &&
+          d.memberUids.size() >= 1 &&
+          d.memberUids.size() <= 30 &&
+          isDateLike(d.createdAt) &&
+          isDateLike(d.updatedAt) &&
+          validInviteCode(d.inviteCode) &&
+          (!d.keys().hasAny(['budget']) || isNumberOrNull(d.budget)) &&
+          (!d.keys().hasAny(['reminder']) || validReminder(d.reminder)) &&
+          (!d.keys().hasAny(['paymentBalances']) || (
+            d.paymentBalances is list &&
+            d.paymentBalances.size() <= 30
+          )) &&
+          (!d.keys().hasAny(['isClosed']) || d.isClosed is bool) &&
+          (!d.keys().hasAny(['closedAt']) ||
+            d.closedAt == null ||
+            isDateLike(d.closedAt)) &&
+          (
+            !d.keys().hasAny(['sourceLocalListId']) ||
+            d.sourceLocalListId == null ||
+            isString(d.sourceLocalListId, 1, 120)
+          );
+      }
+
+      function validSharedListCreate(listId) {
+        let d = request.resource.data;
+        return validSharedListCommon(listId, d) &&
+          d.ownerUid == request.auth.uid &&
+          request.auth.uid in d.memberUids;
+      }
+
+      function validSharedListUpdate(listId) {
+        let d = request.resource.data;
+        let previous = resource.data;
+        return validSharedListCommon(listId, d) &&
+          isSharedListMemberFromData(d) &&
+          d.ownerUid == previous.ownerUid &&
+          d.createdAt == previous.createdAt &&
+          (
+            previous.ownerUid == request.auth.uid ||
+            (
+              d.memberUids == previous.memberUids &&
+              d.inviteCode == previous.inviteCode &&
+              d.sourceLocalListId == previous.sourceLocalListId
+            )
+          );
+      }
+
+      function validSharedItemCommon(itemId, d) {
+        return d.keys().hasOnly([
+            'id',
+            'name',
+            'quantity',
+            'unitPrice',
+            'isPurchased',
+            'updatedBy',
+            'updatedAt',
+            'createdAt',
+            'category',
+            'barcode'
+          ]) &&
+          d.keys().hasAll([
+            'id',
+            'name',
+            'quantity',
+            'unitPrice',
+            'isPurchased',
+            'updatedBy',
+            'updatedAt',
+            'createdAt',
+            'category',
+            'barcode'
+          ]) &&
+          d.id == itemId &&
+          isString(d.name, 1, 180) &&
+          d.quantity is int &&
+          d.quantity >= 1 &&
+          d.quantity <= 9999 &&
+          isNumber(d.unitPrice) &&
+          d.unitPrice >= 0 &&
+          d.isPurchased is bool &&
+          isString(d.updatedBy, 1, 200) &&
+          isDateLike(d.updatedAt) &&
+          isDateLike(d.createdAt) &&
+          validCategory(d.category) &&
+          (d.barcode == null || isString(d.barcode, 8, 64));
+      }
+
+      function validSharedItemCreate(itemId) {
+        let d = request.resource.data;
+        return validSharedItemCommon(itemId, d);
+      }
+
+      function validSharedItemUpdate(itemId) {
+        let d = request.resource.data;
+        return validSharedItemCommon(itemId, d) &&
+          d.createdAt == resource.data.createdAt;
+      }
+
+      function validSharedHistoryDoc(historyId, d) {
+        return d.keys().hasOnly([
+            'id',
+            'listId',
+            'listName',
+            'closedAt',
+            'items',
+            'budget',
+            'paymentBalances'
+          ]) &&
+          d.keys().hasAll([
+            'id',
+            'listId',
+            'listName',
+            'closedAt',
+            'items',
+            'budget',
+            'paymentBalances'
+          ]) &&
+          d.id == historyId &&
+          isString(d.listId, 1, 120) &&
+          isString(d.listName, 1, 120) &&
+          isDateLike(d.closedAt) &&
+          d.items is list &&
+          d.items.size() <= 3000 &&
+          isNumberOrNull(d.budget) &&
+          d.paymentBalances is list &&
+          d.paymentBalances.size() <= 30;
+      }
+
+      function validInviteDoc(code, d) {
+        return d.keys().hasOnly([
+            'code',
+            'listId',
+            'ownerUid',
+            'active',
+            'createdAt',
+            'updatedAt'
+          ]) &&
+          d.keys().hasAll([
+            'code',
+            'listId',
+            'ownerUid',
+            'active',
+            'createdAt',
+            'updatedAt'
+          ]) &&
+          d.code == code &&
+          isString(d.code, 6, 16) &&
+          isString(d.listId, 1, 120) &&
+          isString(d.ownerUid, 1, 200) &&
+          d.active is bool &&
+          isDateLike(d.createdAt) &&
+          isDateLike(d.updatedAt);
+      }
+
+      function inviteMatchesOwnedList(listId, ownerUid) {
+        return sharedListExists(listId) &&
+          sharedListData(listId).ownerUid == ownerUid;
+      }
+
+      match /users/{uid} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && validUserRootCreate();
+        allow update: if isOwner(uid) && validUserRootUpdate();
+        allow delete: if isOwner(uid);
+
+        match /lists/{listId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid) && validListDoc(listId);
+          allow delete: if isOwner(uid);
+        }
+
+        match /history/{historyId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid) && validHistoryDoc(historyId);
+          allow delete: if isOwner(uid);
+        }
+
+        match /catalog/{productId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid) && validCatalogDoc(productId);
+          allow delete: if isOwner(uid);
+        }
+
+        match /settings/{docId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid) && validSettingsDoc(docId);
+          allow delete: if isOwner(uid);
+        }
+      }
+
+      match /shared_lists/{listId} {
+        allow read: if isSharedListMemberFromData(resource.data);
+        allow create: if signedIn() && validSharedListCreate(listId);
+        allow update: if (
+            // Caso normal: membro existente editando a lista
+            isSharedListMemberFromData(resource.data) &&
+            validSharedListUpdate(listId)
+          ) || (
+            // Caso especial: entrar na lista pelo código de convite (joinByCode)
+            // Permite que um usuário autenticado adicione apenas a si mesmo como membro,
+            // desde que a lista tenha um inviteCode ativo e o limite não seja ultrapassado.
+            signedIn() &&
+            resource.data.inviteCode != null &&
+            resource.data.inviteCode is string &&
+            resource.data.inviteCode.size() >= 6 &&
+            request.resource.data.ownerUid == resource.data.ownerUid &&
+            request.resource.data.createdAt == resource.data.createdAt &&
+            request.resource.data.name == resource.data.name &&
+            request.resource.data.budget == resource.data.budget &&
+            request.resource.data.reminder == resource.data.reminder &&
+            request.resource.data.paymentBalances == resource.data.paymentBalances &&
+            request.resource.data.isClosed == resource.data.isClosed &&
+            request.resource.data.closedAt == resource.data.closedAt &&
+            request.resource.data.inviteCode == resource.data.inviteCode &&
+            request.resource.data.sourceLocalListId ==
+              resource.data.sourceLocalListId &&
+            request.resource.data.memberUids.hasAll(resource.data.memberUids) &&
+            request.auth.uid in request.resource.data.memberUids &&
+            request.resource.data.memberUids.size() <= 30
+          );
+        allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+
+        match /items/{itemId} {
+          allow read: if isSharedListMember(listId);
+          allow create: if isSharedListMember(listId) &&
+            validSharedItemCreate(itemId);
+          allow update: if isSharedListMember(listId) &&
+            validSharedItemUpdate(itemId);
+          allow delete: if isSharedListMember(listId);
+        }
+
+        match /history/{historyId} {
+          allow read: if isSharedListMember(listId);
+          allow create, update: if isSharedListMember(listId) &&
+            validSharedHistoryDoc(historyId, request.resource.data);
+          allow delete: if isSharedListMember(listId);
+        }
+      }
+
+      match /list_invites/{code} {
+        // Permite leitura para usuário autenticado (necessário para transações
+        // que verificam existência/estado do convite).
+        allow get: if signedIn();
+        allow list: if false;
+        allow create: if signedIn() &&
+          validInviteDoc(code, request.resource.data) &&
+          request.resource.data.ownerUid == request.auth.uid &&
+          inviteMatchesOwnedList(
+            request.resource.data.listId,
+            request.auth.uid,
+          );
+        allow update: if signedIn() &&
+          validInviteDoc(code, request.resource.data) &&
+          resource.data.ownerUid == request.auth.uid &&
           request.resource.data.ownerUid == resource.data.ownerUid &&
+          request.resource.data.listId == resource.data.listId &&
+          request.resource.data.code == resource.data.code &&
           request.resource.data.createdAt == resource.data.createdAt &&
-          request.resource.data.memberUids.hasAll(resource.data.memberUids) &&
-          request.auth.uid in request.resource.data.memberUids &&
-          request.resource.data.memberUids.size() <= 30
-        );
-      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
-
-      match /items/{itemId} {
-        allow read: if isSharedListMember(listId);
-        allow create: if isSharedListMember(listId) &&
-          validSharedItemCreate(itemId);
-        allow update: if isSharedListMember(listId) &&
-          validSharedItemUpdate(itemId);
-        allow delete: if isSharedListMember(listId);
+          inviteMatchesOwnedList(
+            request.resource.data.listId,
+            request.auth.uid,
+          );
+        allow delete: if signedIn() &&
+          resource.data.ownerUid == request.auth.uid &&
+          inviteMatchesOwnedList(resource.data.listId, request.auth.uid);
       }
-    }
 
-    match /list_invites/{code} {
-      allow get: if signedIn() && resource.data.active == true;
-      allow list: if false;
-      allow create: if signedIn() &&
-        validInviteDoc(code, request.resource.data) &&
-        request.resource.data.ownerUid == request.auth.uid &&
-        inviteMatchesOwnedList(
-          request.resource.data.listId,
-          request.auth.uid,
-        );
-      allow update: if signedIn() &&
-        validInviteDoc(code, request.resource.data) &&
-        resource.data.ownerUid == request.auth.uid &&
-        request.resource.data.ownerUid == resource.data.ownerUid &&
-        request.resource.data.listId == resource.data.listId &&
-        request.resource.data.code == resource.data.code &&
-        request.resource.data.createdAt == resource.data.createdAt &&
-        inviteMatchesOwnedList(
-          request.resource.data.listId,
-          request.auth.uid,
-        );
-      allow delete: if signedIn() &&
-        resource.data.ownerUid == request.auth.uid &&
-        inviteMatchesOwnedList(resource.data.listId, request.auth.uid);
-    }
-
-    match /{document=**} {
-      allow read, write: if false;
+      match /{document=**} {
+        allow read, write: if false;
+      }
     }
   }
-}

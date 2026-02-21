@@ -54,6 +54,7 @@ class ShoppingListApp extends StatefulWidget {
   final PurchaseHistoryStorage? _historyStorage;
   final ProductLookupService? _lookupService;
   final ShoppingHomeWidgetService? _homeWidgetService;
+
   /// Instância pré-inicializada do Firestore (necessária na Web para evitar
   /// LateInitializationError com databaseId customizado).
   final FirebaseFirestore? _firestoreInstance;
@@ -181,6 +182,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
           _lastSuccessfulCloudSyncAt = null;
           _cloudSyncDebounce?.cancel();
           _stopCloudRetryTimer();
+          unawaited(_store.clearAllLocalData());
           if (mounted) {
             setState(() {});
           }
@@ -188,6 +190,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         }
 
         final isDifferentUser = previousUid != user.uid;
+        if (isDifferentUser && previousUid != null) {
+          unawaited(_store.clearAllLocalData());
+        }
         if (isDifferentUser) {
           _resetOnboardingState();
         }
@@ -563,28 +568,38 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     // pode disparar um segundo _pullFromCloud enquanto o primeiro ainda está
     // em andamento, causando LateInitializationError no SDK Web do Firestore.
     if (_isPullingCloudSnapshot) {
-      debugPrint('[CloudSync][pull] já em andamento, ignorando chamada duplicada para uid=$uid');
+      debugPrint(
+        '[CloudSync][pull] já em andamento, ignorando chamada duplicada para uid=$uid',
+      );
       return;
     }
     _isPullingCloudSnapshot = true;
     final repository = _cloudRepository;
     try {
-      debugPrint('[CloudSync][pull] iniciando para uid=$uid asInitialHydration=$asInitialHydration');
+      debugPrint(
+        '[CloudSync][pull] iniciando para uid=$uid asInitialHydration=$asInitialHydration',
+      );
       await _waitForStoreLoaded();
       if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) {
-        debugPrint('[CloudSync][pull] abortado: usuário mudou ou widget desmontado');
+        debugPrint(
+          '[CloudSync][pull] abortado: usuário mudou ou widget desmontado',
+        );
         return;
       }
       debugPrint('[CloudSync][pull] chamando loadUserSnapshot...');
       final snapshot = await repository.loadUserSnapshot(uid);
-      debugPrint('[CloudSync][pull] loadUserSnapshot OK — hasCoreData=${snapshot.hasCoreData}');
+      debugPrint(
+        '[CloudSync][pull] loadUserSnapshot OK — hasCoreData=${snapshot.hasCoreData}',
+      );
       if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) {
         return;
       }
 
       final hasCloudCoreData = snapshot.hasCoreData;
       if (hasCloudCoreData) {
-        debugPrint('[CloudSync][pull] importando snapshot: listas=${snapshot.lists.length} histórico=${snapshot.history.length} catálogo=${snapshot.catalog.length}');
+        debugPrint(
+          '[CloudSync][pull] importando snapshot: listas=${snapshot.lists.length} histórico=${snapshot.history.length} catálogo=${snapshot.catalog.length}',
+        );
         final payload = jsonEncode({
           'version': 3,
           'exportedAt': DateTime.now().toIso8601String(),
@@ -604,7 +619,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         }
       }
 
-      debugPrint('[CloudSync][pull] aplicando tema da nuvem (themeMode=${snapshot.settings.themeMode})...');
+      debugPrint(
+        '[CloudSync][pull] aplicando tema da nuvem (themeMode=${snapshot.settings.themeMode})...',
+      );
       final cloudTheme = _parseThemeMode(snapshot.settings.themeMode);
       if (cloudTheme != null && cloudTheme != _themeMode) {
         await _setThemeMode(cloudTheme, syncCloud: false);
@@ -634,9 +651,13 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       // em modo release (--omit-late-names) quando o SDK JS do Firebase ainda
       // não terminou de inicializar internamente. Tratamos como erro transiente
       // e tentamos novamente silenciosamente, sem exibir mensagem ao usuário.
-      final isLateInitError = error.toString().contains('LateInitializationError');
+      final isLateInitError = error.toString().contains(
+        'LateInitializationError',
+      );
       if (!_onboardingResolved) {
-        debugPrint('[CloudSync][pull] resolvendo onboarding no catch (isLateInitError=$isLateInitError)...');
+        debugPrint(
+          '[CloudSync][pull] resolvendo onboarding no catch (isLateInitError=$isLateInitError)...',
+        );
         await _resolveOnboardingForUser(uid);
       }
       _hasPendingCloudSync = true;
@@ -667,7 +688,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       // na segunda chamada (asInitialHydration=false) deixe _isInitialCloudHydration
       // preso em true para sempre, causando loading eterno na Web.
       if (_hydratingCloudUid == uid && mounted) {
-        debugPrint('[CloudSync][pull] finally: limpando _isInitialCloudHydration para uid=$uid');
+        debugPrint(
+          '[CloudSync][pull] finally: limpando _isInitialCloudHydration para uid=$uid',
+        );
         setState(() {
           _isInitialCloudHydration = false;
           _hydratingCloudUid = null;
@@ -719,11 +742,15 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     }
     final repository = _cloudRepository;
     if (_isPushingCloudSnapshot || _isApplyingCloudSnapshot) {
-      debugPrint('[CloudSync][push] ignorado: isPushing=$_isPushingCloudSnapshot isApplying=$_isApplyingCloudSnapshot');
+      debugPrint(
+        '[CloudSync][push] ignorado: isPushing=$_isPushingCloudSnapshot isApplying=$_isApplyingCloudSnapshot',
+      );
       return;
     }
     if (_loadedCloudUid != uid) {
-      debugPrint('[CloudSync][push] ignorado: _loadedCloudUid=$_loadedCloudUid != uid=$uid — aguardando pull');
+      debugPrint(
+        '[CloudSync][push] ignorado: _loadedCloudUid=$_loadedCloudUid != uid=$uid — aguardando pull',
+      );
       _ensureCloudRetryTimer();
       return;
     }
@@ -743,7 +770,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       return;
     }
 
-    debugPrint('[CloudSync][push] iniciando saveUserSnapshot para uid=$uid — listas=${_store.lists.length} histórico=${_store.purchaseHistory.length} catálogo=${_store.catalogProducts.length}');
+    debugPrint(
+      '[CloudSync][push] iniciando saveUserSnapshot para uid=$uid — listas=${_store.lists.length} histórico=${_store.purchaseHistory.length} catálogo=${_store.catalogProducts.length}',
+    );
     _isPushingCloudSnapshot = true;
     if (mounted) {
       setState(() {});
@@ -771,7 +800,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         ),
         profile: profile,
       );
-      debugPrint('[CloudSync][push] saveUserSnapshot OK — sincronização concluída!');
+      debugPrint(
+        '[CloudSync][push] saveUserSnapshot OK — sincronização concluída!',
+      );
       _hasPendingCloudSync = false;
       _loadedCloudUid = uid;
       _lastSuccessfulCloudSyncAt = DateTime.now();
@@ -857,6 +888,16 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       return;
     }
     await user.reload();
+    final refreshed = FirebaseAuth.instance.currentUser;
+    if (refreshed != null) {
+      final repository = FirestoreUserDataRepository();
+      final migrated = await repository.migrateProfilePhotoToStoragePath(
+        user: refreshed,
+      );
+      if (migrated && mounted) {
+        setState(() {});
+      }
+    }
     if (!mounted) {
       return;
     }
