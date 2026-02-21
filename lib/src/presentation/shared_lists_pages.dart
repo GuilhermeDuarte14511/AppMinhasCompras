@@ -467,6 +467,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
   bool _didShowBudgetWarning = false;
   bool _didShowBudgetNearLimitWarning = false;
   String? _lastReminderFingerprint;
+  String? _lastLocalMirrorFingerprint;
 
   String get _currentUid => FirebaseAuth.instance.currentUser?.uid.trim() ?? '';
   String get _searchQuery => _searchController.text.trim();
@@ -583,6 +584,38 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
     }
     _lastReminderFingerprint = fingerprint;
     unawaited(widget.store.syncExternalReminder(list));
+  }
+
+  void _mirrorToLocalIfNeeded(
+    SharedShoppingListSummary list,
+    ShoppingListModel listModel,
+  ) {
+    final uid = _currentUid;
+    if (uid.isEmpty || !list.isOwner(uid)) {
+      return;
+    }
+    final sourceId = list.sourceLocalListId?.trim() ?? '';
+    if (sourceId.isEmpty) {
+      return;
+    }
+    final fingerprint = [
+      list.updatedAt.millisecondsSinceEpoch,
+      listModel.items.length,
+      listModel.totalValue.toStringAsFixed(2),
+      listModel.purchasedItemsCount,
+      listModel.isClosed,
+    ].join('|');
+    if (_lastLocalMirrorFingerprint == fingerprint) {
+      return;
+    }
+    _lastLocalMirrorFingerprint = fingerprint;
+    final existing = widget.store.findById(sourceId);
+    final mirrored = listModel.copyWith(
+      id: sourceId,
+      createdAt: existing?.createdAt ?? listModel.createdAt,
+    );
+    _log('mirror local listId=$sourceId from shared=${list.id}');
+    unawaited(widget.store.upsertList(mirrored));
   }
 
   Future<void> _openBudgetEditor(SharedShoppingListSummary list) async {
@@ -1175,6 +1208,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
               }
               _maybeWarnBudget(listModel);
               _syncReminderIfNeeded(listModel);
+              _mirrorToLocalIfNeeded(list, listModel);
             });
 
             return Scaffold(

@@ -340,6 +340,119 @@ class SharedListsRepository {
         });
   }
 
+  Future<List<SharedShoppingListSummary>> fetchOwnedSharedLists(String uid) async {
+    final trimmedUid = uid.trim();
+    if (trimmedUid.isEmpty) {
+      return const <SharedShoppingListSummary>[];
+    }
+    final snapshot = await _sharedListsRef
+        .where('ownerUid', isEqualTo: trimmedUid)
+        .get();
+    final lists = snapshot.docs
+        .map(SharedShoppingListSummary.fromFirestoreDoc)
+        .toList(growable: false);
+    lists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return List.unmodifiable(lists);
+  }
+
+  Future<List<SharedShoppingItem>> fetchListItems(String listId) async {
+    final trimmedListId = listId.trim();
+    if (trimmedListId.isEmpty) {
+      return const <SharedShoppingItem>[];
+    }
+    final snapshot = await _itemsRef(trimmedListId).get();
+    final items = snapshot.docs
+        .map(SharedShoppingItem.fromFirestoreDoc)
+        .toList(growable: false);
+    items.sort((left, right) {
+      if (left.isPurchased != right.isPurchased) {
+        return left.isPurchased ? 1 : -1;
+      }
+      return left.name.toLowerCase().compareTo(right.name.toLowerCase());
+    });
+    return List.unmodifiable(items);
+  }
+
+  Future<void> syncLocalListToShared({
+    required ShoppingListModel localList,
+    required SharedShoppingListSummary sharedList,
+    required String updatedBy,
+  }) async {
+    final trimmedUid = updatedBy.trim();
+    if (trimmedUid.isEmpty) {
+      return;
+    }
+    final listId = sharedList.id.trim();
+    if (listId.isEmpty) {
+      return;
+    }
+    await updateListMeta(
+      listId: listId,
+      name: localList.name,
+      budget: localList.budget,
+      reminder: localList.reminder,
+      paymentBalances: localList.paymentBalances,
+      isClosed: localList.isClosed,
+      closedAt: localList.closedAt,
+      clearBudget: localList.budget == null,
+      clearReminder: localList.reminder == null,
+      clearPaymentBalances: localList.paymentBalances.isEmpty,
+      clearClosedAt: localList.closedAt == null,
+    );
+
+    final sharedItems = await fetchListItems(listId);
+    final sharedById = <String, SharedShoppingItem>{
+      for (final item in sharedItems) item.id: item,
+    };
+    final localIds = localList.items.map((item) => item.id).toSet();
+    final toDelete = sharedItems
+        .where((item) => !localIds.contains(item.id))
+        .map((item) => item.id)
+        .toList(growable: false);
+
+    final operations = <void Function(WriteBatch)>[];
+    final now = DateTime.now();
+    for (final item in localList.items) {
+      final existing = sharedById[item.id];
+      final sharedItem = SharedShoppingItem(
+        id: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        isPurchased: item.isPurchased,
+        updatedBy: trimmedUid,
+        updatedAt: now,
+        createdAt: existing?.createdAt ?? now,
+        category: item.category,
+        barcode: item.barcode,
+      );
+      operations.add(
+        (batch) => batch.set(
+          _itemsRef(listId).doc(sharedItem.id),
+          sharedItem.toFirestorePayload(updatedBy: trimmedUid),
+          SetOptions(merge: true),
+        ),
+      );
+    }
+    for (final itemId in toDelete) {
+      operations.add((batch) => batch.delete(_itemsRef(listId).doc(itemId)));
+    }
+
+    if (operations.isEmpty) {
+      return;
+    }
+
+    const maxOps = 450;
+    for (var i = 0; i < operations.length; i += maxOps) {
+      final batch = _firestore.batch();
+      final slice = operations.skip(i).take(maxOps);
+      for (final op in slice) {
+        op(batch);
+      }
+      await batch.commit();
+    }
+  }
+
   Stream<List<SharedShoppingListSummary>> watchOwnedSharedLists(String uid) {
     final trimmedUid = uid.trim();
     if (trimmedUid.isEmpty) {
@@ -368,6 +481,39 @@ class SharedListsRepository {
       }
       return SharedShoppingListSummary.fromFirestoreDoc(snapshot);
     });
+  }
+
+  Future<SharedShoppingListSummary?> fetchSharedList(String listId) async {
+    final trimmedListId = listId.trim();
+    if (trimmedListId.isEmpty) {
+      return null;
+    }
+    final snapshot = await _listRef(trimmedListId).get();
+    if (!snapshot.exists) {
+      return null;
+    }
+    return SharedShoppingListSummary.fromFirestoreDoc(snapshot);
+  }
+
+  Future<SharedShoppingListSummary?> findSharedListBySource({
+    required String ownerUid,
+    required String sourceLocalListId,
+  }) async {
+    final trimmedUid = ownerUid.trim();
+    final trimmedSource = sourceLocalListId.trim();
+    if (trimmedUid.isEmpty || trimmedSource.isEmpty) {
+      return null;
+    }
+    final snapshot = await _sharedListsRef
+        .where('ownerUid', isEqualTo: trimmedUid)
+        .get();
+    for (final doc in snapshot.docs) {
+      final parsed = SharedShoppingListSummary.fromFirestoreDoc(doc);
+      if (parsed.sourceLocalListId == trimmedSource) {
+        return parsed;
+      }
+    }
+    return null;
   }
 
   Stream<List<SharedShoppingItem>> watchListItems(String listId) {
@@ -659,26 +805,101 @@ class SharedListsRepository {
       throw StateError('Codigo ou usuario invalido.');
     }
 
-    return _firestore.runTransaction((transaction) async {
-      final inviteSnapshot = await transaction.get(_inviteRef(normalizedCode));
-      if (!inviteSnapshot.exists) {
-        throw StateError('Codigo invalido ou expirado.');
-      }
-      final inviteData = inviteSnapshot.data() ?? const <String, dynamic>{};
-      if ((inviteData['active'] as bool?) != true) {
-        throw StateError('Codigo invalido ou expirado.');
-      }
-      final listId = (inviteData['listId'] as String?)?.trim() ?? '';
-      if (listId.isEmpty) {
-        throw StateError('Convite sem lista valida.');
-      }
+    if (kIsWeb) {
+      _log('joinByCode web mode (sem transacao) code=$normalizedCode');
+      return _joinByCodeWithoutTransaction(
+        inviteCode: normalizedCode,
+        uid: trimmedUid,
+        forceServer: true,
+      );
+    }
 
-      transaction.update(_listRef(listId), <String, dynamic>{
-        'memberUids': FieldValue.arrayUnion(<String>[trimmedUid]),
-        'updatedAt': FieldValue.serverTimestamp(),
+    try {
+      return await _firestore.runTransaction((transaction) async {
+        final inviteSnapshot = await transaction.get(
+          _inviteRef(normalizedCode),
+        );
+        if (!inviteSnapshot.exists) {
+          throw StateError('Codigo invalido ou expirado.');
+        }
+        final inviteData = inviteSnapshot.data() ?? const <String, dynamic>{};
+        if ((inviteData['active'] as bool?) != true) {
+          throw StateError('Codigo invalido ou expirado.');
+        }
+        final listId = (inviteData['listId'] as String?)?.trim() ?? '';
+        if (listId.isEmpty) {
+          throw StateError('Convite sem lista valida.');
+        }
+
+        transaction.update(_listRef(listId), <String, dynamic>{
+          'memberUids': FieldValue.arrayUnion(<String>[trimmedUid]),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+        return listId;
       });
-      return listId;
+    } catch (error, stack) {
+      _log('joinByCode transaction error=$error');
+      if (error is StateError) {
+        rethrow;
+      }
+      if (error is FirebaseException &&
+          error.code.toLowerCase() == 'permission-denied') {
+        rethrow;
+      }
+      if (kIsWeb) {
+        try {
+          return await _joinByCodeWithoutTransaction(
+            inviteCode: normalizedCode,
+            uid: trimmedUid,
+            forceServer: true,
+          );
+        } catch (fallbackError, fallbackStack) {
+          _log('joinByCode fallback error=$fallbackError');
+          developer.log(
+            'joinByCode fallback stack',
+            name: 'shared_lists',
+            error: fallbackError,
+            stackTrace: fallbackStack,
+          );
+          rethrow;
+        }
+      }
+      developer.log(
+        'joinByCode error',
+        name: 'shared_lists',
+        error: error,
+        stackTrace: stack,
+      );
+      rethrow;
+    }
+  }
+
+  Future<String> _joinByCodeWithoutTransaction({
+    required String inviteCode,
+    required String uid,
+    bool forceServer = false,
+  }) async {
+    final inviteSnapshot = forceServer
+        ? await _inviteRef(inviteCode).get(
+            const GetOptions(source: Source.server),
+          )
+        : await _inviteRef(inviteCode).get();
+    if (!inviteSnapshot.exists) {
+      throw StateError('Codigo invalido ou expirado.');
+    }
+    final inviteData = inviteSnapshot.data() ?? const <String, dynamic>{};
+    if ((inviteData['active'] as bool?) != true) {
+      throw StateError('Codigo invalido ou expirado.');
+    }
+    final listId = (inviteData['listId'] as String?)?.trim() ?? '';
+    if (listId.isEmpty) {
+      throw StateError('Convite sem lista valida.');
+    }
+    await _listRef(listId).update(<String, dynamic>{
+      'memberUids': FieldValue.arrayUnion(<String>[uid]),
+      'updatedAt': FieldValue.serverTimestamp(),
     });
+    return listId;
   }
 
   Future<void> updateListMeta({

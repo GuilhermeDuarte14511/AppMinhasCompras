@@ -20,6 +20,7 @@ import '../data/repositories/product_catalog_repository.dart';
 import '../data/services/backup_service.dart';
 import '../data/services/home_widget_service.dart';
 import '../data/services/reminder_service.dart';
+import '../domain/models_and_utils.dart';
 import '../presentation/auth_page.dart';
 import '../presentation/launch.dart';
 import '../presentation/onboarding_page.dart';
@@ -110,6 +111,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   bool _isApplyingCloudSnapshot = false;
   bool _isPushingCloudSnapshot = false;
   bool _isPullingCloudSnapshot = false;
+  bool _isMirroringSharedLists = false;
   bool _hasPendingCloudSync = false;
   bool _hasNetworkConnection = true;
   bool _notifySuccessOnNextSync = false;
@@ -263,12 +265,81 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       unawaited(_pullFromCloud(uid));
       return;
     }
+    unawaited(_mirrorSharedListsToLocal(uid, showSnack: true));
     _scheduleCloudSync(immediate: true);
   }
 
   Future<void> _waitForStoreLoaded() async {
     while (mounted && _store.isLoading) {
       await Future<void>.delayed(const Duration(milliseconds: 80));
+    }
+  }
+
+  Future<void> _mirrorSharedListsToLocal(
+    String uid, {
+    bool showSnack = false,
+  }) async {
+    if (widget._storage != null) {
+      return;
+    }
+    if (_isMirroringSharedLists) {
+      return;
+    }
+    _isMirroringSharedLists = true;
+    try {
+      await _waitForStoreLoaded();
+      final ownedShared = await _sharedListsRepository.fetchOwnedSharedLists(
+        uid,
+      );
+      if (ownedShared.isEmpty) {
+        return;
+      }
+      var mirroredCount = 0;
+      for (final shared in ownedShared) {
+        final sourceId = shared.sourceLocalListId?.trim() ?? '';
+        if (sourceId.isEmpty) {
+          continue;
+        }
+        final local = _store.findById(sourceId);
+        if (local != null && local.updatedAt.isAfter(shared.updatedAt)) {
+          await _sharedListsRepository.syncLocalListToShared(
+            localList: local,
+            sharedList: shared,
+            updatedBy: uid,
+          );
+          mirroredCount++;
+          continue;
+        }
+        final items = await _sharedListsRepository.fetchListItems(shared.id);
+        final listModel = ShoppingListModel(
+          id: sourceId,
+          name: shared.name,
+          createdAt: local?.createdAt ?? shared.createdAt,
+          updatedAt: shared.updatedAt,
+          items: items
+              .map((entry) => entry.toShoppingItem())
+              .toList(growable: false),
+          budget: shared.budget,
+          reminder: shared.reminder,
+          paymentBalances: shared.paymentBalances,
+          isClosed: shared.isClosed,
+          closedAt: shared.closedAt,
+        );
+        await _store.upsertList(listModel);
+        mirroredCount++;
+      }
+      if (showSnack && mirroredCount > 0) {
+        _showCloudSyncNotification(
+          'Listas compartilhadas sincronizadas.',
+          duration: const Duration(seconds: 3),
+          type: AppToastType.info,
+        );
+      }
+    } catch (error, stack) {
+      debugPrint('[share_sync] erro ao espelhar: $error');
+      debugPrintStack(label: '[share_sync]', stackTrace: stack);
+    } finally {
+      _isMirroringSharedLists = false;
     }
   }
 
@@ -633,6 +704,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       debugPrint('[CloudSync][pull] chamando _resolveOnboardingForUser...');
       await _resolveOnboardingForUser(uid, profile: snapshot.profile);
       debugPrint('[CloudSync][pull] _resolveOnboardingForUser OK');
+      unawaited(_mirrorSharedListsToLocal(uid));
       _hasPendingCloudSync = true;
       if (mounted) {
         setState(() {});
