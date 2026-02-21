@@ -53,7 +53,6 @@ Future<void> main() async {
           firestore.settings = const Settings(
             persistenceEnabled: false,
             webExperimentalForceLongPolling: true,
-            webExperimentalAutoDetectLongPolling: true,
           );
         }
 

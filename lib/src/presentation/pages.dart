@@ -1342,6 +1342,7 @@ class _DashboardPageState extends State<DashboardPage> {
       return;
     }
     try {
+      debugPrint('[share_flow] joinByCode start code=$inviteCode uid=$uid');
       final listId = await repository.joinByCode(
         inviteCode: inviteCode,
         uid: uid,
@@ -1355,7 +1356,23 @@ class _DashboardPageState extends State<DashboardPage> {
       if (!mounted) {
         return;
       }
-      _showSnack('Nao foi possivel entrar com o codigo: $error');
+      debugPrint('[share_flow] joinByCode error=$error');
+      if (error is FirebaseException) {
+        final code = error.code.trim().toLowerCase();
+        if (code == 'permission-denied') {
+          _showSnack(
+            'Permissao negada. Verifique se o codigo ainda esta ativo.',
+          );
+          return;
+        }
+        _showSnack('Nao foi possivel entrar: ${error.message ?? code}');
+        return;
+      }
+      if (error is StateError) {
+        _showSnack(error.message);
+        return;
+      }
+      _showSnack('Nao foi possivel entrar com o codigo.');
     }
   }
 
@@ -3942,6 +3959,8 @@ enum _MyListsMenuAction {
 
 enum _ListEditorMenuAction {
   reopenList,
+  openSharedList,
+  syncSharedNow,
   shareList,
   importFiscalReceipt,
   finalizePurchase,
@@ -3960,13 +3979,15 @@ enum _ListItemSwipeQuickAction { edit, duplicate, delete }
 
 class _ListEditorActionsSheet extends StatelessWidget {
   const _ListEditorActionsSheet({
-    required this.isReadOnly,
+    required this.isClosed,
+    required this.isSharedLocked,
     required this.hasReminder,
     required this.hasPurchasedItems,
     required this.marketOrderingEnabled,
   });
 
-  final bool isReadOnly;
+  final bool isClosed;
+  final bool isSharedLocked;
   final bool hasReminder;
   final bool hasPurchasedItems;
   final bool marketOrderingEnabled;
@@ -3976,27 +3997,30 @@ class _ListEditorActionsSheet extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
-    final quickActions = isReadOnly
+    final quickActions = isClosed
         ? const <_ListEditorMenuAction>[_ListEditorMenuAction.reopenList]
-        : const <_ListEditorMenuAction>[
+        : <_ListEditorMenuAction>[
             _ListEditorMenuAction.finalizePurchase,
             _ListEditorMenuAction.importFiscalReceipt,
             _ListEditorMenuAction.openMarketMode,
+            if (isSharedLocked) _ListEditorMenuAction.syncSharedNow,
           ];
     final purchaseActions = <_ListEditorMenuAction>[
-      if (!isReadOnly) ...[
+      if (!isClosed) ...[
         _ListEditorMenuAction.importFiscalReceipt,
         _ListEditorMenuAction.finalizePurchase,
         _ListEditorMenuAction.openMarketMode,
         _ListEditorMenuAction.openCatalog,
         if (hasPurchasedItems) _ListEditorMenuAction.clearPurchased,
       ],
-      if (isReadOnly) _ListEditorMenuAction.reopenList,
-      if (isReadOnly) _ListEditorMenuAction.openCatalog,
+      if (isClosed) _ListEditorMenuAction.reopenList,
+      if (isClosed) _ListEditorMenuAction.openCatalog,
+      if (isSharedLocked) _ListEditorMenuAction.openSharedList,
+      if (isSharedLocked) _ListEditorMenuAction.syncSharedNow,
       _ListEditorMenuAction.shareList,
       _ListEditorMenuAction.viewHistory,
     ];
-    final settingsActions = isReadOnly
+    final settingsActions = isClosed
         ? const <_ListEditorMenuAction>[]
         : <_ListEditorMenuAction>[
             _ListEditorMenuAction.editReminder,
@@ -4014,6 +4038,20 @@ class _ListEditorActionsSheet extends StatelessWidget {
             shortLabel: 'Reabrir',
             icon: Icons.lock_open_rounded,
             color: const Color(0xFF1E88E5),
+          );
+        case _ListEditorMenuAction.openSharedList:
+          return _ListEditorActionMeta(
+            label: 'Abrir lista compartilhada',
+            shortLabel: 'Abrir compartilhada',
+            icon: Icons.group_work_rounded,
+            color: const Color(0xFF00796B),
+          );
+        case _ListEditorMenuAction.syncSharedNow:
+          return _ListEditorActionMeta(
+            label: 'Sincronizar agora',
+            shortLabel: 'Sincronizar',
+            icon: Icons.sync_rounded,
+            color: const Color(0xFF00838F),
           );
         case _ListEditorMenuAction.shareList:
           return _ListEditorActionMeta(
@@ -4336,9 +4374,20 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   bool _summaryCollapsed = true;
   bool _didShowBudgetWarning = false;
   bool _didShowBudgetNearLimitWarning = false;
+  SharedShoppingListSummary? _linkedSharedSummary;
+  bool _checkedSharedLink = false;
+  bool _redirectingToShared = false;
+  bool _forceSharedView = false;
+  bool _isSyncingToShared = false;
+  StreamSubscription<SharedShoppingListSummary?>? _sharedListSub;
+  StreamSubscription<List<SharedShoppingItem>>? _sharedItemsSub;
+  SharedShoppingListSummary? _sharedLiveSummary;
+  List<SharedShoppingItem>? _sharedLiveItems;
+  DateTime? _lastSharedSyncAt;
 
   String get _searchQuery => _searchController.text.trim();
-  bool get _isReadOnly => _list.isClosed;
+  bool get _isSharedLocked => _linkedSharedSummary != null;
+  bool get _isEditingLocked => _list.isClosed;
   bool get _hasActiveFilters =>
       _searchQuery.isNotEmpty ||
       _sortOption != ItemSortOption.defaultOrder ||
@@ -4409,14 +4458,14 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   }
 
   bool _ensureEditable([String? message]) {
-    if (!_isReadOnly) {
-      return true;
+    if (_list.isClosed) {
+      _showSnack(
+        message ??
+            'Esta lista está fechada. Reabra a lista para editar produtos.',
+      );
+      return false;
     }
-    _showSnack(
-      message ??
-          'Esta lista está fechada. Reabra a lista para editar produtos.',
-    );
-    return false;
+    return true;
   }
 
   @override
@@ -4433,12 +4482,15 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     _list = fromStore.deepCopy();
     _didShowBudgetWarning = _list.isOverBudget;
     _didShowBudgetNearLimitWarning = false;
+    _resolveSharedLink();
   }
 
   @override
   void dispose() {
     _searchController.removeListener(_handleSearchChanged);
     _searchController.dispose();
+    _sharedListSub?.cancel();
+    _sharedItemsSub?.cancel();
     super.dispose();
   }
 
@@ -4449,6 +4501,263 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     setState(() {});
   }
 
+  Future<void> _resolveSharedLink() async {
+    if (_checkedSharedLink) {
+      return;
+    }
+    _checkedSharedLink = true;
+    final repository = widget.sharedListsRepository;
+    if (repository == null) {
+      return;
+    }
+    final uid = FirebaseAuth.instance.currentUser?.uid.trim() ?? '';
+    if (uid.isEmpty) {
+      return;
+    }
+    try {
+      final shared = await repository.findSharedListBySource(
+        ownerUid: uid,
+        sourceLocalListId: _list.id,
+      );
+      if (!mounted || shared == null) {
+        return;
+      }
+      setState(() {
+        _linkedSharedSummary = shared;
+      });
+      _startSharedLiveSync(shared.id);
+      _promptOpenSharedList(shared);
+    } catch (error) {
+      debugPrint('[share_flow] resolveSharedLink error=$error');
+    }
+  }
+
+  void _startSharedLiveSync(String sharedListId) {
+    final repository = widget.sharedListsRepository;
+    if (repository == null) {
+      return;
+    }
+    _sharedListSub?.cancel();
+    _sharedItemsSub?.cancel();
+    _sharedListSub = repository.watchSharedList(sharedListId).listen((summary) {
+      _sharedLiveSummary = summary;
+      _applySharedSnapshotToLocal();
+    });
+    _sharedItemsSub = repository.watchListItems(sharedListId).listen((items) {
+      _sharedLiveItems = items;
+      _applySharedSnapshotToLocal();
+    });
+  }
+
+  void _applySharedSnapshotToLocal() {
+    final summary = _sharedLiveSummary;
+    final items = _sharedLiveItems;
+    if (summary == null || items == null) {
+      return;
+    }
+    final sourceLocalId = summary.sourceLocalListId?.trim() ?? '';
+    if (sourceLocalId.isNotEmpty && sourceLocalId != _list.id) {
+      return;
+    }
+    if (_isSyncingToShared) {
+      return;
+    }
+    if (_list.updatedAt.isAfter(summary.updatedAt)) {
+      unawaited(_syncLocalChangesToShared(_list));
+      return;
+    }
+    final updated = ShoppingListModel(
+      id: _list.id,
+      name: summary.name,
+      createdAt: _list.createdAt,
+      updatedAt: summary.updatedAt,
+      items: items
+          .map((entry) => entry.toShoppingItem())
+          .toList(growable: false),
+      budget: summary.budget,
+      reminder: summary.reminder,
+      paymentBalances: summary.paymentBalances,
+      isClosed: summary.isClosed,
+      closedAt: summary.closedAt,
+    );
+    setState(() {
+      _list = updated;
+      _linkedSharedSummary = summary;
+      _lastSharedSyncAt = DateTime.now();
+    });
+    unawaited(widget.store.upsertList(updated));
+  }
+
+  void _promptOpenSharedList(SharedShoppingListSummary shared) {
+    if (_redirectingToShared) {
+      return;
+    }
+    _redirectingToShared = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) {
+        return;
+      }
+      final shouldOpen = await showAppDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Lista compartilhada detectada'),
+          content: const Text(
+            'Esta lista tem uma versão compartilhada. Para ver atualizações em '
+            'tempo real, abra a lista compartilhada.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Agora não'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Abrir lista compartilhada'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) {
+        return;
+      }
+      if (shouldOpen == true) {
+        _activateSharedView();
+      } else {
+        _redirectingToShared = false;
+      }
+    });
+  }
+
+  void _activateSharedView() {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _forceSharedView = true;
+    });
+  }
+
+  Future<void> _openSharedInviteSheetFromLocal() async {
+    final repository = widget.sharedListsRepository;
+    final shared = _linkedSharedSummary;
+    final uid = FirebaseAuth.instance.currentUser?.uid.trim() ?? '';
+    if (repository == null || shared == null || uid.isEmpty) {
+      return;
+    }
+    await showSharedInviteSheet(
+      context: context,
+      repository: repository,
+      listId: shared.id,
+      currentUid: uid,
+      onOpenSharedList: _openLinkedSharedList,
+    );
+  }
+
+  Future<void> _openLinkedSharedList() async {
+    _activateSharedView();
+  }
+
+  Future<void> _syncLinkedSharedNow({bool showSnack = false}) async {
+    final repository = widget.sharedListsRepository;
+    final shared = _linkedSharedSummary;
+    if (repository == null || shared == null) {
+      if (showSnack) {
+        _showSnack('Nenhuma lista compartilhada para sincronizar.');
+      }
+      return;
+    }
+    final sourceLocalId = shared.sourceLocalListId?.trim() ?? '';
+    if (sourceLocalId.isNotEmpty && sourceLocalId != _list.id) {
+      if (showSnack) {
+        _showSnack('Esta lista não corresponde ao compartilhamento vinculado.');
+      }
+      return;
+    }
+    try {
+      final latest = await repository.fetchSharedList(shared.id);
+      if (latest == null) {
+        if (showSnack) {
+          _showSnack('Lista compartilhada não encontrada.');
+        }
+        return;
+      }
+      final items = await repository.fetchListItems(shared.id);
+      final existing = widget.store.findById(_list.id);
+      final mirrored = ShoppingListModel(
+        id: _list.id,
+        name: latest.name,
+        createdAt: existing?.createdAt ?? _list.createdAt,
+        updatedAt: latest.updatedAt,
+        items: items
+            .map((entry) => entry.toShoppingItem())
+            .toList(growable: false),
+        budget: latest.budget,
+        reminder: latest.reminder,
+        paymentBalances: latest.paymentBalances,
+        isClosed: latest.isClosed,
+        closedAt: latest.closedAt,
+      );
+      await widget.store.upsertList(mirrored);
+      if (mounted) {
+        setState(() {
+          _list = mirrored;
+          _linkedSharedSummary = latest;
+          _lastSharedSyncAt = DateTime.now();
+        });
+      }
+      if (showSnack) {
+        _showSnack('Listas compartilhadas sincronizadas.');
+      }
+    } catch (error) {
+      if (showSnack) {
+        _showSnack('Não foi possível sincronizar: $error');
+      }
+    }
+  }
+
+  Future<void> _syncLocalChangesToShared(
+    ShoppingListModel updated, {
+    bool showSnack = false,
+  }) async {
+    final repository = widget.sharedListsRepository;
+    final shared = _linkedSharedSummary;
+    final uid = FirebaseAuth.instance.currentUser?.uid.trim() ?? '';
+    if (repository == null || shared == null || uid.isEmpty) {
+      return;
+    }
+    final sourceLocalId = shared.sourceLocalListId?.trim() ?? '';
+    if (sourceLocalId.isNotEmpty && sourceLocalId != updated.id) {
+      return;
+    }
+    if (_isSyncingToShared) {
+      return;
+    }
+    _isSyncingToShared = true;
+    try {
+      await repository.syncLocalListToShared(
+        localList: updated,
+        sharedList: shared,
+        updatedBy: uid,
+      );
+      final latest = await repository.fetchSharedList(shared.id);
+      if (mounted && latest != null) {
+        setState(() {
+          _linkedSharedSummary = latest;
+          _lastSharedSyncAt = DateTime.now();
+        });
+      }
+      if (showSnack) {
+        _showSnack('Listas compartilhadas sincronizadas.');
+      }
+    } catch (error) {
+      if (showSnack) {
+        _showSnack('Não foi possível sincronizar: $error');
+      }
+    } finally {
+      _isSyncingToShared = false;
+    }
+  }
+
   void _updateList(ShoppingListModel updated, {String? message}) {
     final normalized = updated.copyWith(updatedAt: DateTime.now());
     setState(() {
@@ -4456,6 +4765,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     });
     _maybeWarnBudgetExceeded(normalized);
     unawaited(widget.store.upsertList(_list));
+    unawaited(_syncLocalChangesToShared(normalized));
     if (message != null) {
       _showSnack(message);
     }
@@ -5043,6 +5353,12 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         _logShare('share flow aborted: widget unmounted');
         return;
       }
+      if (mounted) {
+        setState(() {
+          _linkedSharedSummary = sharedList;
+        });
+      }
+      _startSharedLiveSync(sharedList.id);
       await showSharedInviteSheet(
         context: context,
         repository: repository,
@@ -5062,6 +5378,9 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
           );
         },
       );
+      if (!mounted) {
+        return;
+      }
     } catch (error) {
       if (!mounted) {
         return;
@@ -5119,6 +5438,24 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   }
 
   Future<void> _reopenListForEditing() async {
+    if (_linkedSharedSummary != null) {
+      final repository = widget.sharedListsRepository;
+      final uid = FirebaseAuth.instance.currentUser?.uid.trim() ?? '';
+      if (repository == null || uid.isEmpty) {
+        _showSnack('Não foi possível reabrir no modo compartilhado.');
+        return;
+      }
+      try {
+        await repository.reopenSharedList(
+          listId: _linkedSharedSummary!.id,
+          updatedBy: uid,
+        );
+        await _syncLinkedSharedNow(showSnack: true);
+      } catch (error) {
+        _showSnack('Não foi possível reabrir: $error');
+      }
+      return;
+    }
     final updated = await widget.store.reopenList(_list.id);
     if (!mounted || updated == null) {
       return;
@@ -5132,7 +5469,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   }
 
   Future<void> _finalizePurchase() async {
-    if (_isReadOnly) {
+    if (_list.isClosed) {
       _showSnack('A lista já está fechada. Toque em reabrir para editar.');
       return;
     }
@@ -5143,6 +5480,39 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
 
     final checkout = await showPurchaseCheckoutDialog(context, list: _list);
     if (!mounted || checkout == null) {
+      return;
+    }
+
+    if (_linkedSharedSummary != null) {
+      final repository = widget.sharedListsRepository;
+      final uid = FirebaseAuth.instance.currentUser?.uid.trim() ?? '';
+      if (repository == null || uid.isEmpty) {
+        _showSnack('Não foi possível fechar no modo compartilhado.');
+        return;
+      }
+      try {
+        await _syncLocalChangesToShared(_list);
+        final localFinalized = await widget.store.finalizeList(
+          _list.id,
+          markPendingAsPurchased: checkout.markPendingAsPurchased,
+        );
+        if (mounted && localFinalized != null) {
+          setState(() {
+            _list = localFinalized.deepCopy();
+            _didShowBudgetWarning = _list.isOverBudget;
+            _didShowBudgetNearLimitWarning = false;
+          });
+        }
+        await repository.finalizeSharedList(
+          listId: _linkedSharedSummary!.id,
+          updatedBy: uid,
+          markPendingAsPurchased: checkout.markPendingAsPurchased,
+        );
+        await _syncLinkedSharedNow(showSnack: true);
+        _showSnack('Compra fechada e salva no histórico compartilhado.');
+      } catch (error) {
+        _showSnack('Não foi possível fechar: $error');
+      }
       return;
     }
 
@@ -5172,6 +5542,13 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     switch (action) {
       case _ListEditorMenuAction.reopenList:
         _reopenListForEditing();
+        return;
+      case _ListEditorMenuAction.openSharedList:
+        _openLinkedSharedList();
+        return;
+      case _ListEditorMenuAction.syncSharedNow:
+        unawaited(_syncLocalChangesToShared(_list));
+        _syncLinkedSharedNow(showSnack: true);
         return;
       case _ListEditorMenuAction.shareList:
         _shareListWithCode();
@@ -5221,7 +5598,8 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       useSafeArea: true,
       builder: (context) {
         return _ListEditorActionsSheet(
-          isReadOnly: _isReadOnly,
+          isClosed: _list.isClosed,
+          isSharedLocked: _isSharedLocked,
           hasReminder: _list.reminder != null,
           hasPurchasedItems: _list.purchasedItemsCount > 0,
           marketOrderingEnabled: _marketModeEnabled,
@@ -5249,6 +5627,18 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     }
 
     final visibleItems = _visibleItems;
+    final linkedShared = _linkedSharedSummary;
+    final sharedRepository = widget.sharedListsRepository;
+
+    if (_forceSharedView &&
+        linkedShared != null &&
+        sharedRepository != null) {
+      return SharedListEditorPage(
+        repository: sharedRepository,
+        store: widget.store,
+        listId: linkedShared.id,
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -5261,7 +5651,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
           ),
         ],
       ),
-      floatingActionButton: _isReadOnly
+      floatingActionButton: _isEditingLocked
           ? null
           : FloatingActionButton.extended(
               onPressed: _openItemForm,
@@ -5272,21 +5662,83 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         child: SafeArea(
           child: Column(
             children: [
+              if (linkedShared != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+                  child: Card(
+                    elevation: 0,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.group_work_rounded),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Lista compartilhada detectada',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleSmall
+                                      ?.copyWith(fontWeight: FontWeight.w800),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Abra a versao compartilhada para ver '
+                                  'atualizacoes em tempo real.',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                      ),
+                                ),
+                                const SizedBox(height: 10),
+                                _SharedSyncStatusPill(
+                                  isSyncing: _isSyncingToShared,
+                                  lastSyncAt: _lastSharedSyncAt,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              FilledButton.tonal(
+                                onPressed: _openLinkedSharedList,
+                                child: const Text('Abrir'),
+                              ),
+                              TextButton(
+                                onPressed: _openSharedInviteSheetFromLocal,
+                                child: const Text('Gerenciar'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
                 child: _ListSummaryPanel(
                   list: _list,
                   collapsed: _summaryCollapsed,
-                  onBudgetTap: _isReadOnly
+                  onBudgetTap: _isEditingLocked
                       ? () => _ensureEditable()
                       : _openBudgetEditor,
-                  onReminderTap: _isReadOnly
+                  onReminderTap: _isEditingLocked
                       ? () => _ensureEditable()
                       : _openReminderEditor,
-                  onPaymentBalancesTap: _isReadOnly
+                  onPaymentBalancesTap: _isEditingLocked
                       ? () => _ensureEditable()
                       : _openPaymentBalancesEditor,
-                  onReopenTap: _isReadOnly ? _reopenListForEditing : null,
+                  onReopenTap: _list.isClosed ? _reopenListForEditing : null,
                   onToggleCollapsed: () {
                     setState(() {
                       _summaryCollapsed = !_summaryCollapsed;
@@ -5346,11 +5798,11 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
                               ),
                               child: Dismissible(
                                 key: ValueKey('list_item_${item.id}'),
-                                direction: _isReadOnly
+                                direction: _isEditingLocked
                                     ? DismissDirection.none
                                     : DismissDirection.horizontal,
                                 confirmDismiss: (direction) async {
-                                  if (_isReadOnly) {
+                                  if (_isEditingLocked) {
                                     return false;
                                   }
                                   if (direction ==
@@ -5380,10 +5832,10 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
                                       label: 'Ações rápidas',
                                       alignRight: true,
                                     ),
-                                child: _ShoppingItemCard(
-                                  item: item,
-                                  readOnly: _isReadOnly,
-                                  onPurchasedChanged: (value) =>
+                                  child: _ShoppingItemCard(
+                                    item: item,
+                                    readOnly: _isEditingLocked,
+                                    onPurchasedChanged: (value) =>
                                       _togglePurchased(item, value),
                                   onIncrement: () => _changeQuantity(item, 1),
                                   onDecrement: () => _changeQuantity(item, -1),
@@ -8156,6 +8608,63 @@ class _EmptyItemsState extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _SharedSyncStatusPill extends StatelessWidget {
+  const _SharedSyncStatusPill({
+    required this.isSyncing,
+    required this.lastSyncAt,
+  });
+
+  final bool isSyncing;
+  final DateTime? lastSyncAt;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final label = isSyncing
+        ? 'Sincronizando...'
+        : lastSyncAt == null
+        ? 'Sincronização pendente'
+        : 'Sincronizado às ${formatDateTime(lastSyncAt!)}';
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isSyncing)
+              const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              Icon(
+                Icons.sync_rounded,
+                size: 16,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
