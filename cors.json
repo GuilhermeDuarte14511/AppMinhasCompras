@@ -1,0 +1,13 @@
+[
+  {
+    "origin": [
+      "http://localhost:*",
+      "http://127.0.0.1:*",
+      "https://minhascompras-3abbe.web.app",
+      "https://minhascompras-3abbe.firebaseapp.com"
+    ],
+    "method": ["GET"],
+    "responseHeader": ["Content-Type", "Authorization"],
+    "maxAgeSeconds": 3600
+  }
+]

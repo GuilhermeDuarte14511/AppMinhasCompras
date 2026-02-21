@@ -113,6 +113,30 @@ cd "d:\Projetos\Android Flutter\lista_compras_material"
 & "C:\flutter\bin\flutter.bat" run
 ```
 
+## Executar no navegador (Flutter Web)
+```powershell
+cd "d:\Projetos\Android Flutter\lista_compras_material"
+& "C:\flutter\bin\flutter.bat" run -d chrome
+```
+
+## Publicar Web no Firebase Hosting
+Pre-requisitos:
+- Firebase CLI instalado (`npm i -g firebase-tools`)
+- Login no Firebase (`firebase login`)
+- Projeto selecionado (este repo ja inclui `.firebaserc` com `minhascompras-3abbe`)
+
+Build e deploy:
+```powershell
+cd "d:\Projetos\Android Flutter\lista_compras_material"
+& "C:\flutter\bin\flutter.bat" build web --release
+firebase deploy --only hosting
+```
+
+Observacoes:
+- O app Web usa a mesma base de codigo Dart, mesmas telas e mesma logica.
+- O Hosting esta configurado para SPA (qualquer rota cai em `index.html`).
+- O conteudo servido vem de `build/web`.
+
 ## Executar com Cosmos API (opcional)
 Se quiser habilitar busca da Cosmos por GTIN, rode com `--dart-define`:
 ```powershell

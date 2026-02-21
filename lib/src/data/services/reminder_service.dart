@@ -6,7 +6,6 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:intl/intl.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
-
 import '../../application/ports.dart';
 import '../../core/utils/format_utils.dart';
 import '../../domain/models_and_utils.dart';
@@ -62,8 +61,14 @@ class LocalNotificationsReminderService implements ShoppingReminderService {
   bool _notificationsEnabled = true;
   final Map<String, DateTime> _notificationThrottle = <String, DateTime>{};
 
-  @override
+    @override
   Future<void> initialize() async {
+    if (kIsWeb) {
+      throw UnsupportedError(
+        'LocalNotificationsReminderService não é suportado no Web.',
+      );
+    }
+
     if (_initialized) {
       return;
     }
@@ -71,9 +76,7 @@ class LocalNotificationsReminderService implements ShoppingReminderService {
     tz_data.initializeTimeZones();
     await _configureLocalTimezone();
 
-    const androidSettings = AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
-    );
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const darwinSettings = DarwinInitializationSettings();
 
     await _plugin.initialize(
@@ -304,32 +307,33 @@ class LocalNotificationsReminderService implements ShoppingReminderService {
     );
   }
 
-  @override
-  Future<void> syncFromLists(
-    List<ShoppingListModel> lists, {
-    bool reset = false,
-  }) async {
-    if (!_initialized) {
-      await initialize();
-    }
+ @override
+Future<void> syncFromLists(
+  List<ShoppingListModel> lists, {
+  bool reset = false,
+}) async {
+  if (!_initialized) {
+    await initialize();
+  }
 
-    if (reset) {
+  if (reset) {
+    if (!kIsWeb) {
       try {
         await _plugin.cancelAllPendingNotifications();
       } catch (_) {
         await _plugin.cancelAll();
       }
     }
-
-    for (final list in lists) {
-      if (list.reminder == null || list.isClosed) {
-        await cancelForList(list.id);
-      } else {
-        await scheduleForList(list);
-      }
-    }
   }
 
+  for (final list in lists) {
+    if (list.reminder == null || list.isClosed) {
+      await cancelForList(list.id);
+    } else {
+      await scheduleForList(list);
+    }
+  }
+}
   int _notificationIdForList(String listId) {
     final hash = listId.hashCode & 0x7fffffff;
     return 100000 + (hash % 400000000);

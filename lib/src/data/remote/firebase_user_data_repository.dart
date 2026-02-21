@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import '../../domain/models_and_utils.dart';
 
 class FirestoreUserProfile {
@@ -161,13 +162,8 @@ class FirestoreUserDataSnapshot {
 
 class FirestoreUserDataRepository {
   FirestoreUserDataRepository({FirebaseFirestore? firestore})
-    : _defaultFirestore = FirebaseFirestore.instanceFor(app: Firebase.app()),
-      _activeFirestore = firestore ?? _buildPreferredFirestore();
+    : _firestore = firestore ?? _buildFirestore();
 
-  static const String _firestoreDatabaseIdFromDefine = String.fromEnvironment(
-    'FIRESTORE_DATABASE_ID',
-  );
-  static const String _firestoreDatabaseIdHardcoded = 'minhascompras';
   static const int _maxBatchOperations = 450;
   static const Set<String> _transientCodes = <String>{
     'unavailable',
@@ -176,27 +172,11 @@ class FirestoreUserDataRepository {
     'resource-exhausted',
   };
 
-  final FirebaseFirestore _defaultFirestore;
-  FirebaseFirestore _activeFirestore;
+  final FirebaseFirestore _firestore;
 
-  static FirebaseFirestore _buildPreferredFirestore() {
-    final configuredId = _resolveConfiguredDatabaseId();
-    return FirebaseFirestore.instanceFor(
-      app: Firebase.app(),
-      databaseId: configuredId,
-    );
-  }
-
-  static String _resolveConfiguredDatabaseId() {
-    final fromDefine = _firestoreDatabaseIdFromDefine.trim();
-    if (fromDefine.isNotEmpty) {
-      return fromDefine;
-    }
-    final hardcoded = _firestoreDatabaseIdHardcoded.trim();
-    if (hardcoded.isNotEmpty) {
-      return hardcoded;
-    }
-    return '(default)';
+  static FirebaseFirestore _buildFirestore() {
+    // Usa sempre o banco (default) em todas as plataformas.
+    return FirebaseFirestore.instance;
   }
 
   CollectionReference<Map<String, dynamic>> _listsRef(
@@ -262,10 +242,18 @@ class FirestoreUserDataRepository {
     Source? source,
   }) async {
     final getOptions = source == null ? null : GetOptions(source: source);
+
+    // A primeira chamada é feita de forma sequencial para garantir que o
+    // delegate interno do Firestore Web seja inicializado antes de disparar
+    // múltiplas chamadas em paralelo. Fazer todas as chamadas simultâneas com
+    // Future.wait causa LateInitializationError no SDK Web (race condition no
+    // delegate interno que usa campo `late`).
+    final userSnapshot = getOptions == null
+        ? await _userDocRef(firestore, uid).get()
+        : await _userDocRef(firestore, uid).get(getOptions);
+
+    // Demais chamadas em paralelo — delegate já está inicializado.
     final responses = await Future.wait<dynamic>([
-      getOptions == null
-          ? _userDocRef(firestore, uid).get()
-          : _userDocRef(firestore, uid).get(getOptions),
       getOptions == null
           ? _listsRef(firestore, uid).get()
           : _listsRef(firestore, uid).get(getOptions),
@@ -279,12 +267,11 @@ class FirestoreUserDataRepository {
           ? _settingsDocRef(firestore, uid).get()
           : _settingsDocRef(firestore, uid).get(getOptions),
     ]);
-    final userSnapshot = responses[0] as DocumentSnapshot<Map<String, dynamic>>;
-    final listsSnapshot = responses[1] as QuerySnapshot<Map<String, dynamic>>;
-    final historySnapshot = responses[2] as QuerySnapshot<Map<String, dynamic>>;
-    final catalogSnapshot = responses[3] as QuerySnapshot<Map<String, dynamic>>;
+    final listsSnapshot = responses[0] as QuerySnapshot<Map<String, dynamic>>;
+    final historySnapshot = responses[1] as QuerySnapshot<Map<String, dynamic>>;
+    final catalogSnapshot = responses[2] as QuerySnapshot<Map<String, dynamic>>;
     final settingsSnapshot =
-        responses[4] as DocumentSnapshot<Map<String, dynamic>>;
+        responses[3] as DocumentSnapshot<Map<String, dynamic>>;
 
     final lists = <ShoppingListModel>[];
     for (final doc in listsSnapshot.docs) {
@@ -345,16 +332,18 @@ class FirestoreUserDataRepository {
       QuerySnapshot<Map<String, dynamic>>? remoteHistory;
       QuerySnapshot<Map<String, dynamic>>? remoteCatalog;
       try {
+        // A primeira chamada é sequencial para garantir que o delegate interno
+        // do Firestore Web seja inicializado antes das chamadas paralelas.
+        // Fazer todas simultâneas com Future.wait causa LateInitializationError.
+        remoteLists = await listsCollection.get();
         final remoteResponses = await Future.wait<dynamic>([
-          listsCollection.get(),
           historyCollection.get(),
           catalogCollection.get(),
         ]);
-        remoteLists = remoteResponses[0] as QuerySnapshot<Map<String, dynamic>>;
         remoteHistory =
-            remoteResponses[1] as QuerySnapshot<Map<String, dynamic>>;
+            remoteResponses[0] as QuerySnapshot<Map<String, dynamic>>;
         remoteCatalog =
-            remoteResponses[2] as QuerySnapshot<Map<String, dynamic>>;
+            remoteResponses[1] as QuerySnapshot<Map<String, dynamic>>;
       } on FirebaseException catch (error) {
         if (!_isTransientError(error)) {
           rethrow;
@@ -433,12 +422,82 @@ class FirestoreUserDataRepository {
   }
 
   Future<void> saveUserProfile({required FirestoreUserProfile profile}) async {
-    await _runWithDatabaseFallback((firestore) async {
-      await _userDocRef(firestore, profile.uid).set(
+  await _runWithDatabaseFallback((firestore) async {
+    final docRef = _userDocRef(firestore, profile.uid);
+
+    try {
+      await docRef.set(
         profile.toFirestoreJson(includeCreatedAt: false),
         SetOptions(merge: true),
       );
-    });
+    } on FirebaseException catch (e) {
+      final msg = (e.message ?? '');
+
+      if (kIsWeb && msg.contains('INTERNAL ASSERTION FAILED')) {
+        try {
+          await docRef.get(const GetOptions(source: Source.server));
+          return; // trata como sucesso
+        } catch (_) {
+        }
+      }
+      rethrow;
+    }
+  });
+}
+
+  Future<bool> migrateProfilePhotoToStoragePath({
+    required User user,
+  }) async {
+    final rawUrl = user.photoURL?.trim() ?? '';
+    if (rawUrl.isEmpty) {
+      return false;
+    }
+
+    final isStorageUrl = rawUrl.startsWith('gs://') ||
+        rawUrl.contains('firebasestorage.googleapis.com') ||
+        rawUrl.contains('storage.googleapis.com');
+    if (!isStorageUrl) {
+      return false;
+    }
+    if (rawUrl.startsWith('gs://')) {
+      return false;
+    }
+
+    try {
+      final ref = FirebaseStorage.instance.refFromURL(rawUrl);
+      final storagePath = 'gs://${ref.bucket}/${ref.fullPath}';
+      await user.updatePhotoURL(storagePath);
+      await user.reload();
+      final refreshed = FirebaseAuth.instance.currentUser;
+      if (refreshed == null) {
+        return false;
+      }
+      await saveUserProfile(
+        profile: FirestoreUserProfile(
+          uid: refreshed.uid,
+          displayName: refreshed.displayName,
+          email: refreshed.email,
+          photoUrl: refreshed.photoURL,
+          provider: _resolveProviderId(refreshed),
+          themeMode: null,
+          isOnboardingCompleted: null,
+        ),
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  String _resolveProviderId(User user) {
+    for (final info in user.providerData) {
+      final providerId = info.providerId.trim();
+      if (providerId.isEmpty || providerId == 'firebase') {
+        continue;
+      }
+      return providerId;
+    }
+    return 'password';
   }
 
   Future<void> _commitOperationsInChunks(
@@ -471,27 +530,9 @@ class FirestoreUserDataRepository {
     return _transientCodes.contains(error.code.trim().toLowerCase());
   }
 
-  bool _shouldFallbackToDefaultDatabase(FirebaseException error) {
-    final code = error.code.trim().toLowerCase();
-    return code == 'not-found' ||
-        code == 'failed-precondition' ||
-        code == 'invalid-argument' ||
-        code == 'unavailable' ||
-        code == 'deadline-exceeded';
-  }
-
   Future<T> _runWithDatabaseFallback<T>(
     Future<T> Function(FirebaseFirestore firestore) action,
   ) async {
-    try {
-      return await action(_activeFirestore);
-    } on FirebaseException catch (error) {
-      final usingDefault = _activeFirestore.databaseId == '(default)';
-      if (usingDefault || !_shouldFallbackToDefaultDatabase(error)) {
-        rethrow;
-      }
-      _activeFirestore = _defaultFirestore;
-      return action(_activeFirestore);
-    }
+    return action(_firestore);
   }
 }
