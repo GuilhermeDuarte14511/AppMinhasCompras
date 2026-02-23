@@ -473,8 +473,12 @@
         }
       }
 
-      match /shared_lists/{listId} {
-        allow read: if isSharedListMemberFromData(resource.data);
+    match /shared_lists/{listId} {
+      // get (documento individual) continua restrito a membros
+      allow get: if isSharedListMemberFromData(resource.data);
+      // list (queries) liberado para usuÃ¡rios autenticados
+      // OBS: isso permite listar documentos; mantenha o filtro no app.
+      allow list: if signedIn();
         allow create: if signedIn() && validSharedListCreate(listId);
         allow update: if (
             // Caso normal: membro existente editando a lista

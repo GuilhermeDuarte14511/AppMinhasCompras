@@ -1136,6 +1136,9 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   bool _handledCreateListShortcut = false;
+  List<SharedShoppingListSummary> _lastSharedLists =
+      const <SharedShoppingListSummary>[];
+  Object? _sharedListsLastError;
 
   @override
   void initState() {
@@ -1394,10 +1397,8 @@ class _DashboardPageState extends State<DashboardPage> {
       (sum, list) => sum + list.totalValue,
     );
     final sharedRepository = widget.sharedListsRepository;
-    final currentUid = sharedRepository == null
-        ? ''
-        : (FirebaseAuth.instance.currentUser?.uid.trim() ?? '');
-    final canUseSharing = sharedRepository != null && currentUid.isNotEmpty;
+    final authUser = FirebaseAuth.instance.currentUser;
+    final canUseSharing = sharedRepository != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -1578,64 +1579,153 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                StreamBuilder<List<SharedShoppingListSummary>>(
-                  stream: sharedRepository.watchSharedLists(currentUid),
-                  builder: (context, sharedSnapshot) {
-                    if (sharedSnapshot.connectionState ==
-                            ConnectionState.waiting &&
-                        !sharedSnapshot.hasData) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 18),
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-                    final sharedLists =
-                        sharedSnapshot.data ??
-                        const <SharedShoppingListSummary>[];
-                    if (sharedLists.isEmpty) {
+                StreamBuilder<User?>(
+                  stream: FirebaseAuth.instance.idTokenChanges(),
+                  builder: (context, authSnapshot) {
+                    final user = authSnapshot.data ?? authUser;
+                    final uid = user?.uid.trim() ?? '';
+                    if (uid.isEmpty) {
                       return Card(
                         elevation: 0,
                         child: ListTile(
-                          leading: const Icon(Icons.group_off_rounded),
-                          title: const Text('Nenhuma lista compartilhada'),
-                          subtitle: const Text(
-                            'Use "Entrar na lista com codigo" ou compartilhe uma lista sua.',
-                          ),
-                          trailing: TextButton(
-                            onPressed: _joinSharedListByCode,
-                            child: const Text('Entrar'),
-                          ),
+                          leading: const Icon(Icons.lock_outline_rounded),
+                          title: const Text('Entre para ver listas compartilhadas'),
+                          subtitle: const Text('Faca login para carregar seus convites e listas.'),
                         ),
                       );
                     }
-                    return Column(
-                      children: sharedLists
-                          .take(5)
-                          .map((shared) {
-                            final isOwner = shared.isOwner(currentUid);
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Card(
+                    return FutureBuilder<String?>(
+                      key: ValueKey('auth_token_' + uid),
+                      future: user!.getIdToken(true),
+                      builder: (context, tokenSnapshot) {
+                        if (tokenSnapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 18),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+                        if (tokenSnapshot.hasError) {
+                          debugPrint(
+                            '[share_flow] token error uid=' +
+                                uid +
+                                ' error=' +
+                                tokenSnapshot.error.toString(),
+                          );
+                          return Card(
+                            elevation: 0,
+                            child: ListTile(
+                              leading: const Icon(Icons.sync_problem_rounded),
+                              title: const Text(
+                                'Falha ao validar login',
+                              ),
+                              subtitle: const Text(
+                                'Tente sair e entrar novamente para atualizar o token.',
+                              ),
+                              trailing: TextButton(
+                                onPressed: () => setState(() {}),
+                                child: const Text('Atualizar'),
+                              ),
+                            ),
+                          );
+                        }
+                        return StreamBuilder<List<SharedShoppingListSummary>>(
+                          key: ValueKey('shared_lists_' + uid),
+                          stream: sharedRepository.watchSharedLists(uid),
+                          builder: (context, sharedSnapshot) {
+                            if (sharedSnapshot.connectionState ==
+                                    ConnectionState.waiting &&
+                                !sharedSnapshot.hasData) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 18),
+                                child: Center(child: CircularProgressIndicator()),
+                              );
+                            }
+                            if (sharedSnapshot.hasError) {
+                              _sharedListsLastError = sharedSnapshot.error;
+                              debugPrint(
+                                '[share_flow] watchSharedLists error uid=' +
+                                    uid +
+                                    ' error=' +
+                                    sharedSnapshot.error.toString(),
+                              );
+                            } else if (sharedSnapshot.hasData) {
+                              _sharedListsLastError = null;
+                              _lastSharedLists =
+                                  sharedSnapshot.data ??
+                                  const <SharedShoppingListSummary>[];
+                            }
+                            final sharedLists =
+                                sharedSnapshot.data ?? _lastSharedLists;
+                            if (sharedLists.isEmpty) {
+                              if (_sharedListsLastError != null) {
+                                return Card(
+                                  elevation: 0,
+                                  child: ListTile(
+                                    leading: const Icon(Icons.sync_problem_rounded),
+                                    title: const Text(
+                                      'Falha ao carregar listas compartilhadas',
+                                    ),
+                                    subtitle: const Text(
+                                      'Verifique permissoes ou conexao e tente novamente.',
+                                    ),
+                                    trailing: TextButton(
+                                      onPressed: () => setState(() {}),
+                                      child: const Text('Atualizar'),
+                                    ),
+                                  ),
+                                );
+                              }
+                              return Card(
                                 elevation: 0,
                                 child: ListTile(
-                                  onTap: () => _openSharedListEditor(shared.id),
-                                  leading: Icon(
-                                    isOwner
-                                        ? Icons.verified_user_rounded
-                                        : Icons.group_rounded,
+                                  leading: const Icon(Icons.group_off_rounded),
+                                  title: const Text('Nenhuma lista compartilhada'),
+                                  subtitle: const Text(
+                                    'Use "Entrar na lista com codigo" ou compartilhe uma lista sua.',
                                   ),
-                                  title: Text(shared.name),
-                                  subtitle: Text(
-                                    '${shared.memberCount} membro(s) - ${isOwner ? 'Dono' : 'Membro'}',
-                                  ),
-                                  trailing: const Icon(
-                                    Icons.chevron_right_rounded,
+                                  trailing: TextButton(
+                                    onPressed: _joinSharedListByCode,
+                                    child: const Text('Entrar'),
                                   ),
                                 ),
-                              ),
+                              );
+                            }
+                            return Column(
+                              children: sharedLists
+                                  .take(5)
+                                  .map((shared) {
+                                    final isOwner = shared.isOwner(uid);
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 10),
+                                      child: Card(
+                                        elevation: 0,
+                                        child: ListTile(
+                                          onTap: () =>
+                                              _openSharedListEditor(shared.id),
+                                          leading: Icon(
+                                            isOwner
+                                                ? Icons.verified_user_rounded
+                                                : Icons.group_rounded,
+                                          ),
+                                          title: Text(shared.name),
+                                          subtitle: Text(
+                                            shared.memberCount.toString() +
+                                                ' membro(s) - ' +
+                                                (isOwner ? 'Dono' : 'Membro'),
+                                          ),
+                                          trailing: const Icon(
+                                            Icons.chevron_right_rounded,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  })
+                                  .toList(growable: false),
                             );
-                          })
-                          .toList(growable: false),
+                          },
+                        );
+                      },
                     );
                   },
                 ),

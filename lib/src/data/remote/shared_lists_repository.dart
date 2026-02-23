@@ -2,6 +2,7 @@ import 'dart:developer' as developer;
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../domain/classifications.dart';
@@ -328,9 +329,25 @@ class SharedListsRepository {
     if (trimmedUid.isEmpty) {
       return const Stream<List<SharedShoppingListSummary>>.empty();
     }
+    final authUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final projectId = _firestore.app.options.projectId;
+    _log(
+      'watchSharedLists start uid=$trimmedUid authUid=$authUid project=$projectId app=${_firestore.app.name}',
+    );
     return _sharedListsRef
         .where('memberUids', arrayContains: trimmedUid)
         .snapshots()
+        .handleError((error, stack) {
+          _log(
+            'watchSharedLists error uid=$trimmedUid authUid=$authUid project=$projectId error=$error',
+          );
+          developer.log(
+            'watchSharedLists error',
+            name: 'shared_lists',
+            error: error,
+            stackTrace: stack,
+          );
+        })
         .map((snapshot) {
           final lists = snapshot.docs
               .map(SharedShoppingListSummary.fromFirestoreDoc)
