@@ -1,3 +1,4 @@
+import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 
 PageRoute<T> buildAppPageRoute<T>({
@@ -16,7 +17,7 @@ PageRoute<T> buildAppPageRoute<T>({
     reverseTransitionDuration: reverseDuration,
     pageBuilder: (context, animation, secondaryAnimation) => builder(context),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      final fade = CurvedAnimation(
+      final sharedAxisAnimation = CurvedAnimation(
         parent: animation,
         curve: Curves.easeOutCubic,
         reverseCurve: Curves.easeInCubic,
@@ -24,10 +25,16 @@ PageRoute<T> buildAppPageRoute<T>({
       final slide = Tween<Offset>(
         begin: beginOffset,
         end: Offset.zero,
-      ).animate(fade);
-      final scale = Tween<double>(begin: beginScale, end: 1).animate(fade);
-      return FadeTransition(
-        opacity: fade,
+      ).animate(sharedAxisAnimation);
+      final scale = Tween<double>(
+        begin: beginScale,
+        end: 1,
+      ).animate(sharedAxisAnimation);
+      return SharedAxisTransition(
+        animation: sharedAxisAnimation,
+        secondaryAnimation: secondaryAnimation,
+        transitionType: SharedAxisTransitionType.scaled,
+        fillColor: Colors.transparent,
         child: SlideTransition(
           position: slide,
           child: ScaleTransition(scale: scale, child: child),

@@ -3,8 +3,10 @@ import 'dart:convert';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -92,8 +94,8 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   late final ShoppingListsStore _store;
   late final ShoppingBackupService _backupService;
   late final Future<void> _launchDelay;
-  late final FirestoreUserDataRepository _cloudRepository;
-  late final SharedListsRepository _sharedListsRepository;
+  FirestoreUserDataRepository? _cloudRepository;
+  SharedListsRepository? _sharedListsRepository;
 
   StreamSubscription<User?>? _authSubscription;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
@@ -128,12 +130,14 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     // Inicializa os repositórios imediatamente com a instância do Firestore
     // já pronta (passada pelo main.dart), evitando LateInitializationError
     // no SDK Web quando o delegate é acessado antes de estar pronto.
-    _cloudRepository = FirestoreUserDataRepository(
-      firestore: widget._firestoreInstance,
-    );
-    _sharedListsRepository = SharedListsRepository(
-      firestore: widget._firestoreInstance,
-    );
+    if (widget._storage == null) {
+      _cloudRepository = FirestoreUserDataRepository(
+        firestore: widget._firestoreInstance,
+      );
+      _sharedListsRepository = SharedListsRepository(
+        firestore: widget._firestoreInstance,
+      );
+    }
     _backupService =
         widget._backupService ?? const FilePickerShoppingBackupService();
     final catalogStorage =
@@ -279,7 +283,11 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     String uid, {
     bool showSnack = false,
   }) async {
+    final repository = _sharedListsRepository;
     if (widget._storage != null) {
+      return;
+    }
+    if (repository == null) {
       return;
     }
     if (_isMirroringSharedLists) {
@@ -288,9 +296,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     _isMirroringSharedLists = true;
     try {
       await _waitForStoreLoaded();
-      final ownedShared = await _sharedListsRepository.fetchOwnedSharedLists(
-        uid,
-      );
+      final ownedShared = await repository.fetchOwnedSharedLists(uid);
       if (ownedShared.isEmpty) {
         return;
       }
@@ -302,7 +308,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         }
         final local = _store.findById(sourceId);
         if (local != null && local.updatedAt.isAfter(shared.updatedAt)) {
-          await _sharedListsRepository.syncLocalListToShared(
+          await repository.syncLocalListToShared(
             localList: local,
             sharedList: shared,
             updatedBy: uid,
@@ -310,7 +316,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
           mirroredCount++;
           continue;
         }
-        final items = await _sharedListsRepository.fetchListItems(shared.id);
+        final items = await repository.fetchListItems(shared.id);
         final listModel = ShoppingListModel(
           id: sourceId,
           name: shared.name,
@@ -646,6 +652,10 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     }
     _isPullingCloudSnapshot = true;
     final repository = _cloudRepository;
+    if (repository == null) {
+      _isPullingCloudSnapshot = false;
+      return;
+    }
     try {
       debugPrint(
         '[CloudSync][pull] iniciando para uid=$uid asInitialHydration=$asInitialHydration',
@@ -813,6 +823,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       return;
     }
     final repository = _cloudRepository;
+    if (repository == null) {
+      return;
+    }
     if (_isPushingCloudSnapshot || _isApplyingCloudSnapshot) {
       debugPrint(
         '[CloudSync][push] ignorado: isPushing=$_isPushingCloudSnapshot isApplying=$_isApplyingCloudSnapshot',
@@ -979,58 +992,91 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     setState(() {});
   }
 
+  TextTheme _buildAppTextTheme(TextTheme baseTextTheme) {
+    final bodyTheme = GoogleFonts.manropeTextTheme(baseTextTheme);
+    return bodyTheme.copyWith(
+      displaySmall: GoogleFonts.spaceGrotesk(
+        textStyle: bodyTheme.displaySmall?.copyWith(
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.45,
+        ),
+      ),
+      headlineMedium: GoogleFonts.spaceGrotesk(
+        textStyle: bodyTheme.headlineMedium?.copyWith(
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.25,
+        ),
+      ),
+      headlineSmall: GoogleFonts.spaceGrotesk(
+        textStyle: bodyTheme.headlineSmall?.copyWith(
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.2,
+        ),
+      ),
+      titleLarge: GoogleFonts.spaceGrotesk(
+        textStyle: bodyTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.18,
+        ),
+      ),
+      titleMedium: GoogleFonts.spaceGrotesk(
+        textStyle: bodyTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.08,
+        ),
+      ),
+      titleSmall: GoogleFonts.spaceGrotesk(
+        textStyle: bodyTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+      ),
+      bodyLarge: bodyTheme.bodyLarge?.copyWith(height: 1.38),
+      bodyMedium: bodyTheme.bodyMedium?.copyWith(height: 1.36),
+      bodySmall: bodyTheme.bodySmall?.copyWith(height: 1.3),
+      labelLarge: GoogleFonts.manrope(
+        textStyle: bodyTheme.labelLarge?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.14,
+        ),
+      ),
+      labelMedium: GoogleFonts.manrope(
+        textStyle: bodyTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+
   ThemeData _buildLightTheme() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF008577),
-      brightness: Brightness.light,
-      surface: const Color(0xFFF8FCFB),
-      surfaceContainerHighest: const Color(0xFFE8F2EF),
-      surfaceContainerHigh: const Color(0xFFEDF5F3),
-    );
-    final base = ThemeData(
+    final base = FlexThemeData.light(
       useMaterial3: true,
-      colorScheme: scheme,
       visualDensity: VisualDensity.adaptivePlatformDensity,
-      brightness: Brightness.light,
-    );
-    final textTheme = base.textTheme.copyWith(
-      displaySmall: base.textTheme.displaySmall?.copyWith(
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.45,
+      colors: const FlexSchemeColor(
+        primary: Color(0xFF008577),
+        primaryContainer: Color(0xFFB4E9DE),
+        secondary: Color(0xFF2F766C),
+        secondaryContainer: Color(0xFFCBEAE3),
+        tertiary: Color(0xFF2D6F89),
+        tertiaryContainer: Color(0xFFCDEAF8),
+        appBarColor: Color(0xFFF5FAF8),
+        error: Color(0xFFB3261E),
       ),
-      headlineMedium: base.textTheme.headlineMedium?.copyWith(
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.25,
-      ),
-      headlineSmall: base.textTheme.headlineSmall?.copyWith(
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.2,
-      ),
-      titleLarge: base.textTheme.titleLarge?.copyWith(
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.2,
-      ),
-      titleMedium: base.textTheme.titleMedium?.copyWith(
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.1,
-      ),
-      titleSmall: base.textTheme.titleSmall?.copyWith(
-        fontWeight: FontWeight.w700,
-      ),
-      bodyLarge: base.textTheme.bodyLarge?.copyWith(height: 1.35),
-      bodyMedium: base.textTheme.bodyMedium?.copyWith(height: 1.35),
-      bodySmall: base.textTheme.bodySmall?.copyWith(height: 1.3),
-      labelLarge: base.textTheme.labelLarge?.copyWith(
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.15,
-      ),
-      labelMedium: base.textTheme.labelMedium?.copyWith(
-        fontWeight: FontWeight.w700,
+      surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
+      blendLevel: 10,
+      scaffoldBackground: const Color(0xFFF5FAF8),
+      subThemesData: const FlexSubThemesData(
+        interactionEffects: true,
+        blendOnLevel: 10,
       ),
     );
+    final scheme = base.colorScheme;
+    final textTheme = _buildAppTextTheme(base.textTheme);
     return base.copyWith(
+      materialTapTargetSize: MaterialTapTargetSize.padded,
       scaffoldBackgroundColor: const Color(0xFFF5FAF8),
       textTheme: textTheme,
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: scheme.primary,
+        circularTrackColor: scheme.surfaceContainerHighest.withValues(
+          alpha: 0.55,
+        ),
+      ),
       dividerTheme: DividerThemeData(
         color: scheme.outlineVariant.withValues(alpha: 0.42),
         thickness: 1,
@@ -1118,6 +1164,33 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         ),
         iconColor: scheme.onSurfaceVariant,
       ),
+      checkboxTheme: CheckboxThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusXs),
+        ),
+        visualDensity: VisualDensity.compact,
+        side: BorderSide(
+          color: scheme.outlineVariant.withValues(alpha: 0.9),
+          width: 1.4,
+        ),
+      ),
+      switchTheme: SwitchThemeData(
+        trackOutlineColor: WidgetStatePropertyAll<Color?>(
+          scheme.outlineVariant.withValues(alpha: 0.36),
+        ),
+        thumbColor: WidgetStateProperty.resolveWith<Color?>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return scheme.onPrimary;
+          }
+          return scheme.surface;
+        }),
+        trackColor: WidgetStateProperty.resolveWith<Color?>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return scheme.primary;
+          }
+          return scheme.surfaceContainerHighest;
+        }),
+      ),
       chipTheme: base.chipTheme.copyWith(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTokens.radiusLg),
@@ -1143,6 +1216,47 @@ class _ShoppingListAppState extends State<ShoppingListApp>
           borderRadius: BorderRadius.circular(AppTokens.radius2Xl),
         ),
       ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: scheme.surface,
+        surfaceTintColor: Colors.transparent,
+        textStyle: textTheme.bodyMedium,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+          side: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.34),
+          ),
+        ),
+      ),
+      tooltipTheme: TooltipThemeData(
+        preferBelow: false,
+        waitDuration: const Duration(milliseconds: 450),
+        textStyle: textTheme.bodySmall?.copyWith(
+          color: scheme.onInverseSurface,
+          fontWeight: FontWeight.w700,
+        ),
+        decoration: BoxDecoration(
+          color: scheme.inverseSurface.withValues(alpha: 0.96),
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        margin: const EdgeInsets.all(12),
+      ),
+      menuTheme: MenuThemeData(
+        style: MenuStyle(
+          backgroundColor: WidgetStatePropertyAll<Color>(scheme.surface),
+          surfaceTintColor: const WidgetStatePropertyAll<Color>(
+            Colors.transparent,
+          ),
+          shape: WidgetStatePropertyAll<RoundedRectangleBorder>(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+              side: BorderSide(
+                color: scheme.outlineVariant.withValues(alpha: 0.34),
+              ),
+            ),
+          ),
+        ),
+      ),
       bottomSheetTheme: BottomSheetThemeData(
         showDragHandle: true,
         dragHandleColor: scheme.onSurfaceVariant.withValues(alpha: 0.45),
@@ -1163,6 +1277,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         labelStyle: textTheme.labelLarge?.copyWith(
           color: scheme.onSurfaceVariant,
         ),
+        hintStyle: textTheme.bodyMedium?.copyWith(
+          color: scheme.onSurfaceVariant.withValues(alpha: 0.92),
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppTokens.radiusMd),
           borderSide: BorderSide(color: scheme.outlineVariant),
@@ -1171,65 +1288,48 @@ class _ShoppingListAppState extends State<ShoppingListApp>
           borderRadius: BorderRadius.circular(AppTokens.radiusMd),
           borderSide: BorderSide(color: scheme.outlineVariant),
         ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          borderSide: BorderSide(color: scheme.primary, width: 1.4),
+        ),
       ),
     );
   }
 
   ThemeData _buildDarkTheme() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF00A896),
-      brightness: Brightness.dark,
-      surface: const Color(0xFF151E22),
-      surfaceContainerHighest: const Color(0xFF27343A),
-      surfaceContainerHigh: const Color(0xFF212C31),
-      primary: const Color(0xFF4ED7C7),
-      secondary: const Color(0xFF8ECFC6),
-      tertiary: const Color(0xFF6FA5FF),
-    );
-    final base = ThemeData(
+    final base = FlexThemeData.dark(
       useMaterial3: true,
-      colorScheme: scheme,
       visualDensity: VisualDensity.adaptivePlatformDensity,
-      brightness: Brightness.dark,
-    );
-    final textTheme = base.textTheme.copyWith(
-      displaySmall: base.textTheme.displaySmall?.copyWith(
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.4,
+      colors: const FlexSchemeColor(
+        primary: Color(0xFF4ED7C7),
+        primaryContainer: Color(0xFF005C52),
+        secondary: Color(0xFF8ECFC6),
+        secondaryContainer: Color(0xFF24453F),
+        tertiary: Color(0xFF6FA5FF),
+        tertiaryContainer: Color(0xFF163E72),
+        appBarColor: Color(0xFF0F161A),
+        error: Color(0xFFF2A29D),
       ),
-      headlineMedium: base.textTheme.headlineMedium?.copyWith(
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.2,
-      ),
-      headlineSmall: base.textTheme.headlineSmall?.copyWith(
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.2,
-      ),
-      titleLarge: base.textTheme.titleLarge?.copyWith(
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.15,
-      ),
-      titleMedium: base.textTheme.titleMedium?.copyWith(
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.05,
-      ),
-      titleSmall: base.textTheme.titleSmall?.copyWith(
-        fontWeight: FontWeight.w700,
-      ),
-      bodyLarge: base.textTheme.bodyLarge?.copyWith(height: 1.36),
-      bodyMedium: base.textTheme.bodyMedium?.copyWith(height: 1.36),
-      bodySmall: base.textTheme.bodySmall?.copyWith(height: 1.3),
-      labelLarge: base.textTheme.labelLarge?.copyWith(
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.2,
-      ),
-      labelMedium: base.textTheme.labelMedium?.copyWith(
-        fontWeight: FontWeight.w700,
+      surfaceMode: FlexSurfaceMode.highScaffoldLowSurface,
+      blendLevel: 14,
+      scaffoldBackground: const Color(0xFF0F161A),
+      subThemesData: const FlexSubThemesData(
+        interactionEffects: true,
+        blendOnLevel: 16,
       ),
     );
+    final scheme = base.colorScheme;
+    final textTheme = _buildAppTextTheme(base.textTheme);
     return base.copyWith(
+      materialTapTargetSize: MaterialTapTargetSize.padded,
       scaffoldBackgroundColor: const Color(0xFF0F161A),
       textTheme: textTheme,
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: scheme.primary,
+        circularTrackColor: scheme.surfaceContainerHighest.withValues(
+          alpha: 0.55,
+        ),
+      ),
       dividerTheme: DividerThemeData(
         color: scheme.outlineVariant.withValues(alpha: 0.44),
         thickness: 1,
@@ -1263,6 +1363,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
           horizontal: 14,
           vertical: 14,
         ),
+        hintStyle: textTheme.bodyMedium?.copyWith(
+          color: scheme.onSurfaceVariant.withValues(alpha: 0.88),
+        ),
         labelStyle: textTheme.labelLarge?.copyWith(
           color: scheme.onSurfaceVariant.withValues(alpha: 0.9),
         ),
@@ -1273,6 +1376,10 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppTokens.radiusMd),
           borderSide: BorderSide(color: scheme.outlineVariant),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          borderSide: BorderSide(color: scheme.primary, width: 1.4),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -1335,6 +1442,33 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         ),
         iconColor: scheme.onSurfaceVariant,
       ),
+      checkboxTheme: CheckboxThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusXs),
+        ),
+        visualDensity: VisualDensity.compact,
+        side: BorderSide(
+          color: scheme.outlineVariant.withValues(alpha: 0.92),
+          width: 1.4,
+        ),
+      ),
+      switchTheme: SwitchThemeData(
+        trackOutlineColor: WidgetStatePropertyAll<Color?>(
+          scheme.outlineVariant.withValues(alpha: 0.38),
+        ),
+        thumbColor: WidgetStateProperty.resolveWith<Color?>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return scheme.onPrimary;
+          }
+          return scheme.surface;
+        }),
+        trackColor: WidgetStateProperty.resolveWith<Color?>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return scheme.primary;
+          }
+          return scheme.surfaceContainerHighest;
+        }),
+      ),
       chipTheme: base.chipTheme.copyWith(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTokens.radiusLg),
@@ -1358,6 +1492,47 @@ class _ShoppingListAppState extends State<ShoppingListApp>
           borderRadius: BorderRadius.circular(AppTokens.radius2Xl),
         ),
       ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: scheme.surface,
+        surfaceTintColor: Colors.transparent,
+        textStyle: textTheme.bodyMedium,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+          side: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.36),
+          ),
+        ),
+      ),
+      tooltipTheme: TooltipThemeData(
+        preferBelow: false,
+        waitDuration: const Duration(milliseconds: 450),
+        textStyle: textTheme.bodySmall?.copyWith(
+          color: scheme.onInverseSurface,
+          fontWeight: FontWeight.w700,
+        ),
+        decoration: BoxDecoration(
+          color: scheme.inverseSurface.withValues(alpha: 0.96),
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        margin: const EdgeInsets.all(12),
+      ),
+      menuTheme: MenuThemeData(
+        style: MenuStyle(
+          backgroundColor: WidgetStatePropertyAll<Color>(scheme.surface),
+          surfaceTintColor: const WidgetStatePropertyAll<Color>(
+            Colors.transparent,
+          ),
+          shape: WidgetStatePropertyAll<RoundedRectangleBorder>(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+              side: BorderSide(
+                color: scheme.outlineVariant.withValues(alpha: 0.36),
+              ),
+            ),
+          ),
+        ),
+      ),
       bottomSheetTheme: BottomSheetThemeData(
         showDragHandle: true,
         dragHandleColor: scheme.onSurfaceVariant.withValues(alpha: 0.5),
@@ -1375,6 +1550,11 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     required Widget child,
     required String stateKey,
   }) {
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (reduceMotion) {
+      return KeyedSubtree(key: ValueKey<String>(stateKey), child: child);
+    }
     return AnimatedSwitcher(
       duration: AppTokens.motionSlow,
       switchInCurve: Curves.easeOutCubic,

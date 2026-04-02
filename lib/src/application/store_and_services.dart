@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:lista_compras_material/src/domain/models_and_utils.dart';
 
+import '../domain/classifications.dart';
 import 'ports.dart';
 
 class ShoppingListsStore extends ChangeNotifier {
@@ -124,6 +125,48 @@ class ShoppingListsStore extends ChangeNotifier {
       budget: source?.budget,
       reminder: null,
       paymentBalances: copiedPaymentBalances,
+    );
+
+    _lists.insert(0, created);
+    _sortListsByUpdatedAt();
+    _invalidateListSuggestionCache();
+    await _persistAndNotify();
+    await _productCatalog.ingestFromLists([created]);
+    return created;
+  }
+
+  Future<ShoppingListModel> createListFromDrafts({
+    required String name,
+    required List<ShoppingItemDraft> drafts,
+  }) async {
+    final trimmedName = name.trim();
+    final now = DateTime.now();
+    final created = ShoppingListModel(
+      id: uniqueId(),
+      name: trimmedName,
+      createdAt: now,
+      updatedAt: now,
+      items: drafts
+          .where((draft) => draft.name.trim().isNotEmpty)
+          .map(
+            (draft) => ShoppingItem(
+              id: uniqueId(),
+              name: draft.name.trim(),
+              quantity: max(1, draft.quantity),
+              unitPrice: max(0, draft.unitPrice),
+              category: draft.category,
+              barcode: draft.barcode,
+              priceHistory: draft.unitPrice > 0
+                  ? <PriceHistoryEntry>[
+                      PriceHistoryEntry(
+                        price: draft.unitPrice,
+                        recordedAt: now,
+                      ),
+                    ]
+                  : const <PriceHistoryEntry>[],
+            ),
+          )
+          .toList(growable: false),
     );
 
     _lists.insert(0, created);
@@ -523,6 +566,150 @@ class ShoppingListsStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  List<ReplenishmentSuggestion> suggestReplenishmentItems({
+    DateTime? referenceDate,
+    int limit = 20,
+  }) {
+    if (limit <= 0) {
+      return const <ReplenishmentSuggestion>[];
+    }
+
+    final resolvedReferenceDate = referenceDate ?? DateTime.now();
+    final targetMonth = DateTime(
+      resolvedReferenceDate.year,
+      resolvedReferenceDate.month - 1,
+    );
+    final stats = <String, _ReplenishmentSuggestionStats>{};
+
+    for (final purchase in _history) {
+      if (purchase.closedAt.year != targetMonth.year ||
+          purchase.closedAt.month != targetMonth.month) {
+        continue;
+      }
+
+      for (final item in _itemsRelevantForReplenishment(purchase)) {
+        final normalizedName = normalizeQuery(item.name);
+        if (normalizedName.isEmpty) {
+          continue;
+        }
+
+        final catalogMatch =
+            _productCatalog.findByBarcode(item.barcode) ??
+            _productCatalog.findByName(item.name);
+        final resolvedPrice = _resolveReplenishmentUnitPrice(
+          item: item,
+          catalogMatch: catalogMatch,
+        );
+        final resolvedCategory = item.category != ShoppingCategory.other
+            ? item.category
+            : (catalogMatch?.category ?? ShoppingCategory.other);
+        final existing = stats[normalizedName];
+        if (existing == null) {
+          stats[normalizedName] = _ReplenishmentSuggestionStats(
+            name: item.name.trim(),
+            category: resolvedCategory,
+            quantity: max(1, item.quantity),
+            unitPrice: resolvedPrice,
+            lastPurchasedAt: purchase.closedAt,
+            occurrences: 1,
+            usageCount: catalogMatch?.usageCount ?? 0,
+            barcode: item.barcode ?? catalogMatch?.barcode,
+          );
+          continue;
+        }
+
+        stats[normalizedName] = existing.copyWith(
+          name: _preferredSuggestionLabel(existing.name, item.name),
+          category: existing.category == ShoppingCategory.other
+              ? resolvedCategory
+              : existing.category,
+          quantity: existing.quantity + max(1, item.quantity),
+          unitPrice: resolvedPrice > 0 ? resolvedPrice : existing.unitPrice,
+          lastPurchasedAt: purchase.closedAt.isAfter(existing.lastPurchasedAt)
+              ? purchase.closedAt
+              : existing.lastPurchasedAt,
+          occurrences: existing.occurrences + 1,
+          usageCount: max(existing.usageCount, catalogMatch?.usageCount ?? 0),
+          barcode: existing.barcode ?? item.barcode ?? catalogMatch?.barcode,
+        );
+      }
+    }
+
+    if (stats.isNotEmpty) {
+      final suggestions =
+          stats.values
+              .map(
+                (entry) => ReplenishmentSuggestion(
+                  name: entry.name,
+                  category: entry.category,
+                  suggestedQuantity: entry.quantity,
+                  suggestedUnitPrice: entry.unitPrice,
+                  lastPurchasedAt: entry.lastPurchasedAt,
+                  occurrences: entry.occurrences,
+                  usageCount: entry.usageCount,
+                  source: ReplenishmentSuggestionSource.lastMonth,
+                  barcode: entry.barcode,
+                ),
+              )
+              .toList(growable: false)
+            ..sort((a, b) {
+              final byOccurrences = b.occurrences.compareTo(a.occurrences);
+              if (byOccurrences != 0) {
+                return byOccurrences;
+              }
+              final byDate = b.lastPurchasedAt.compareTo(a.lastPurchasedAt);
+              if (byDate != 0) {
+                return byDate;
+              }
+              final byUsage = b.usageCount.compareTo(a.usageCount);
+              if (byUsage != 0) {
+                return byUsage;
+              }
+              final byQuantity = b.suggestedQuantity.compareTo(
+                a.suggestedQuantity,
+              );
+              if (byQuantity != 0) {
+                return byQuantity;
+              }
+              return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+            });
+      return List.unmodifiable(suggestions.take(limit).toList(growable: false));
+    }
+
+    final fallback = _productCatalog.allProducts().toList(growable: false)
+      ..sort((a, b) {
+        final byUsage = b.usageCount.compareTo(a.usageCount);
+        if (byUsage != 0) {
+          return byUsage;
+        }
+        final byDate = b.updatedAt.compareTo(a.updatedAt);
+        if (byDate != 0) {
+          return byDate;
+        }
+        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      });
+
+    return List.unmodifiable(
+      fallback
+          .where((product) => product.name.trim().isNotEmpty)
+          .take(limit)
+          .map(
+            (product) => ReplenishmentSuggestion(
+              name: product.name.trim(),
+              category: product.category,
+              suggestedQuantity: 1,
+              suggestedUnitPrice: product.unitPrice ?? 0,
+              lastPurchasedAt: product.updatedAt,
+              occurrences: max(1, product.usageCount),
+              usageCount: product.usageCount,
+              source: ReplenishmentSuggestionSource.catalogFallback,
+              barcode: product.barcode,
+            ),
+          )
+          .toList(growable: false),
+    );
+  }
+
   void _sortListsByUpdatedAt() {
     _lists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
   }
@@ -588,6 +775,49 @@ class ShoppingListsStore extends ChangeNotifier {
       values.map((entry) => entry.label).toList(growable: false),
     );
     _listSuggestionsDirty = false;
+  }
+
+  Iterable<ShoppingItem> _itemsRelevantForReplenishment(
+    CompletedPurchase purchase,
+  ) {
+    final purchasedItems = purchase.items.where((item) => item.isPurchased);
+    if (purchasedItems.isNotEmpty) {
+      return purchasedItems;
+    }
+    return purchase.items;
+  }
+
+  double _resolveReplenishmentUnitPrice({
+    required ShoppingItem item,
+    required CatalogProduct? catalogMatch,
+  }) {
+    final itemHistory = item.priceHistory;
+    if (itemHistory.isNotEmpty) {
+      return max(0, itemHistory.last.price);
+    }
+    final catalogHistory =
+        catalogMatch?.priceHistory ?? const <PriceHistoryEntry>[];
+    if (catalogHistory.isNotEmpty) {
+      return max(0, catalogHistory.last.price);
+    }
+    return max(
+      0,
+      item.unitPrice > 0 ? item.unitPrice : (catalogMatch?.unitPrice ?? 0),
+    );
+  }
+
+  String _preferredSuggestionLabel(String current, String incoming) {
+    final trimmedCurrent = current.trim();
+    final trimmedIncoming = incoming.trim();
+    if (trimmedCurrent.isEmpty) {
+      return trimmedIncoming;
+    }
+    if (trimmedIncoming.isEmpty) {
+      return trimmedCurrent;
+    }
+    return trimmedIncoming.length > trimmedCurrent.length
+        ? trimmedIncoming
+        : trimmedCurrent;
   }
 
   List<ShoppingListModel> _decodeBackupLists(String rawPayload) {
@@ -787,4 +1017,48 @@ class _DecodedBackupPayload {
   final List<ShoppingListModel> lists;
   final List<CompletedPurchase> history;
   final List<CatalogProduct> catalog;
+}
+
+class _ReplenishmentSuggestionStats {
+  const _ReplenishmentSuggestionStats({
+    required this.name,
+    required this.category,
+    required this.quantity,
+    required this.unitPrice,
+    required this.lastPurchasedAt,
+    required this.occurrences,
+    required this.usageCount,
+    this.barcode,
+  });
+
+  final String name;
+  final ShoppingCategory category;
+  final int quantity;
+  final double unitPrice;
+  final DateTime lastPurchasedAt;
+  final int occurrences;
+  final int usageCount;
+  final String? barcode;
+
+  _ReplenishmentSuggestionStats copyWith({
+    String? name,
+    ShoppingCategory? category,
+    int? quantity,
+    double? unitPrice,
+    DateTime? lastPurchasedAt,
+    int? occurrences,
+    int? usageCount,
+    String? barcode,
+  }) {
+    return _ReplenishmentSuggestionStats(
+      name: name ?? this.name,
+      category: category ?? this.category,
+      quantity: quantity ?? this.quantity,
+      unitPrice: unitPrice ?? this.unitPrice,
+      lastPurchasedAt: lastPurchasedAt ?? this.lastPurchasedAt,
+      occurrences: occurrences ?? this.occurrences,
+      usageCount: usageCount ?? this.usageCount,
+      barcode: barcode ?? this.barcode,
+    );
+  }
 }

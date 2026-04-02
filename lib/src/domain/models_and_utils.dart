@@ -581,6 +581,49 @@ class ShoppingItemDraft {
   final String? barcode;
 }
 
+enum ReplenishmentSuggestionSource {
+  lastMonth('last_month'),
+  catalogFallback('catalog_fallback');
+
+  const ReplenishmentSuggestionSource(this.key);
+
+  final String key;
+}
+
+class ReplenishmentSuggestion {
+  const ReplenishmentSuggestion({
+    required this.name,
+    required this.category,
+    required this.suggestedQuantity,
+    required this.suggestedUnitPrice,
+    required this.lastPurchasedAt,
+    required this.occurrences,
+    required this.usageCount,
+    required this.source,
+    this.barcode,
+  });
+
+  final String name;
+  final ShoppingCategory category;
+  final int suggestedQuantity;
+  final double suggestedUnitPrice;
+  final DateTime lastPurchasedAt;
+  final int occurrences;
+  final int usageCount;
+  final ReplenishmentSuggestionSource source;
+  final String? barcode;
+
+  ShoppingItemDraft toDraft() {
+    return ShoppingItemDraft(
+      name: name,
+      quantity: suggestedQuantity,
+      unitPrice: suggestedUnitPrice,
+      category: category,
+      barcode: barcode,
+    );
+  }
+}
+
 class BudgetEditorResult {
   const BudgetEditorResult({this.value, this.clear = false});
 

@@ -211,7 +211,16 @@ class _OnboardingPageState extends State<OnboardingPage>
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Card(
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(AppTokens.radiusXl),
+                      border: Border.all(
+                        color: colorScheme.outlineVariant.withValues(
+                          alpha: 0.3,
+                        ),
+                      ),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
                       child: Column(
@@ -221,6 +230,13 @@ class _OnboardingPageState extends State<OnboardingPage>
                             'Aparência',
                             style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Escolha o tema que combina melhor com seu uso.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -340,7 +356,21 @@ class _OnboardingStepCard extends StatelessWidget {
         final wave = math.sin(animation.value * math.pi * 2) * 5;
         return Transform.translate(offset: Offset(0, wave), child: child);
       },
-      child: Card(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colorScheme.surface.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(AppTokens.radius2Xl),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: colorScheme.shadow.withValues(alpha: 0.05),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
           child: Column(

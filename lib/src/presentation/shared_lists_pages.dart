@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 import '../application/store_and_services.dart';
 import '../core/utils/format_utils.dart';
@@ -13,6 +14,7 @@ import '../data/remote/shared_lists_repository.dart';
 import '../domain/models_and_utils.dart';
 import 'dialogs_and_sheets.dart';
 import 'launch.dart';
+import 'theme/app_tokens.dart';
 import 'utils/app_modal.dart';
 import 'utils/app_toast.dart';
 
@@ -34,6 +36,121 @@ Future<void> showSharedInviteSheet({
       onOpenSharedList: onOpenSharedList,
     ),
   );
+}
+
+bool _prefersReducedMotion(BuildContext context) =>
+    MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+
+Duration _adaptiveMotionDuration(BuildContext context, Duration fallback) =>
+    _prefersReducedMotion(context) ? Duration.zero : fallback;
+
+class _SharedSummarySkeleton extends StatelessWidget {
+  const _SharedSummarySkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Skeletonizer(
+      enabled: true,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Lista compartilhada carregando',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('Sincronizando membros e configuracoes.'),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: const [
+                      Chip(label: Text('Membros')),
+                      Chip(label: Text('Convites')),
+                      Chip(label: Text('Status')),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SharedEditorLoadingScaffold extends StatelessWidget {
+  const _SharedEditorLoadingScaffold();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Lista compartilhada')),
+      body: AppGradientScene(
+        child: SafeArea(
+          child: Skeletonizer(
+            enabled: true,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              children: [
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Mercado da semana',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text('3 membros ativos na compra'),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: const [
+                            Chip(label: Text('Valor total')),
+                            Chip(label: Text('Valor pego')),
+                            Chip(label: Text('Falta pegar')),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...List.generate(
+                  5,
+                  (index) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Card(
+                      child: ListTile(
+                        leading: const CircleAvatar(
+                          child: Icon(Icons.shopping_bag_rounded),
+                        ),
+                        title: Text('Item compartilhado ${index + 1}'),
+                        subtitle: const Text('Quantidade, valor e status'),
+                        trailing: const Icon(Icons.more_horiz_rounded),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _SharedInviteSheet extends StatefulWidget {
@@ -61,10 +178,7 @@ class _SharedInviteSheetState extends State<_SharedInviteSheet> {
     developer.log(message, name: 'share_flow');
   }
 
-  void _showSnack(
-    String message, {
-    AppToastType type = AppToastType.info,
-  }) {
+  void _showSnack(String message, {AppToastType type = AppToastType.info}) {
     AppToast.show(
       context,
       message: message,
@@ -73,9 +187,7 @@ class _SharedInviteSheetState extends State<_SharedInviteSheet> {
     );
   }
 
-  Future<void> _generateInviteCode(
-    SharedShoppingListSummary list,
-  ) async {
+  Future<void> _generateInviteCode(SharedShoppingListSummary list) async {
     setState(() => _busy = true);
     try {
       _log('invite generate listId=${list.id}');
@@ -103,9 +215,7 @@ class _SharedInviteSheetState extends State<_SharedInviteSheet> {
     }
   }
 
-  Future<void> _revokeInviteCode(
-    SharedShoppingListSummary list,
-  ) async {
+  Future<void> _revokeInviteCode(SharedShoppingListSummary list) async {
     setState(() => _busy = true);
     try {
       _log('invite revoke listId=${list.id}');
@@ -122,10 +232,7 @@ class _SharedInviteSheetState extends State<_SharedInviteSheet> {
         return;
       }
       _log('invite revoke error=$error');
-      _showSnack(
-        'Não foi possível revogar: $error',
-        type: AppToastType.error,
-      );
+      _showSnack('Não foi possível revogar: $error', type: AppToastType.error);
     } finally {
       if (mounted) {
         setState(() => _busy = false);
@@ -204,10 +311,7 @@ class _SharedInviteSheetState extends State<_SharedInviteSheet> {
         return;
       }
       _log('remove member error=$error');
-      _showSnack(
-        'Não foi possível remover: $error',
-        type: AppToastType.error,
-      );
+      _showSnack('Não foi possível remover: $error', type: AppToastType.error);
     } finally {
       if (mounted) {
         setState(() => _busy = false);
@@ -249,7 +353,7 @@ class _SharedInviteSheetState extends State<_SharedInviteSheet> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Padding(
             padding: EdgeInsets.all(24),
-            child: Center(child: CircularProgressIndicator()),
+            child: _SharedSummarySkeleton(),
           );
         }
 
@@ -261,8 +365,8 @@ class _SharedInviteSheetState extends State<_SharedInviteSheet> {
           );
         }
 
-        final isOwner = widget.currentUid.isNotEmpty &&
-            list.isOwner(widget.currentUid);
+        final isOwner =
+            widget.currentUid.isNotEmpty && list.isOwner(widget.currentUid);
         final inviteCode = list.inviteCode ?? '';
         final hasInvite = inviteCode.trim().isNotEmpty;
         final members = _sortedMembers(list);
@@ -275,23 +379,24 @@ class _SharedInviteSheetState extends State<_SharedInviteSheet> {
               Text(
                 'Compartilhamento',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 6),
               Text(
                 'Convide pessoas para editar esta lista em tempo real.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
+                  color: colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
               ),
               const SizedBox(height: 16),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color:
-                      colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
+                  color: colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.7,
+                  ),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
@@ -300,13 +405,14 @@ class _SharedInviteSheetState extends State<_SharedInviteSheet> {
                     Text(
                       'Código de convite',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       hasInvite ? inviteCode : 'Nenhum código ativo',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1.4,
                           ),
@@ -314,7 +420,9 @@ class _SharedInviteSheetState extends State<_SharedInviteSheet> {
                     const SizedBox(height: 12),
                     if (!hasInvite && isOwner)
                       FilledButton.icon(
-                        onPressed: _busy ? null : () => _generateInviteCode(list),
+                        onPressed: _busy
+                            ? null
+                            : () => _generateInviteCode(list),
                         icon: const Icon(Icons.qr_code_rounded),
                         label: Text(_busy ? 'Gerando...' : 'Gerar código'),
                       )
@@ -324,8 +432,9 @@ class _SharedInviteSheetState extends State<_SharedInviteSheet> {
                         runSpacing: 8,
                         children: [
                           FilledButton.icon(
-                            onPressed:
-                                _busy || !hasInvite ? null : () => _copyInviteCode(inviteCode),
+                            onPressed: _busy || !hasInvite
+                                ? null
+                                : () => _copyInviteCode(inviteCode),
                             icon: const Icon(Icons.copy_rounded),
                             label: const Text('Copiar'),
                           ),
@@ -351,12 +460,12 @@ class _SharedInviteSheetState extends State<_SharedInviteSheet> {
                         padding: const EdgeInsets.only(top: 8),
                         child: Text(
                           'Somente o dono pode gerenciar o código.',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onSurface.withValues(
-                                      alpha: 0.6,
-                                    ),
-                                  ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: colorScheme.onSurface.withValues(
+                                  alpha: 0.6,
+                                ),
+                              ),
                         ),
                       ),
                   ],
@@ -368,8 +477,8 @@ class _SharedInviteSheetState extends State<_SharedInviteSheet> {
                   Text(
                     'Membros',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Container(
@@ -384,9 +493,9 @@ class _SharedInviteSheetState extends State<_SharedInviteSheet> {
                     child: Text(
                       '${members.length}',
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: colorScheme.onPrimaryContainer,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        color: colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ],
@@ -461,13 +570,20 @@ class SharedListEditorPage extends StatefulWidget {
   State<SharedListEditorPage> createState() => _SharedListEditorPageState();
 }
 
+enum _SharedHeaderSection { summary, budget, balances, reminder }
+
+enum _SharedItemsFilter { pending, all, purchased }
+
 class _SharedListEditorPageState extends State<SharedListEditorPage> {
   late final TextEditingController _searchController;
   bool _busy = false;
+  bool _isHeaderExpanded = false;
   bool _didShowBudgetWarning = false;
   bool _didShowBudgetNearLimitWarning = false;
   String? _lastReminderFingerprint;
   String? _lastLocalMirrorFingerprint;
+  _SharedHeaderSection? _expandedHeaderSection;
+  _SharedItemsFilter _itemsFilter = _SharedItemsFilter.pending;
 
   String get _currentUid => FirebaseAuth.instance.currentUser?.uid.trim() ?? '';
   String get _searchQuery => _searchController.text.trim();
@@ -532,6 +648,53 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
       isClosed: list.isClosed,
       closedAt: list.closedAt,
     );
+  }
+
+  void _toggleHeaderSection(_SharedHeaderSection section) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _expandedHeaderSection = _expandedHeaderSection == section
+          ? null
+          : section;
+    });
+  }
+
+  void _toggleHeaderExpanded() {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _isHeaderExpanded = !_isHeaderExpanded;
+    });
+  }
+
+  void _setItemsFilter(_SharedItemsFilter filter) {
+    if (_itemsFilter == filter) {
+      return;
+    }
+    HapticFeedback.selectionClick();
+    setState(() {
+      _itemsFilter = filter;
+    });
+  }
+
+  List<SharedShoppingItem> _applyItemsFilter(List<SharedShoppingItem> items) {
+    final filteredItems = items
+        .where((item) {
+          return switch (_itemsFilter) {
+            _SharedItemsFilter.pending => !item.isPurchased,
+            _SharedItemsFilter.all => true,
+            _SharedItemsFilter.purchased => item.isPurchased,
+          };
+        })
+        .toList(growable: false);
+
+    final sortedItems = filteredItems.toList(growable: false)
+      ..sort((left, right) {
+        if (left.isPurchased != right.isPurchased) {
+          return left.isPurchased ? 1 : -1;
+        }
+        return normalizeQuery(left.name).compareTo(normalizeQuery(right.name));
+      });
+    return sortedItems;
   }
 
   void _maybeWarnBudget(ShoppingListModel list) {
@@ -1052,11 +1215,17 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
     SharedShoppingListSummary list,
     List<SharedShoppingItem> items,
   ) {
+    final derivedList = _toShoppingListModel(list, items);
     final totalValue = items.fold<double>(
       0,
       (sum, item) => sum + item.subtotal,
     );
+    final pickedValue = items
+        .where((item) => item.isPurchased)
+        .fold<double>(0, (sum, item) => sum + item.subtotal);
+    final remainingValue = max<double>(0, totalValue - pickedValue);
     final purchasedCount = items.where((item) => item.isPurchased).length;
+    final pendingCount = max(0, items.length - purchasedCount);
     final currentUid = _currentUid;
     final isOwner = currentUid.isNotEmpty && list.isOwner(currentUid);
     final colorScheme = Theme.of(context).colorScheme;
@@ -1070,18 +1239,25 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
         ? 'Saldos: ${formatCurrency(list.paymentBalancesTotal)}'
         : 'Saldos: indefinido';
     final isReadOnly = list.isClosed;
+    final headerSubtitle =
+        '${items.length} item(ns) • $purchasedCount comprados • ${formatCurrency(pickedValue)} pego';
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        gradient: LinearGradient(
-          colors: [
-            colorScheme.primaryContainer.withValues(alpha: 0.88),
-            colorScheme.secondaryContainer.withValues(alpha: 0.88),
-          ],
+        color: Color.alphaBlend(
+          colorScheme.primaryContainer.withValues(alpha: 0.56),
+          colorScheme.surface,
         ),
+        borderRadius: BorderRadius.circular(AppTokens.radiusXl),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.shadow.withValues(alpha: 0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.32),
         ),
       ),
       child: Padding(
@@ -1089,72 +1265,330 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _SharedMetaChip(
-                  icon: Icons.group_rounded,
-                  text:
-                      '${list.memberCount} membro${list.memberCount == 1 ? '' : 's'}',
+            InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: _toggleHeaderExpanded,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(2, 2, 2, 2),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Painel da lista',
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            headerSubtitle,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: colorScheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface.withValues(alpha: 0.36),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _isHeaderExpanded ? 'Fechar' : 'Abrir',
+                              style: Theme.of(context).textTheme.labelMedium
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(width: 4),
+                            AnimatedRotation(
+                              turns: _isHeaderExpanded ? 0.5 : 0,
+                              duration: _adaptiveMotionDuration(
+                                context,
+                                AppTokens.motionMedium,
+                              ),
+                              child: const Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                _SharedMetaChip(
-                  icon: Icons.shopping_basket_rounded,
-                  text: '${items.length} item(ns)',
-                ),
-                _SharedMetaChip(
-                  icon: Icons.check_circle_rounded,
-                  text: '$purchasedCount comprados',
-                ),
-                _SharedMetaChip(
-                  icon: Icons.attach_money_rounded,
-                  text: formatCurrency(totalValue),
-                ),
-                _SharedMetaChip(
-                  icon: isOwner
-                      ? Icons.verified_user_rounded
-                      : Icons.people_alt_rounded,
-                  text: isOwner ? 'Dono' : 'Membro',
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _searchController,
-              textInputAction: TextInputAction.search,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search_rounded),
-                hintText: 'Buscar item por nome...',
               ),
             ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _SharedActionChip(
-                  icon: Icons.account_balance_wallet_rounded,
-                  text: budgetLabel,
-                  onTap: isReadOnly ? null : () => _openBudgetEditor(list),
+            ClipRect(
+              child: AnimatedAlign(
+                duration: _adaptiveMotionDuration(
+                  context,
+                  AppTokens.motionMedium,
                 ),
-                _SharedActionChip(
-                  icon: Icons.notifications_active_rounded,
-                  text: reminderLabel,
-                  onTap: isReadOnly ? null : () => _openReminderEditor(list),
-                ),
-                _SharedActionChip(
-                  icon: Icons.payments_rounded,
-                  text: balancesLabel,
-                  onTap: isReadOnly
-                      ? null
-                      : () => _openPaymentBalancesEditor(list),
-                ),
-                if (isReadOnly)
-                  const _SharedMetaChip(
-                    icon: Icons.lock_rounded,
-                    text: 'Lista fechada',
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topCenter,
+                heightFactor: _isHeaderExpanded ? 1 : 0,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _SharedMetaChip(
+                            icon: Icons.group_rounded,
+                            text:
+                                '${list.memberCount} membro${list.memberCount == 1 ? '' : 's'}',
+                          ),
+                          _SharedMetaChip(
+                            icon: Icons.shopping_basket_rounded,
+                            text: '${items.length} item(ns)',
+                          ),
+                          _SharedMetaChip(
+                            icon: Icons.check_circle_rounded,
+                            text: '$purchasedCount comprados',
+                          ),
+                          _SharedMetaChip(
+                            icon: Icons.attach_money_rounded,
+                            text: formatCurrency(totalValue),
+                          ),
+                          _SharedMetaChip(
+                            icon: Icons.shopping_cart_checkout_rounded,
+                            text: 'Pego ${formatCurrency(pickedValue)}',
+                          ),
+                          _SharedMetaChip(
+                            icon: Icons.pending_actions_rounded,
+                            text: 'Falta ${formatCurrency(remainingValue)}',
+                          ),
+                          _SharedMetaChip(
+                            icon: isOwner
+                                ? Icons.verified_user_rounded
+                                : Icons.people_alt_rounded,
+                            text: isOwner ? 'Dono' : 'Membro',
+                          ),
+                          if (isReadOnly)
+                            const _SharedMetaChip(
+                              icon: Icons.lock_rounded,
+                              text: 'Lista fechada',
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _SharedHeaderSectionCard(
+                        title: 'Resumo da compra',
+                        subtitle:
+                            '${formatCurrency(pickedValue)} pego de ${formatCurrency(totalValue)}',
+                        expanded:
+                            _expandedHeaderSection ==
+                            _SharedHeaderSection.summary,
+                        onToggle: () =>
+                            _toggleHeaderSection(_SharedHeaderSection.summary),
+                        child: Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            _SharedMetricCard(
+                              icon: Icons.attach_money_rounded,
+                              label: 'Total planejado',
+                              value: formatCurrency(totalValue),
+                            ),
+                            _SharedMetricCard(
+                              icon: Icons.shopping_cart_checkout_rounded,
+                              label: 'Valor pego',
+                              value: formatCurrency(pickedValue),
+                            ),
+                            _SharedMetricCard(
+                              icon: Icons.pending_actions_rounded,
+                              label: 'Falta pegar',
+                              value: formatCurrency(remainingValue),
+                            ),
+                            _SharedMetricCard(
+                              icon: Icons.check_circle_rounded,
+                              label: 'Comprados',
+                              value: '$purchasedCount item(ns)',
+                            ),
+                            _SharedMetricCard(
+                              icon: Icons.playlist_add_check_circle_rounded,
+                              label: 'Pendentes',
+                              value: '$pendingCount item(ns)',
+                            ),
+                            _SharedMetricCard(
+                              icon: Icons.inventory_2_rounded,
+                              label: 'Total de itens',
+                              value: '${items.length} item(ns)',
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      _SharedHeaderSectionCard(
+                        title: 'Orcamento',
+                        subtitle: budgetLabel,
+                        expanded:
+                            _expandedHeaderSection ==
+                            _SharedHeaderSection.budget,
+                        onToggle: () =>
+                            _toggleHeaderSection(_SharedHeaderSection.budget),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: [
+                                _SharedMetricCard(
+                                  icon: Icons.account_balance_wallet_rounded,
+                                  label: 'Orcamento',
+                                  value: derivedList.hasBudget
+                                      ? formatCurrency(derivedList.budget ?? 0)
+                                      : 'Nao definido',
+                                ),
+                                _SharedMetricCard(
+                                  icon: derivedList.isOverBudget
+                                      ? Icons.warning_amber_rounded
+                                      : Icons.savings_rounded,
+                                  label: derivedList.isOverBudget
+                                      ? 'Excesso'
+                                      : 'Saldo',
+                                  value: derivedList.hasBudget
+                                      ? formatCurrency(
+                                          derivedList.isOverBudget
+                                              ? derivedList.overBudgetAmount
+                                              : max(
+                                                  0,
+                                                  derivedList.budgetRemaining,
+                                                ),
+                                        )
+                                      : 'Nao definido',
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            _SharedActionChip(
+                              icon: Icons.edit_rounded,
+                              text: list.hasBudget
+                                  ? 'Editar orcamento'
+                                  : 'Definir orcamento',
+                              onTap: isReadOnly
+                                  ? null
+                                  : () => _openBudgetEditor(list),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      _SharedHeaderSectionCard(
+                        title: 'Carteiras e saldos',
+                        subtitle: balancesLabel,
+                        expanded:
+                            _expandedHeaderSection ==
+                            _SharedHeaderSection.balances,
+                        onToggle: () =>
+                            _toggleHeaderSection(_SharedHeaderSection.balances),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: [
+                                _SharedMetricCard(
+                                  icon: Icons.payments_rounded,
+                                  label: 'Total de saldos',
+                                  value: derivedList.hasPaymentBalances
+                                      ? formatCurrency(
+                                          derivedList.paymentBalancesTotal,
+                                        )
+                                      : 'Nao definido',
+                                ),
+                                _SharedMetricCard(
+                                  icon: derivedList.uncoveredAmount > 0
+                                      ? Icons.error_outline_rounded
+                                      : Icons.check_circle_rounded,
+                                  label: derivedList.uncoveredAmount > 0
+                                      ? 'Falta cobrir'
+                                      : 'Coberto',
+                                  value: derivedList.hasPaymentBalances
+                                      ? formatCurrency(
+                                          derivedList.uncoveredAmount > 0
+                                              ? derivedList.uncoveredAmount
+                                              : derivedList.coveredAmount,
+                                        )
+                                      : 'Nao definido',
+                                ),
+                              ],
+                            ),
+                            if (derivedList.hasPaymentBalances) ...[
+                              const SizedBox(height: 10),
+                              ...list.paymentBalances.map((entry) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: _SharedBalanceRow(entry: entry),
+                                );
+                              }),
+                            ],
+                            const SizedBox(height: 2),
+                            _SharedActionChip(
+                              icon: Icons.account_balance_wallet_rounded,
+                              text: list.hasPaymentBalances
+                                  ? 'Editar saldos'
+                                  : 'Definir saldos',
+                              onTap: isReadOnly
+                                  ? null
+                                  : () => _openPaymentBalancesEditor(list),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      _SharedHeaderSectionCard(
+                        title: 'Lembrete',
+                        subtitle: reminderLabel,
+                        expanded:
+                            _expandedHeaderSection ==
+                            _SharedHeaderSection.reminder,
+                        onToggle: () =>
+                            _toggleHeaderSection(_SharedHeaderSection.reminder),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _SharedMetricCard(
+                              icon: list.reminder == null
+                                  ? Icons.notifications_off_rounded
+                                  : Icons.notifications_active_rounded,
+                              label: 'Status',
+                              value: list.reminder == null
+                                  ? 'Lembrete desligado'
+                                  : formatDateTime(list.reminder!.scheduledAt),
+                            ),
+                            const SizedBox(height: 10),
+                            _SharedActionChip(
+                              icon: Icons.notifications_active_rounded,
+                              text: list.reminder == null
+                                  ? 'Definir lembrete'
+                                  : 'Editar lembrete',
+                              onTap: isReadOnly
+                                  ? null
+                                  : () => _openReminderEditor(list),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-              ],
+                ),
+              ),
             ),
           ],
         ),
@@ -1169,9 +1603,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
       builder: (context, listSnapshot) {
         if (listSnapshot.connectionState == ConnectionState.waiting &&
             !listSnapshot.hasData) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const _SharedEditorLoadingScaffold();
         }
         final list = listSnapshot.data;
         if (list == null) {
@@ -1194,14 +1626,19 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
           builder: (context, itemsSnapshot) {
             final allItems = itemsSnapshot.data ?? const <SharedShoppingItem>[];
             final normalizedQuery = normalizeQuery(_searchQuery);
-            final visibleItems = allItems
+            final matchingItems = allItems
                 .where(
                   (item) => normalizedQuery.isEmpty
                       ? true
                       : normalizeQuery(item.name).contains(normalizedQuery),
                 )
                 .toList(growable: false);
+            final visibleItems = _applyItemsFilter(matchingItems);
             final listModel = _toShoppingListModel(list, allItems);
+            final pendingItemsCount = allItems
+                .where((item) => !item.isPurchased)
+                .length;
+            final purchasedItemsCount = allItems.length - pendingItemsCount;
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!mounted) {
                 return;
@@ -1284,48 +1721,128 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                         child: _buildListHeader(context, list, allItems),
                       ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                        child: _SharedItemsToolbar(
+                          controller: _searchController,
+                          selectedFilter: _itemsFilter,
+                          totalCount: allItems.length,
+                          pendingCount: pendingItemsCount,
+                          purchasedCount: purchasedItemsCount,
+                          matchingCount: matchingItems.length,
+                          onFilterSelected: _setItemsFilter,
+                        ),
+                      ),
+                      if (_itemsFilter == _SharedItemsFilter.pending &&
+                          purchasedItemsCount > 0)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                          child: _SharedItemsHintCard(
+                            hiddenCount: purchasedItemsCount,
+                            onPressed: () =>
+                                _setItemsFilter(_SharedItemsFilter.purchased),
+                          ),
+                        ),
                       Expanded(
-                        child: allItems.isEmpty
-                            ? const Center(
-                                child: Text(
-                                  'Nenhum item nesta lista compartilhada.',
+                        child: AnimatedSwitcher(
+                          duration: AppTokens.motionMedium,
+                          switchInCurve: Curves.easeOutCubic,
+                          switchOutCurve: Curves.easeInCubic,
+                          child: allItems.isEmpty
+                              ? const _SharedItemsEmptyState(
+                                  key: ValueKey<String>('shared-empty-all'),
+                                  icon: Icons.playlist_add_check_rounded,
+                                  title: 'Nenhum item nessa lista ainda',
+                                  description:
+                                      'Adicione os primeiros produtos para comecar a compra compartilhada.',
+                                )
+                              : visibleItems.isEmpty
+                              ? _SharedItemsEmptyState(
+                                  key: ValueKey<String>(
+                                    'shared-empty-${_itemsFilter.name}-$normalizedQuery',
+                                  ),
+                                  icon: normalizedQuery.isNotEmpty
+                                      ? Icons.search_off_rounded
+                                      : Icons.check_circle_outline_rounded,
+                                  title: normalizedQuery.isNotEmpty
+                                      ? 'Nada encontrado nessa busca'
+                                      : _itemsFilter ==
+                                            _SharedItemsFilter.pending
+                                      ? 'Tudo foi pego'
+                                      : _itemsFilter ==
+                                            _SharedItemsFilter.purchased
+                                      ? 'Nenhum item marcado ainda'
+                                      : 'Nenhum item disponivel',
+                                  description: normalizedQuery.isNotEmpty
+                                      ? 'Tente outro nome ou limpe a busca para ver mais itens.'
+                                      : _itemsFilter ==
+                                            _SharedItemsFilter.pending
+                                      ? 'Voce pode revisar os comprados ou continuar pela visao completa.'
+                                      : _itemsFilter ==
+                                            _SharedItemsFilter.purchased
+                                      ? 'Marque os itens durante a compra para acompanhar o que ja foi pego.'
+                                      : 'Adicione novos itens para preencher essa lista.',
+                                  primaryActionLabel: normalizedQuery.isNotEmpty
+                                      ? 'Limpar busca'
+                                      : _itemsFilter ==
+                                            _SharedItemsFilter.pending
+                                      ? 'Ver comprados'
+                                      : _itemsFilter ==
+                                            _SharedItemsFilter.purchased
+                                      ? 'Ver pendentes'
+                                      : null,
+                                  onPrimaryAction: normalizedQuery.isNotEmpty
+                                      ? () => _searchController.clear()
+                                      : _itemsFilter ==
+                                            _SharedItemsFilter.pending
+                                      ? () => _setItemsFilter(
+                                          _SharedItemsFilter.purchased,
+                                        )
+                                      : _itemsFilter ==
+                                            _SharedItemsFilter.purchased
+                                      ? () => _setItemsFilter(
+                                          _SharedItemsFilter.pending,
+                                        )
+                                      : null,
+                                )
+                              : ListView.separated(
+                                  key: ValueKey<String>(
+                                    'shared-items-${_itemsFilter.name}-$normalizedQuery-${visibleItems.length}',
+                                  ),
+                                  keyboardDismissBehavior:
+                                      ScrollViewKeyboardDismissBehavior.onDrag,
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    0,
+                                    16,
+                                    120,
+                                  ),
+                                  itemCount: visibleItems.length,
+                                  separatorBuilder: (context, index) =>
+                                      const SizedBox(height: 10),
+                                  itemBuilder: (context, index) {
+                                    final item = visibleItems[index];
+                                    return RepaintBoundary(
+                                      child: _SharedItemCard(
+                                        key: ValueKey<String>(item.id),
+                                        item: item,
+                                        onPurchasedChanged: (value) =>
+                                            _togglePurchased(list, item, value),
+                                        onIncrement: () =>
+                                            _changeQuantity(list, item, 1),
+                                        onDecrement: () =>
+                                            _changeQuantity(list, item, -1),
+                                        onEdit: () => _openItemEditor(
+                                          list: list,
+                                          items: allItems,
+                                          existing: item,
+                                        ),
+                                        onDelete: () => _deleteItem(list, item),
+                                      ),
+                                    );
+                                  },
                                 ),
-                              )
-                            : visibleItems.isEmpty
-                            ? const Center(
-                                child: Text(
-                                  'Nenhum item encontrado para a busca.',
-                                ),
-                              )
-                            : ListView.separated(
-                                padding: const EdgeInsets.fromLTRB(
-                                  16,
-                                  0,
-                                  16,
-                                  120,
-                                ),
-                                itemCount: visibleItems.length,
-                                separatorBuilder: (context, index) =>
-                                    const SizedBox(height: 10),
-                                itemBuilder: (context, index) {
-                                  final item = visibleItems[index];
-                                  return _SharedItemCard(
-                                    item: item,
-                                    onPurchasedChanged: (value) =>
-                                        _togglePurchased(list, item, value),
-                                    onIncrement: () =>
-                                        _changeQuantity(list, item, 1),
-                                    onDecrement: () =>
-                                        _changeQuantity(list, item, -1),
-                                    onEdit: () => _openItemEditor(
-                                      list: list,
-                                      items: allItems,
-                                      existing: item,
-                                    ),
-                                    onDelete: () => _deleteItem(list, item),
-                                  );
-                                },
-                              ),
+                        ),
                       ),
                     ],
                   ),
@@ -1335,6 +1852,219 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
           },
         );
       },
+    );
+  }
+}
+
+class _SharedItemsToolbar extends StatelessWidget {
+  const _SharedItemsToolbar({
+    required this.controller,
+    required this.selectedFilter,
+    required this.totalCount,
+    required this.pendingCount,
+    required this.purchasedCount,
+    required this.matchingCount,
+    required this.onFilterSelected,
+  });
+
+  final TextEditingController controller;
+  final _SharedItemsFilter selectedFilter;
+  final int totalCount;
+  final int pendingCount;
+  final int purchasedCount;
+  final int matchingCount;
+  final ValueChanged<_SharedItemsFilter> onFilterSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final searchIsActive = matchingCount != totalCount;
+    final filterEntries =
+        <({String label, int count, _SharedItemsFilter value})>[
+          (
+            label: 'Pendentes',
+            count: pendingCount,
+            value: _SharedItemsFilter.pending,
+          ),
+          (label: 'Todos', count: totalCount, value: _SharedItemsFilter.all),
+          (
+            label: 'Comprados',
+            count: purchasedCount,
+            value: _SharedItemsFilter.purchased,
+          ),
+        ];
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.34),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: controller,
+              textInputAction: TextInputAction.search,
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search_rounded),
+                hintText: 'Buscar item por nome...',
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final filter in filterEntries)
+                  ChoiceChip(
+                    selected: selectedFilter == filter.value,
+                    showCheckmark: false,
+                    label: Text('${filter.label} ${filter.count}'),
+                    avatar: Icon(switch (filter.value) {
+                      _SharedItemsFilter.pending =>
+                        Icons.pending_actions_rounded,
+                      _SharedItemsFilter.all =>
+                        Icons.format_list_bulleted_rounded,
+                      _SharedItemsFilter.purchased =>
+                        Icons.check_circle_rounded,
+                    }, size: 16),
+                    onSelected: (_) => onFilterSelected(filter.value),
+                  ),
+              ],
+            ),
+            if (searchIsActive) ...[
+              const SizedBox(height: 8),
+              Text(
+                '$matchingCount resultado(s) na busca atual.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SharedItemsHintCard extends StatelessWidget {
+  const _SharedItemsHintCard({
+    required this.hiddenCount,
+    required this.onPressed,
+  });
+
+  final int hiddenCount;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.secondaryContainer.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.28),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        child: Row(
+          children: [
+            Icon(Icons.visibility_outlined, color: colorScheme.secondary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '$hiddenCount item(ns) ja pegos estao ocultos para deixar a lista mais pratica.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSecondaryContainer,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            TextButton(onPressed: onPressed, child: const Text('Ver')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SharedItemsEmptyState extends StatelessWidget {
+  const _SharedItemsEmptyState({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.description,
+    this.primaryActionLabel,
+    this.onPrimaryAction,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+  final String? primaryActionLabel;
+  final VoidCallback? onPrimaryAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 120),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: colorScheme.surface.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(AppTokens.radiusXl),
+              border: Border.all(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.32),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 32, color: colorScheme.primary),
+                  const SizedBox(height: 12),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    description,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  if (primaryActionLabel != null &&
+                      onPrimaryAction != null) ...[
+                    const SizedBox(height: 16),
+                    FilledButton.tonal(
+                      onPressed: onPrimaryAction,
+                      child: Text(primaryActionLabel!),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1412,6 +2142,212 @@ class _SharedActionChip extends StatelessWidget {
                       ? colorScheme.onSurface
                       : colorScheme.onSurfaceVariant,
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SharedHeaderSectionCard extends StatelessWidget {
+  const _SharedHeaderSectionCard({
+    required this.title,
+    required this.subtitle,
+    required this.expanded,
+    required this.onToggle,
+    required this.child,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool expanded;
+  final VoidCallback onToggle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      label: title,
+      hint: subtitle,
+      toggled: expanded,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colorScheme.surface.withValues(alpha: 0.76),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+          ),
+        ),
+        child: Column(
+          children: [
+            InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: onToggle,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            subtitle,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: colorScheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    ),
+                    AnimatedRotation(
+                      turns: expanded ? 0.5 : 0,
+                      duration: _adaptiveMotionDuration(
+                        context,
+                        AppTokens.motionMedium,
+                      ),
+                      child: const Icon(Icons.keyboard_arrow_down_rounded),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            ClipRect(
+              child: AnimatedAlign(
+                duration: _adaptiveMotionDuration(
+                  context,
+                  AppTokens.motionMedium,
+                ),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topCenter,
+                heightFactor: expanded ? 1 : 0,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                  child: child,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SharedMetricCard extends StatelessWidget {
+  const _SharedMetricCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Semantics(
+      label: '$label: $value',
+      readOnly: true,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 138),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.52),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 18, color: colorScheme.primary),
+                const SizedBox(height: 8),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SharedBalanceRow extends StatelessWidget {
+  const _SharedBalanceRow({required this.entry});
+
+  final PaymentBalance entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Semantics(
+      label:
+          'Carteira ${entry.name}, tipo ${entry.type.label}, saldo ${formatCurrency(entry.value)}',
+      readOnly: true,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Icon(
+                Icons.account_balance_wallet_rounded,
+                color: colorScheme.primary,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      entry.name,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      entry.type.label,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                formatCurrency(entry.value),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
               ),
             ],
           ),
@@ -1527,8 +2463,16 @@ class _SharedHistoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
-    return Card(
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(AppTokens.radiusXl),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
       child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         title: Text(
           formatDateTime(purchase.closedAt),
           style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
@@ -1566,33 +2510,70 @@ class _SharedHistoryDetailsSheet extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                formatDateTime(purchase.closedAt),
-                style: textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+                  border: Border.all(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.28),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Total: ${formatCurrency(purchase.totalValue)}',
-                style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        formatDateTime(purchase.closedAt),
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Total: ${formatCurrency(purchase.totalValue)}',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
               ...purchase.items.map((item) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(item.name, style: textTheme.bodyMedium),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface,
+                      borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+                      border: Border.all(
+                        color: colorScheme.outlineVariant.withValues(
+                          alpha: 0.24,
+                        ),
                       ),
-                      Text(
-                        '${item.quantity} x ${formatCurrency(item.unitPrice)}',
-                        style: textTheme.bodySmall,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
                       ),
-                    ],
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(item.name, style: textTheme.bodyMedium),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            '${item.quantity} x ${formatCurrency(item.unitPrice)}',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 );
               }),
@@ -1628,6 +2609,7 @@ class _SharedHistoryDetailsSheet extends StatelessWidget {
 
 class _SharedItemCard extends StatelessWidget {
   const _SharedItemCard({
+    super.key,
     required this.item,
     required this.onPurchasedChanged,
     required this.onIncrement,
@@ -1646,70 +2628,199 @@ class _SharedItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final cardColor = item.isPurchased
+        ? colorScheme.surfaceContainerLow.withValues(alpha: 0.95)
+        : colorScheme.surface;
     return Card(
       elevation: 0,
-      color: colorScheme.surface,
+      color: cardColor,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
-        child: Row(
+        padding: const EdgeInsets.fromLTRB(8, 10, 8, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Checkbox(value: item.isPurchased, onChanged: onPurchasedChanged),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.name,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      decoration: item.isPurchased
-                          ? TextDecoration.lineThrough
-                          : TextDecoration.none,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Checkbox(
+                    value: item.isPurchased,
+                    onChanged: onPurchasedChanged,
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.name,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            decoration: item.isPurchased
+                                ? TextDecoration.lineThrough
+                                : TextDecoration.none,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${item.quantity} x ${formatCurrency(item.unitPrice)}',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            decoration: item.isPurchased
+                                ? TextDecoration.lineThrough
+                                : TextDecoration.none,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    '${item.quantity} x ${formatCurrency(item.unitPrice)} = ${formatCurrency(item.subtotal)}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                PopupMenuButton<String>(
+                  tooltip: 'Mais acoes do item',
+                  onSelected: (action) {
+                    if (action == 'edit') {
+                      onEdit();
+                      return;
+                    }
+                    if (action == 'delete') {
+                      onDelete();
+                    }
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(value: 'edit', child: Text('Editar item')),
+                    PopupMenuItem(value: 'delete', child: Text('Excluir item')),
+                  ],
+                ),
+              ],
             ),
-            IconButton(
-              tooltip: 'Diminuir',
-              onPressed: onDecrement,
-              icon: const Icon(Icons.remove_circle_outline_rounded),
-            ),
-            Text(
-              '${item.quantity}',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            IconButton(
-              tooltip: 'Aumentar',
-              onPressed: onIncrement,
-              icon: const Icon(Icons.add_circle_outline_rounded),
-            ),
-            PopupMenuButton<String>(
-              onSelected: (action) {
-                if (action == 'edit') {
-                  onEdit();
-                  return;
-                }
-                if (action == 'delete') {
-                  onDelete();
-                }
-              },
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'edit', child: Text('Editar item')),
-                PopupMenuItem(value: 'delete', child: Text('Excluir item')),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                _SharedItemInfoChip(
+                  icon: item.isPurchased
+                      ? Icons.check_circle_rounded
+                      : Icons.radio_button_unchecked_rounded,
+                  label: item.isPurchased ? 'Pego' : 'Pendente',
+                  emphasized: item.isPurchased,
+                ),
+                _SharedItemInfoChip(
+                  icon: Icons.receipt_long_rounded,
+                  label: formatCurrency(item.subtotal),
+                ),
+                _SharedQuantityStepper(
+                  quantity: item.quantity,
+                  onIncrement: onIncrement,
+                  onDecrement: onDecrement,
+                ),
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SharedItemInfoChip extends StatelessWidget {
+  const _SharedItemInfoChip({
+    required this.icon,
+    required this.label,
+    this.emphasized = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final backgroundColor = emphasized
+        ? colorScheme.primaryContainer.withValues(alpha: 0.82)
+        : colorScheme.surfaceContainerHighest.withValues(alpha: 0.58);
+    final foregroundColor = emphasized
+        ? colorScheme.onPrimaryContainer
+        : colorScheme.onSurfaceVariant;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: foregroundColor),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: foregroundColor,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SharedQuantityStepper extends StatelessWidget {
+  const _SharedQuantityStepper({
+    required this.quantity,
+    required this.onIncrement,
+    required this.onDecrement,
+  });
+
+  final int quantity;
+  final VoidCallback onIncrement;
+  final VoidCallback onDecrement;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.48),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.26),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            tooltip: 'Diminuir',
+            visualDensity: VisualDensity.compact,
+            onPressed: onDecrement,
+            icon: const Icon(Icons.remove_rounded),
+          ),
+          Text(
+            '$quantity',
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          IconButton(
+            tooltip: 'Aumentar',
+            visualDensity: VisualDensity.compact,
+            onPressed: onIncrement,
+            icon: const Icon(Icons.add_rounded),
+          ),
+        ],
       ),
     );
   }

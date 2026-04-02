@@ -758,13 +758,13 @@ class _AuthSurface extends StatelessWidget {
                     .withValues(
                       alpha: brightness == Brightness.dark ? 0.3 : 0.08,
                     ),
-            blurRadius: 32,
-            offset: const Offset(0, 14),
+            blurRadius: 36,
+            offset: const Offset(0, 16),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
+        padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
         child: child,
       ),
     );
@@ -813,6 +813,26 @@ class _AuthHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colorScheme.surface.withValues(alpha: 0.46),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  child: Text(
+                    compact ? 'Conta segura' : 'Sincronizacao e acesso seguro',
+                    style: textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
               Text(
                 title,
                 style: textTheme.headlineSmall?.copyWith(
@@ -826,6 +846,23 @@ class _AuthHeader extends StatelessWidget {
                   color: colorScheme.onSurfaceVariant,
                 ),
               ),
+              if (!compact) ...[
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _AuthFeatureChip(
+                      icon: Icons.cloud_done_rounded,
+                      label: 'Sincronizacao online',
+                    ),
+                    _AuthFeatureChip(
+                      icon: Icons.group_rounded,
+                      label: 'Listas compartilhadas',
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -840,6 +877,43 @@ class _AuthHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AuthFeatureChip extends StatelessWidget {
+  const _AuthFeatureChip({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withValues(alpha: 0.46),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.28),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: colorScheme.primary),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
