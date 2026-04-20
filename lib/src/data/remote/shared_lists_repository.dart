@@ -29,19 +29,8 @@ class SharedShoppingListSummary {
     DocumentSnapshot<Map<String, dynamic>> doc,
   ) {
     final data = doc.data() ?? const <String, dynamic>{};
-    final members = <String>{};
-    final rawMembers = data['memberUids'];
-    if (rawMembers is List) {
-      for (final raw in rawMembers) {
-        if (raw is String && raw.trim().isNotEmpty) {
-          members.add(raw.trim());
-        }
-      }
-    }
-    final ownerUid = (data['ownerUid'] as String?)?.trim() ?? '';
-    if (ownerUid.isNotEmpty) {
-      members.add(ownerUid);
-    }
+    final ownerUid = readOwnerUidFromData(data);
+    final members = readMemberUidsFromData(data, ownerUid: ownerUid);
     return SharedShoppingListSummary(
       id: (data['id'] as String?)?.trim().isNotEmpty == true
           ? (data['id'] as String).trim()
@@ -160,6 +149,61 @@ class SharedShoppingListSummary {
       return ShoppingReminderConfig.fromJson(Map<String, dynamic>.from(raw));
     }
     return null;
+  }
+
+  @visibleForTesting
+  static String readOwnerUidFromData(Map<String, dynamic> data) {
+    final ownerUid = (data['ownerUid'] as String?)?.trim() ?? '';
+    if (ownerUid.isNotEmpty) {
+      return ownerUid;
+    }
+    return (data['ownerId'] as String?)?.trim() ?? '';
+  }
+
+  @visibleForTesting
+  static List<String> readMemberUidsFromData(
+    Map<String, dynamic> data, {
+    String? ownerUid,
+  }) {
+    final members = <String>{};
+
+    final rawMembers = data['memberUids'];
+    if (rawMembers is List) {
+      for (final raw in rawMembers) {
+        if (raw is String && raw.trim().isNotEmpty) {
+          members.add(raw.trim());
+        }
+      }
+    }
+
+    final rawSharedWith = data['sharedWith'];
+    if (rawSharedWith is List) {
+      for (final raw in rawSharedWith) {
+        if (raw is String && raw.trim().isNotEmpty) {
+          members.add(raw.trim());
+        }
+      }
+    }
+
+    final resolvedOwner = (ownerUid ?? readOwnerUidFromData(data)).trim();
+    if (resolvedOwner.isNotEmpty) {
+      members.add(resolvedOwner);
+    }
+
+    return List.unmodifiable(members);
+  }
+
+  @visibleForTesting
+  static bool isVisibleToUserData(Map<String, dynamic> data, String uid) {
+    final trimmedUid = uid.trim();
+    if (trimmedUid.isEmpty) {
+      return false;
+    }
+    final ownerUid = readOwnerUidFromData(data);
+    if (ownerUid == trimmedUid) {
+      return true;
+    }
+    return readMemberUidsFromData(data, ownerUid: ownerUid).contains(trimmedUid);
   }
 }
 
@@ -335,7 +379,6 @@ class SharedListsRepository {
       'watchSharedLists start uid=$trimmedUid authUid=$authUid project=$projectId app=${_firestore.app.name}',
     );
     return _sharedListsRef
-        .where('memberUids', arrayContains: trimmedUid)
         .snapshots()
         .handleError((error, stack) {
           _log(
@@ -351,6 +394,11 @@ class SharedListsRepository {
         .map((snapshot) {
           final lists = snapshot.docs
               .map(SharedShoppingListSummary.fromFirestoreDoc)
+              .where(
+                (entry) =>
+                    entry.ownerUid == trimmedUid ||
+                    entry.memberUids.contains(trimmedUid),
+              )
               .toList(growable: false);
           lists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
           return List.unmodifiable(lists);
