@@ -904,7 +904,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
     List<SharedShoppingItem> items,
   ) async {
     if (list.isClosed) {
-      _showSnack('A lista já está fechada.');
+      _showSnack('A lista jÃ¡ estÃ¡ fechada.');
       return;
     }
     if (items.isEmpty) {
@@ -920,7 +920,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
     }
     final uid = _currentUid;
     if (uid.isEmpty) {
-      _showSnack('Faça login para fechar a lista.');
+      _showSnack('FaÃ§a login para fechar a lista.');
       return;
     }
     setState(() => _busy = true);
@@ -933,13 +933,13 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
       if (!mounted) {
         return;
       }
-      _showSnack('Compra fechada e salva no histórico compartilhado.');
+      _showSnack('Compra fechada e salva no histÃ³rico compartilhado.');
     } catch (error) {
       if (!mounted) {
         return;
       }
       _showSnack(
-        'Não foi possível fechar a compra: $error',
+        'NÃ£o foi possÃ­vel fechar a compra: $error',
         type: AppToastType.error,
       );
     } finally {
@@ -952,7 +952,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
   Future<void> _reopenSharedList(SharedShoppingListSummary list) async {
     final uid = _currentUid;
     if (uid.isEmpty) {
-      _showSnack('Faça login para reabrir.');
+      _showSnack('FaÃ§a login para reabrir.');
       return;
     }
     setState(() => _busy = true);
@@ -967,7 +967,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
         return;
       }
       _showSnack(
-        'Não foi possível reabrir: $error',
+        'NÃ£o foi possÃ­vel reabrir: $error',
         type: AppToastType.error,
       );
     } finally {
