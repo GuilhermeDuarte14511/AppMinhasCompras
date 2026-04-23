@@ -966,10 +966,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
       if (!mounted) {
         return;
       }
-      _showSnack(
-        'Não foi possível reabrir: $error',
-        type: AppToastType.error,
-      );
+      _showSnack('Não foi possível reabrir: $error', type: AppToastType.error);
     } finally {
       if (mounted) {
         setState(() => _busy = false);
@@ -1007,7 +1004,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
       if (!mounted) {
         return;
       }
-      _showSnack('Nao foi possivel renomear: $error', type: AppToastType.error);
+      _showSnack('Não foi possível renomear: $error', type: AppToastType.error);
     }
   }
 
@@ -1039,7 +1036,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
     }
     final uid = _currentUid;
     if (uid.isEmpty) {
-      _showSnack('Faca login para editar itens.', type: AppToastType.warning);
+      _showSnack('Faça login para editar itens.', type: AppToastType.warning);
       return;
     }
 
@@ -1093,7 +1090,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
         return;
       }
       _showSnack(
-        'Nao foi possivel salvar item: $error',
+        'Não foi possível salvar item: $error',
         type: AppToastType.error,
       );
     } finally {
@@ -1129,7 +1126,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
         return;
       }
       _showSnack(
-        'Nao foi possivel alterar status: $error',
+        'Não foi possível alterar status: $error',
         type: AppToastType.error,
       );
     }
@@ -1160,7 +1157,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
         return;
       }
       _showSnack(
-        'Nao foi possivel atualizar quantidade: $error',
+        'Não foi possível atualizar quantidade: $error',
         type: AppToastType.error,
       );
     }
@@ -1204,7 +1201,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
         return;
       }
       _showSnack(
-        'Nao foi possivel excluir item: $error',
+        'Não foi possível excluir item: $error',
         type: AppToastType.error,
       );
     }
@@ -1240,7 +1237,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
         : 'Saldos: indefinido';
     final isReadOnly = list.isClosed;
     final headerSubtitle =
-        '${items.length} item(ns) • $purchasedCount comprados • ${formatCurrency(pickedValue)} pego';
+        '${formatItemCount(items.length)} • $purchasedCount comprados • ${formatCurrency(pickedValue)} pego';
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -1353,7 +1350,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
                           ),
                           _SharedMetaChip(
                             icon: Icons.shopping_basket_rounded,
-                            text: '${items.length} item(ns)',
+                            text: formatItemCount(items.length),
                           ),
                           _SharedMetaChip(
                             icon: Icons.check_circle_rounded,
@@ -1416,24 +1413,24 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
                             _SharedMetricCard(
                               icon: Icons.check_circle_rounded,
                               label: 'Comprados',
-                              value: '$purchasedCount item(ns)',
+                              value: formatItemCount(purchasedCount),
                             ),
                             _SharedMetricCard(
                               icon: Icons.playlist_add_check_circle_rounded,
                               label: 'Pendentes',
-                              value: '$pendingCount item(ns)',
+                              value: formatItemCount(pendingCount),
                             ),
                             _SharedMetricCard(
                               icon: Icons.inventory_2_rounded,
                               label: 'Total de itens',
-                              value: '${items.length} item(ns)',
+                              value: formatItemCount(items.length),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 10),
                       _SharedHeaderSectionCard(
-                        title: 'Orcamento',
+                        title: 'Orçamento',
                         subtitle: budgetLabel,
                         expanded:
                             _expandedHeaderSection ==
@@ -1449,10 +1446,10 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
                               children: [
                                 _SharedMetricCard(
                                   icon: Icons.account_balance_wallet_rounded,
-                                  label: 'Orcamento',
+                                  label: 'Orçamento',
                                   value: derivedList.hasBudget
                                       ? formatCurrency(derivedList.budget ?? 0)
-                                      : 'Nao definido',
+                                      : 'Não definido',
                                 ),
                                 _SharedMetricCard(
                                   icon: derivedList.isOverBudget
@@ -1470,7 +1467,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
                                                   derivedList.budgetRemaining,
                                                 ),
                                         )
-                                      : 'Nao definido',
+                                      : 'Não definido',
                                 ),
                               ],
                             ),
@@ -1478,8 +1475,8 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
                             _SharedActionChip(
                               icon: Icons.edit_rounded,
                               text: list.hasBudget
-                                  ? 'Editar orcamento'
-                                  : 'Definir orcamento',
+                                  ? 'Editar orçamento'
+                                  : 'Definir orçamento',
                               onTap: isReadOnly
                                   ? null
                                   : () => _openBudgetEditor(list),
@@ -1510,7 +1507,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
                                       ? formatCurrency(
                                           derivedList.paymentBalancesTotal,
                                         )
-                                      : 'Nao definido',
+                                      : 'Não definido',
                                 ),
                                 _SharedMetricCard(
                                   icon: derivedList.uncoveredAmount > 0
@@ -1525,7 +1522,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
                                               ? derivedList.uncoveredAmount
                                               : derivedList.coveredAmount,
                                         )
-                                      : 'Nao definido',
+                                      : 'Não definido',
                                 ),
                               ],
                             ),
@@ -1612,7 +1609,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
             body: const Center(
               child: Padding(
                 padding: EdgeInsets.all(20),
-                child: Text('Lista nao encontrada ou sem permissao.'),
+                child: Text('Lista não encontrada ou sem permissão.'),
               ),
             ),
           );
@@ -1654,7 +1651,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
                 actions: [
                   if (isOwner)
                     IconButton(
-                      tooltip: 'Gerar codigo de compartilhamento',
+                      tooltip: 'Gerar código de compartilhamento',
                       onPressed: _busy ? null : () => _openInviteDialog(list),
                       icon: const Icon(Icons.qr_code_rounded),
                     ),
@@ -1754,7 +1751,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
                                   icon: Icons.playlist_add_check_rounded,
                                   title: 'Nenhum item nessa lista ainda',
                                   description:
-                                      'Adicione os primeiros produtos para comecar a compra compartilhada.',
+                                      'Adicione os primeiros produtos para começar a compra compartilhada.',
                                 )
                               : visibleItems.isEmpty
                               ? _SharedItemsEmptyState(
@@ -1772,15 +1769,15 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
                                       : _itemsFilter ==
                                             _SharedItemsFilter.purchased
                                       ? 'Nenhum item marcado ainda'
-                                      : 'Nenhum item disponivel',
+                                      : 'Nenhum item disponível',
                                   description: normalizedQuery.isNotEmpty
                                       ? 'Tente outro nome ou limpe a busca para ver mais itens.'
                                       : _itemsFilter ==
                                             _SharedItemsFilter.pending
-                                      ? 'Voce pode revisar os comprados ou continuar pela visao completa.'
+                                      ? 'Você pode revisar os comprados ou continuar pela visão completa.'
                                       : _itemsFilter ==
                                             _SharedItemsFilter.purchased
-                                      ? 'Marque os itens durante a compra para acompanhar o que ja foi pego.'
+                                      ? 'Marque os itens durante a compra para acompanhar o que já foi pego.'
                                       : 'Adicione novos itens para preencher essa lista.',
                                   primaryActionLabel: normalizedQuery.isNotEmpty
                                       ? 'Limpar busca'
@@ -1940,7 +1937,7 @@ class _SharedItemsToolbar extends StatelessWidget {
             if (searchIsActive) ...[
               const SizedBox(height: 8),
               Text(
-                '$matchingCount resultado(s) na busca atual.',
+                '${formatCountLabel(matchingCount, 'resultado', 'resultados')} na busca atual.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w600,
@@ -1982,7 +1979,9 @@ class _SharedItemsHintCard extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                '$hiddenCount item(ns) ja pegos estao ocultos para deixar a lista mais pratica.',
+                hiddenCount == 1
+                    ? '1 item já pego está oculto para deixar a lista mais prática.'
+                    : '$hiddenCount itens já pegos estão ocultos para deixar a lista mais prática.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSecondaryContainer,
                   fontWeight: FontWeight.w600,

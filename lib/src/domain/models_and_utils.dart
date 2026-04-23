@@ -7,6 +7,14 @@ import '../core/utils/text_utils.dart';
 export '../core/utils/id_utils.dart';
 export '../core/utils/text_utils.dart';
 
+String formatCountLabel(int count, String singular, String plural) =>
+    count == 1 ? '1 $singular' : '$count $plural';
+
+String formatItemCount(int count) => count == 1 ? '1 item' : '$count itens';
+
+String formatUnitCount(int count) =>
+    count == 1 ? '1 unidade' : '$count unidades';
+
 class ShoppingListModel {
   const ShoppingListModel({
     required this.id,

@@ -824,7 +824,7 @@ class _AuthHeader extends StatelessWidget {
                     vertical: 5,
                   ),
                   child: Text(
-                    compact ? 'Conta segura' : 'Sincronizacao e acesso seguro',
+                    compact ? 'Conta segura' : 'Sincronização e acesso seguro',
                     style: textTheme.labelSmall?.copyWith(
                       color: colorScheme.onSurface,
                       fontWeight: FontWeight.w800,
@@ -854,7 +854,7 @@ class _AuthHeader extends StatelessWidget {
                   children: [
                     _AuthFeatureChip(
                       icon: Icons.cloud_done_rounded,
-                      label: 'Sincronizacao online',
+                      label: 'Sincronização online',
                     ),
                     _AuthFeatureChip(
                       icon: Icons.group_rounded,

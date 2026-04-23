@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lista_compras_material/src/app/shopping_list_app.dart';
 import 'package:lista_compras_material/src/application/ports.dart';
+import 'package:lista_compras_material/src/domain/classifications.dart';
 import 'package:lista_compras_material/src/domain/models_and_utils.dart';
 
 void main() {
@@ -23,9 +24,9 @@ void main() {
   ) async {
     await _pumpApp(tester);
 
-    await _createListFromDashboard(tester, 'Mercado do mes');
+    await _createListFromDashboard(tester, 'Mercado do mês');
 
-    expect(find.text('Mercado do mes'), findsOneWidget);
+    expect(find.text('Mercado do mês'), findsOneWidget);
 
     await _addItem(
       tester,
@@ -48,7 +49,7 @@ void main() {
       '3',
     );
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Valor unitario'),
+      find.widgetWithText(TextFormField, 'Valor unitário'),
       '950',
     );
     await tester.tap(find.widgetWithText(FilledButton, 'Salvar item'));
@@ -82,10 +83,10 @@ void main() {
       '2',
     );
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Valor unitario'),
+      find.widgetWithText(TextFormField, 'Valor unitário'),
       '950',
     );
-    await tester.tap(find.widgetWithText(FilledButton, 'Adicionar item'));
+    await _tapVisibleButton<FilledButton>(tester, 'Adicionar item');
     await tester.pumpAndSettle();
 
     expect(_textContains('existe na lista'), findsOneWidget);
@@ -106,13 +107,13 @@ void main() {
     );
     await _addItem(
       tester,
-      name: 'Feijao',
+      name: 'Feijão',
       quantity: '1',
       unitValueDigits: '1200',
     );
     await _addItem(
       tester,
-      name: 'Macarrao',
+      name: 'Macarrão',
       quantity: '1',
       unitValueDigits: '800',
     );
@@ -121,7 +122,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Arroz'), findsOneWidget);
-    expect(find.text('Feijao'), findsNothing);
+    expect(find.text('Feijão'), findsNothing);
 
     await tester.tap(find.byIcon(Icons.close_rounded).first);
     await tester.pumpAndSettle();
@@ -141,7 +142,7 @@ void main() {
   ) async {
     await _pumpApp(tester);
 
-    await _createListFromDashboard(tester, 'Orcamento e historico');
+    await _createListFromDashboard(tester, 'Orçamento e histórico');
 
     await _openListEditorMenuAction(tester, 'Definir or');
     await tester.enterText(find.byType(TextFormField).last, '1000');
@@ -164,7 +165,7 @@ void main() {
       icon: Icons.edit_rounded,
     );
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Valor unitario'),
+      find.widgetWithText(TextFormField, 'Valor unitário'),
       '3000',
     );
     await tester.tap(find.widgetWithText(FilledButton, 'Salvar item'));
@@ -177,6 +178,135 @@ void main() {
     );
 
     expect(_textContains('Inicial'), findsWidgets);
+  });
+
+  testWidgets('Add item searches every catalog product and applies details', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      catalogStorage: _MemoryProductCatalogStorage(
+        _buildCatalogProducts(
+          extraProducts: [
+            _catalogProduct(
+              name: 'Lentilha Premium',
+              barcode: '7890000009999',
+              unitPrice: 12.34,
+              usageCount: 1,
+              updatedAt: DateTime(2026),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    await _createListFromDashboard(tester, 'Catálogo completo');
+
+    await _openAddItemSheet(tester);
+    await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'lent');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lentilha Premium'), findsOneWidget);
+
+    await tester.tap(find.text('Lentilha Premium'));
+    await tester.pumpAndSettle();
+    await _tapVisibleButton<FilledButton>(tester, 'Adicionar item');
+
+    expect(find.text('Lentilha Premium'), findsOneWidget);
+    expect(find.text('7890000009999'), findsOneWidget);
+    expect(_textContains('12,34'), findsWidgets);
+  });
+
+  testWidgets('Add item sheet can add multiple catalog products', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      catalogStorage: _MemoryProductCatalogStorage([
+        _catalogProduct(
+          name: 'Banana Prata',
+          barcode: '7890000001111',
+          unitPrice: 6.99,
+        ),
+        _catalogProduct(
+          name: 'Leite Integral',
+          barcode: '7890000002222',
+          unitPrice: 4.79,
+        ),
+      ]),
+    );
+
+    await _createListFromDashboard(tester, 'Compra da semana');
+
+    await _openAddItemSheet(tester);
+    await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'ban');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Banana Prata'));
+    await tester.pumpAndSettle();
+    await _tapVisibleButton<OutlinedButton>(tester, 'Adicionar e continuar');
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'lei');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Leite Integral'));
+    await tester.pumpAndSettle();
+    await _tapVisibleButton<FilledButton>(tester, 'Adicionar item');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Banana Prata'), findsOneWidget);
+    expect(find.text('Leite Integral'), findsOneWidget);
+    expect(find.text('7890000001111'), findsOneWidget);
+    expect(find.text('7890000002222'), findsOneWidget);
+  });
+
+  testWidgets('Add item sheet can add and continue from keyboard', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(tester);
+
+    await _createListFromDashboard(tester, 'Compra rápida');
+
+    await _openAddItemSheet(tester);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Item'),
+      'Tomate',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Quantidade'),
+      '2',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Valor unitário'),
+      '399',
+    );
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    expect(_textContains('1 item pronto'), findsOneWidget);
+    expect(
+      tester
+          .widget<TextFormField>(find.widgetWithText(TextFormField, 'Item'))
+          .controller
+          ?.text,
+      isEmpty,
+    );
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Item'),
+      'Cebola',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Quantidade'),
+      '1',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Valor unitário'),
+      '250',
+    );
+    await _tapVisibleButton<FilledButton>(tester, 'Adicionar item');
+
+    expect(find.text('Tomate'), findsOneWidget);
+    expect(find.text('Cebola'), findsOneWidget);
   });
 
   testWidgets('Delete multiple lists from My Lists', (
@@ -243,7 +373,7 @@ void main() {
       unitValueDigits: '750',
     );
 
-    await tester.tap(find.byType(Checkbox).first);
+    await tester.tap(find.byType(Checkbox).first, warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(_textContains('Comprado'), findsWidgets);
 
@@ -254,15 +384,20 @@ void main() {
     expect(find.text('Minhas Compras'), findsOneWidget);
 
     final historyAction = find.byKey(const ValueKey('dash_action_history'));
-    await tester.tap(historyAction);
+    await tester.tap(historyAction, warnIfMissed: false);
     await tester.pumpAndSettle();
 
     expect(find.text('Fechamento mensal'), findsOneWidget);
   });
 }
 
-Future<void> _pumpApp(WidgetTester tester) async {
-  await tester.pumpWidget(ShoppingListApp(storage: _MemoryStorage()));
+Future<void> _pumpApp(
+  WidgetTester tester, {
+  ProductCatalogStorage? catalogStorage,
+}) async {
+  await tester.pumpWidget(
+    ShoppingListApp(storage: _MemoryStorage(), catalogStorage: catalogStorage),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -279,6 +414,21 @@ Future<void> _addItem(
   required String quantity,
   required String unitValueDigits,
 }) async {
+  await _openAddItemSheet(tester);
+
+  await tester.enterText(find.widgetWithText(TextFormField, 'Item'), name);
+  await tester.enterText(
+    find.widgetWithText(TextFormField, 'Quantidade'),
+    quantity,
+  );
+  await tester.enterText(
+    find.widgetWithText(TextFormField, 'Valor unitário'),
+    unitValueDigits,
+  );
+  await _tapVisibleButton<FilledButton>(tester, 'Adicionar item');
+}
+
+Future<void> _openAddItemSheet(WidgetTester tester) async {
   final addItemFab = find.widgetWithText(
     FloatingActionButton,
     'Adicionar item',
@@ -289,17 +439,16 @@ Future<void> _addItem(
     await tester.tap(find.byIcon(Icons.add_shopping_cart_rounded).first);
   }
   await tester.pumpAndSettle();
+}
 
-  await tester.enterText(find.widgetWithText(TextFormField, 'Item'), name);
-  await tester.enterText(
-    find.widgetWithText(TextFormField, 'Quantidade'),
-    quantity,
-  );
-  await tester.enterText(
-    find.widgetWithText(TextFormField, 'Valor unitario'),
-    unitValueDigits,
-  );
-  await tester.tap(find.widgetWithText(FilledButton, 'Adicionar item'));
+Future<void> _tapVisibleButton<T extends ButtonStyleButton>(
+  WidgetTester tester,
+  String label,
+) async {
+  final finder = find.widgetWithText(T, label);
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+  await tester.tap(finder, warnIfMissed: false);
   await tester.pumpAndSettle();
 }
 
@@ -370,4 +519,68 @@ class _MemoryStorage implements ShoppingListsStorage {
   Future<void> saveLists(List<ShoppingListModel> lists) async {
     _lists = lists.map((list) => list.deepCopy()).toList(growable: false);
   }
+}
+
+class _MemoryProductCatalogStorage implements ProductCatalogStorage {
+  _MemoryProductCatalogStorage([List<CatalogProduct> products = const []])
+    : _products = _cloneProducts(products);
+
+  List<CatalogProduct> _products;
+
+  @override
+  Future<List<CatalogProduct>> loadProducts() async {
+    return _cloneProducts(_products);
+  }
+
+  @override
+  Future<void> saveProducts(List<CatalogProduct> products) async {
+    _products = _cloneProducts(products);
+  }
+
+  static List<CatalogProduct> _cloneProducts(List<CatalogProduct> source) {
+    return source
+        .map(
+          (product) => product.copyWith(
+            priceHistory: List<PriceHistoryEntry>.from(product.priceHistory),
+            updatedAt: product.updatedAt,
+          ),
+        )
+        .toList(growable: false);
+  }
+}
+
+List<CatalogProduct> _buildCatalogProducts({
+  List<CatalogProduct> extraProducts = const [],
+}) {
+  return [
+    for (var index = 0; index < 24; index++)
+      _catalogProduct(
+        name: 'Produto Recente $index',
+        barcode: '789000100${index.toString().padLeft(4, '0')}',
+        unitPrice: 2.0 + index,
+        usageCount: 50 - index,
+        updatedAt: DateTime(2026, 4, 1, 12, index),
+      ),
+    ...extraProducts,
+  ];
+}
+
+CatalogProduct _catalogProduct({
+  required String name,
+  required String barcode,
+  required double unitPrice,
+  int usageCount = 10,
+  DateTime? updatedAt,
+}) {
+  final recordedAt = updatedAt ?? DateTime(2026, 4, 1);
+  return CatalogProduct(
+    id: uniqueId(),
+    name: name,
+    category: ShoppingCategory.grocery,
+    unitPrice: unitPrice,
+    barcode: barcode,
+    usageCount: usageCount,
+    updatedAt: recordedAt,
+    priceHistory: [PriceHistoryEntry(price: unitPrice, recordedAt: recordedAt)],
+  );
 }

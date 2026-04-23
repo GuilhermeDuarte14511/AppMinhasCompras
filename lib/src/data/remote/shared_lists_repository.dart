@@ -91,7 +91,7 @@ class SharedShoppingListSummary {
   bool get hasPaymentBalances =>
       paymentBalances.any((entry) => entry.value > 0);
   double get paymentBalancesTotal =>
-      paymentBalances.fold<double>(0, (sum, entry) => sum + entry.value);
+      paymentBalances.fold<double>(0, (total, entry) => total + entry.value);
 
   Map<String, dynamic> toCreatePayload({
     required String ownerUid,
@@ -357,7 +357,9 @@ class SharedListsRepository {
         });
   }
 
-  Future<List<SharedShoppingListSummary>> fetchOwnedSharedLists(String uid) async {
+  Future<List<SharedShoppingListSummary>> fetchOwnedSharedLists(
+    String uid,
+  ) async {
     final trimmedUid = uid.trim();
     if (trimmedUid.isEmpty) {
       return const <SharedShoppingListSummary>[];
@@ -574,7 +576,7 @@ class SharedListsRepository {
   }) async {
     final trimmedUid = ownerUid.trim();
     if (trimmedUid.isEmpty) {
-      throw StateError('ownerUid invalido');
+      throw StateError('Usuário inválido.');
     }
     final sourceLocalListId = localList.id.trim();
     if (sourceLocalListId.isNotEmpty) {
@@ -597,7 +599,7 @@ class SharedListsRepository {
   }) async {
     final trimmedUid = ownerUid.trim();
     if (trimmedUid.isEmpty) {
-      throw StateError('ownerUid invalido');
+      throw StateError('Usuário inválido.');
     }
 
     _log(
@@ -686,7 +688,7 @@ class SharedListsRepository {
     final trimmedListId = listId.trim();
     final trimmedUid = requesterUid.trim();
     if (trimmedListId.isEmpty || trimmedUid.isEmpty) {
-      throw StateError('Dados invalidos para gerar convite.');
+      throw StateError('Dados inválidos para gerar convite.');
     }
     _log('generateInviteCode start listId=$trimmedListId uid=$trimmedUid');
     final newCode = await _generateUniqueInviteCode();
@@ -695,14 +697,14 @@ class SharedListsRepository {
       final listSnapshot = await transaction.get(_listRef(trimmedListId));
       _log('generateInviteCode listSnapshot.exists=${listSnapshot.exists}');
       if (!listSnapshot.exists) {
-        throw StateError('Lista compartilhada nao encontrada.');
+        throw StateError('Lista compartilhada não encontrada.');
       }
       final parsed = SharedShoppingListSummary.fromFirestoreDoc(listSnapshot);
       _log(
         'generateInviteCode owner=${parsed.ownerUid} invite=${parsed.inviteCode}',
       );
       if (!parsed.isOwner(trimmedUid)) {
-        throw StateError('Somente o dono pode gerar codigo.');
+        throw StateError('Somente o dono pode gerar código.');
       }
       final previousCode = parsed.inviteCode;
       if (previousCode != null && previousCode.isNotEmpty) {
@@ -738,7 +740,7 @@ class SharedListsRepository {
     final trimmedListId = listId.trim();
     final trimmedUid = requesterUid.trim();
     if (trimmedListId.isEmpty || trimmedUid.isEmpty) {
-      throw StateError('Dados invalidos para revogar convite.');
+      throw StateError('Dados inválidos para revogar convite.');
     }
     _log('revokeInviteCode start listId=$trimmedListId uid=$trimmedUid');
     await _firestore.runTransaction((transaction) async {
@@ -752,7 +754,7 @@ class SharedListsRepository {
         'revokeInviteCode owner=${parsed.ownerUid} invite=${parsed.inviteCode}',
       );
       if (!parsed.isOwner(trimmedUid)) {
-        throw StateError('Somente o dono pode revogar codigo.');
+        throw StateError('Somente o dono pode revogar código.');
       }
       final previousCode = parsed.inviteCode;
       if (previousCode != null && previousCode.isNotEmpty) {
@@ -819,11 +821,11 @@ class SharedListsRepository {
     final normalizedCode = _normalizeInviteCode(inviteCode);
     final trimmedUid = uid.trim();
     if (normalizedCode.isEmpty || trimmedUid.isEmpty) {
-      throw StateError('Codigo ou usuario invalido.');
+      throw StateError('Código ou usuário inválido.');
     }
 
     if (kIsWeb) {
-      _log('joinByCode web mode (sem transacao) code=$normalizedCode');
+      _log('joinByCode web mode (sem transação) code=$normalizedCode');
       return _joinByCodeWithoutTransaction(
         inviteCode: normalizedCode,
         uid: trimmedUid,
@@ -837,15 +839,15 @@ class SharedListsRepository {
           _inviteRef(normalizedCode),
         );
         if (!inviteSnapshot.exists) {
-          throw StateError('Codigo invalido ou expirado.');
+          throw StateError('Código inválido ou expirado.');
         }
         final inviteData = inviteSnapshot.data() ?? const <String, dynamic>{};
         if ((inviteData['active'] as bool?) != true) {
-          throw StateError('Codigo invalido ou expirado.');
+          throw StateError('Código inválido ou expirado.');
         }
         final listId = (inviteData['listId'] as String?)?.trim() ?? '';
         if (listId.isEmpty) {
-          throw StateError('Convite sem lista valida.');
+          throw StateError('Convite sem lista válida.');
         }
 
         transaction.update(_listRef(listId), <String, dynamic>{
@@ -897,20 +899,20 @@ class SharedListsRepository {
     bool forceServer = false,
   }) async {
     final inviteSnapshot = forceServer
-        ? await _inviteRef(inviteCode).get(
-            const GetOptions(source: Source.server),
-          )
+        ? await _inviteRef(
+            inviteCode,
+          ).get(const GetOptions(source: Source.server))
         : await _inviteRef(inviteCode).get();
     if (!inviteSnapshot.exists) {
-      throw StateError('Codigo invalido ou expirado.');
+      throw StateError('Código inválido ou expirado.');
     }
     final inviteData = inviteSnapshot.data() ?? const <String, dynamic>{};
     if ((inviteData['active'] as bool?) != true) {
-      throw StateError('Codigo invalido ou expirado.');
+      throw StateError('Código inválido ou expirado.');
     }
     final listId = (inviteData['listId'] as String?)?.trim() ?? '';
     if (listId.isEmpty) {
-      throw StateError('Convite sem lista valida.');
+      throw StateError('Convite sem lista válida.');
     }
     await _listRef(listId).update(<String, dynamic>{
       'memberUids': FieldValue.arrayUnion(<String>[uid]),
@@ -1159,7 +1161,7 @@ class SharedListsRepository {
         return candidate;
       }
     }
-    throw StateError('Falha ao gerar codigo de compartilhamento unico.');
+    throw StateError('Falha ao gerar código de compartilhamento único.');
   }
 
   String _randomInviteCode() {

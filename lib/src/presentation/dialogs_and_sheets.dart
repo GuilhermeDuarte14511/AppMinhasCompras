@@ -492,7 +492,7 @@ Future<PaymentBalance?> _showPaymentBalanceEntryDialog(
                         formatter,
                       ],
                       decoration: const InputDecoration(
-                        labelText: 'Saldo disponivel',
+                        labelText: 'Saldo disponível',
                         hintText: 'R\$ 0,00',
                         prefixIcon: Icon(Icons.account_balance_wallet_rounded),
                       ),
@@ -772,7 +772,11 @@ Future<PurchaseCheckoutResult?> showPurchaseCheckoutDialog(
                       });
                     },
                     title: const Text('Marcar pendentes como comprados'),
-                    subtitle: Text('$pendingCount item(ns) pendente(s).'),
+                    subtitle: Text(
+                      pendingCount == 1
+                          ? '1 item pendente.'
+                          : '$pendingCount itens pendentes.',
+                    ),
                   ),
                 ],
               ],
@@ -878,9 +882,9 @@ class _ReplenishmentSuggestionsSheetState
   String _sourceLabel(ReplenishmentSuggestion suggestion) {
     switch (suggestion.source) {
       case ReplenishmentSuggestionSource.lastMonth:
-        return 'Baseado no mes passado';
+        return 'Baseado no mês passado';
       case ReplenishmentSuggestionSource.catalogFallback:
-        return 'Baseado no catalogo';
+        return 'Baseado no catálogo';
     }
   }
 
@@ -925,7 +929,7 @@ class _ReplenishmentSuggestionsSheetState
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Text(
-              'Reposicao inteligente',
+              'Reposição inteligente',
               style: Theme.of(
                 context,
               ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
@@ -955,7 +959,7 @@ class _ReplenishmentSuggestionsSheetState
                 ),
                 Chip(
                   avatar: const Icon(Icons.shopping_bag_rounded, size: 18),
-                  label: Text('${selectedSuggestions.length} item(ns)'),
+                  label: Text(formatItemCount(selectedSuggestions.length)),
                 ),
                 Chip(
                   avatar: const Icon(Icons.attach_money_rounded, size: 18),
@@ -1019,7 +1023,7 @@ class _ReplenishmentSuggestionsSheetState
                         _SelectionInfoChip(
                           icon: Icons.history_rounded,
                           text:
-                              '${suggestion.occurrences} compra(s) · ${formatShortDate(suggestion.lastPurchasedAt)}',
+                              '${formatCountLabel(suggestion.occurrences, 'compra', 'compras')} · ${formatShortDate(suggestion.lastPurchasedAt)}',
                         ),
                         _SelectionInfoChip(
                           icon: Icons.auto_awesome_rounded,
@@ -1468,11 +1472,11 @@ class _FiscalReceiptImportSheetState extends State<_FiscalReceiptImportSheet> {
                             children: [
                               _ReceiptStatChip(
                                 icon: Icons.receipt_long_rounded,
-                                text: '${_parsedItems.length} item(ns)',
+                                text: formatItemCount(_parsedItems.length),
                               ),
                               _ReceiptStatChip(
                                 icon: Icons.confirmation_number_rounded,
-                                text: '$totalUnits unidade(s)',
+                                text: formatUnitCount(totalUnits),
                               ),
                               _ReceiptStatChip(
                                 icon: Icons.attach_money_rounded,
@@ -1557,6 +1561,33 @@ Future<ShoppingItemDraft?> showShoppingItemEditorSheet(
         onLookupBarcode: onLookupBarcode,
         onLookupCatalogByName: onLookupCatalogByName,
         mode: mode,
+        allowMultiple: false,
+      );
+    },
+  );
+}
+
+Future<List<ShoppingItemDraft>?> showShoppingItemsEditorSheet(
+  BuildContext context, {
+  Set<String> blockedNormalizedNames = const <String>{},
+  List<String> suggestionCatalog = const <String>[],
+  Future<ProductLookupResult> Function(String barcode)? onLookupBarcode,
+  Future<CatalogProduct?> Function(String name)? onLookupCatalogByName,
+}) {
+  return showAppModalBottomSheet<List<ShoppingItemDraft>>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    useSafeArea: true,
+    builder: (context) {
+      return _ShoppingItemEditorSheet(
+        existingItem: null,
+        blockedNormalizedNames: blockedNormalizedNames,
+        suggestionCatalog: suggestionCatalog,
+        onLookupBarcode: onLookupBarcode,
+        onLookupCatalogByName: onLookupCatalogByName,
+        mode: ShoppingItemEditorMode.listItem,
+        allowMultiple: true,
       );
     },
   );
@@ -1570,6 +1601,7 @@ class _ShoppingItemEditorSheet extends StatefulWidget {
     required this.onLookupBarcode,
     required this.onLookupCatalogByName,
     required this.mode,
+    required this.allowMultiple,
   });
 
   final ShoppingItem? existingItem;
@@ -1578,6 +1610,7 @@ class _ShoppingItemEditorSheet extends StatefulWidget {
   final Future<ProductLookupResult> Function(String barcode)? onLookupBarcode;
   final Future<CatalogProduct?> Function(String name)? onLookupCatalogByName;
   final ShoppingItemEditorMode mode;
+  final bool allowMultiple;
 
   @override
   State<_ShoppingItemEditorSheet> createState() =>
@@ -1592,12 +1625,14 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
   late final TextEditingController _barcodeController;
   late final TextEditingController _quantityController;
   late final TextEditingController _priceController;
+  final FocusNode _nameFocusNode = FocusNode();
   late ShoppingCategory _selectedCategory;
   late final List<String> _normalizedSuggestionCatalog;
   bool _isLookingUpBarcode = false;
   bool _isLookingUpCatalog = false;
   String? _lookupFeedback;
   CatalogProduct? _catalogMatch;
+  final List<ShoppingItemDraft> _pendingDrafts = <ShoppingItemDraft>[];
 
   @override
   void initState() {
@@ -1659,7 +1694,9 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     for (final value in _normalizedSuggestionCatalog) {
       final normalized = normalizeQuery(value);
       final shouldInclude = query.isEmpty ? true : normalized.contains(query);
-      if (!shouldInclude || normalized == query) {
+      if (!shouldInclude ||
+          normalized == query ||
+          _blockedNormalizedNames.contains(normalized)) {
         continue;
       }
       suggestions.add(value);
@@ -1675,6 +1712,13 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
       ..text = value
       ..selection = TextSelection.collapsed(offset: value.length);
     await _lookupCatalogByName(value, true);
+  }
+
+  Set<String> get _blockedNormalizedNames {
+    return <String>{
+      ...widget.blockedNormalizedNames,
+      for (final draft in _pendingDrafts) normalizeQuery(draft.name),
+    };
   }
 
   Future<void> _scanBarcode() async {
@@ -1849,12 +1893,13 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     _barcodeController.dispose();
     _quantityController.dispose();
     _priceController.dispose();
+    _nameFocusNode.dispose();
     super.dispose();
   }
 
-  void _submit() {
+  ShoppingItemDraft? _buildDraftFromForm() {
     if (_formKey.currentState?.validate() != true) {
-      return;
+      return null;
     }
 
     final quantity = widget.mode == ShoppingItemEditorMode.catalogProduct
@@ -1865,19 +1910,70 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
         quantity < 1 ||
         unitPrice == null ||
         unitPrice <= 0) {
+      return null;
+    }
+
+    return ShoppingItemDraft(
+      name: _nameController.text.trim(),
+      quantity: quantity,
+      unitPrice: unitPrice,
+      category: _selectedCategory,
+      barcode: sanitizeBarcode(_barcodeController.text),
+    );
+  }
+
+  void _resetFormAfterQueuedDraft(String productName) {
+    _formKey.currentState?.reset();
+    _nameController.clear();
+    _barcodeController.clear();
+    _quantityController.text = '1';
+    _priceController.clear();
+    setState(() {
+      _selectedCategory = ShoppingCategory.grocery;
+      _catalogMatch = null;
+      _lookupFeedback = '$productName adicionado. Continue com o próximo.';
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _nameFocusNode.requestFocus();
+      }
+    });
+  }
+
+  void _addAndContinue() {
+    final draft = _buildDraftFromForm();
+    if (draft == null) {
+      return;
+    }
+    setState(() {
+      _pendingDrafts.add(draft);
+    });
+    _resetFormAfterQueuedDraft(draft.name);
+  }
+
+  void _submit() {
+    final draft = _buildDraftFromForm();
+    if (draft == null) {
       return;
     }
 
-    Navigator.pop(
-      context,
-      ShoppingItemDraft(
-        name: _nameController.text.trim(),
-        quantity: quantity,
-        unitPrice: unitPrice,
-        category: _selectedCategory,
-        barcode: sanitizeBarcode(_barcodeController.text),
-      ),
-    );
+    if (widget.allowMultiple) {
+      Navigator.pop(
+        context,
+        List<ShoppingItemDraft>.unmodifiable([..._pendingDrafts, draft]),
+      );
+      return;
+    }
+
+    Navigator.pop(context, draft);
+  }
+
+  void _handleLastFieldSubmitted() {
+    if (widget.allowMultiple && widget.existingItem == null) {
+      _addAndContinue();
+      return;
+    }
+    _submit();
   }
 
   @override
@@ -1979,6 +2075,8 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _nameController,
+                focusNode: _nameFocusNode,
+                autofocus: !isEditing,
                 textInputAction: TextInputAction.next,
                 decoration: InputDecoration(
                   labelText: nameLabel,
@@ -2004,7 +2102,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                         ? 'Digite o nome do produto.'
                         : 'Digite o nome do item.';
                   }
-                  if (widget.blockedNormalizedNames.contains(normalized)) {
+                  if (_blockedNormalizedNames.contains(normalized)) {
                     return isCatalogMode
                         ? 'Esse produto já existe no catálogo.'
                         : 'Esse item já existe na lista.';
@@ -2016,7 +2114,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
               if (_matchingSuggestions.isNotEmpty) ...[
                 const SizedBox(height: 10),
                 Text(
-                  'Sugestões recentes',
+                  'Produtos encontrados',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -2028,7 +2126,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                   children: [
                     for (final suggestion in _matchingSuggestions)
                       ActionChip(
-                        avatar: const Icon(Icons.history_rounded, size: 16),
+                        avatar: const Icon(Icons.inventory_2_rounded, size: 16),
                         label: Text(suggestion),
                         onPressed: () =>
                             unawaited(_applySuggestion(suggestion)),
@@ -2070,6 +2168,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                 TextFormField(
                   controller: _priceController,
                   keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.done,
                   inputFormatters: [
                     FilteringTextInputFormatter.digitsOnly,
                     _currencyFormatter,
@@ -2088,6 +2187,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                     }
                     return null;
                   },
+                  onFieldSubmitted: (_) => _handleLastFieldSubmitted(),
                 )
               else
                 Row(
@@ -2115,12 +2215,13 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                       child: TextFormField(
                         controller: _priceController,
                         keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.done,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
                           _currencyFormatter,
                         ],
                         decoration: const InputDecoration(
-                          labelText: 'Valor unitario',
+                          labelText: 'Valor unitário',
                           prefixIcon: Icon(Icons.monetization_on_rounded),
                           hintText: 'R\$ 0,00',
                         ),
@@ -2133,6 +2234,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                           }
                           return null;
                         },
+                        onFieldSubmitted: (_) => _handleLastFieldSubmitted(),
                       ),
                     ),
                   ],
@@ -2142,18 +2244,99 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                 _CatalogPriceHint(product: _catalogMatch!),
               ],
               const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _submit,
-                  icon: Icon(
-                    isEditing ? Icons.save_rounded : Icons.add_rounded,
+              if (widget.allowMultiple && _pendingDrafts.isNotEmpty) ...[
+                _PendingDraftsPreview(drafts: _pendingDrafts),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Navigator.pop(
+                        context,
+                        List<ShoppingItemDraft>.unmodifiable(_pendingDrafts),
+                      );
+                    },
+                    icon: const Icon(Icons.check_rounded),
+                    label: const Text('Concluir seleção'),
                   ),
-                  label: Text(submitLabel),
                 ),
-              ),
+                const SizedBox(height: 12),
+              ],
+              if (widget.allowMultiple)
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _addAndContinue,
+                        icon: const Icon(Icons.playlist_add_rounded),
+                        label: const Text('Adicionar e continuar'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: _submit,
+                        icon: const Icon(Icons.add_rounded),
+                        label: const Text('Adicionar item'),
+                      ),
+                    ),
+                  ],
+                )
+              else
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _submit,
+                    icon: Icon(
+                      isEditing ? Icons.save_rounded : Icons.add_rounded,
+                    ),
+                    label: Text(submitLabel),
+                  ),
+                ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PendingDraftsPreview extends StatelessWidget {
+  const _PendingDraftsPreview({required this.drafts});
+
+  final List<ShoppingItemDraft> drafts;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final previewNames = drafts.take(3).map((draft) => draft.name).join(', ');
+    final remaining = drafts.length - min(drafts.length, 3);
+    final suffix = remaining > 0 ? ' +$remaining' : '';
+    final itemLabel = drafts.length == 1 ? 'item pronto' : 'itens prontos';
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.primaryContainer.withValues(alpha: 0.58),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            Icon(
+              Icons.playlist_add_check_rounded,
+              color: colorScheme.onPrimaryContainer,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '${drafts.length} $itemLabel: $previewNames$suffix',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -2212,7 +2395,7 @@ class _CatalogPriceHint extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '$variationText Histórico local: ${history.length} registro(s). Última atualização: $latestDate.',
+              '$variationText Histórico local: ${formatCountLabel(history.length, 'registro', 'registros')}. Última atualização: $latestDate.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),

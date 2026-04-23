@@ -80,9 +80,9 @@ String _buildReplenishmentListName(
     final monthLabel = _capitalizeText(
       DateFormat('MMMM yyyy', 'pt_BR').format(targetMonth),
     );
-    return 'Reposicao $monthLabel';
+    return 'Reposição $monthLabel';
   }
-  return 'Reposicao inteligente';
+  return 'Reposição inteligente';
 }
 
 Future<ShoppingListModel?> _runSmartReplenishmentFlow(
@@ -94,7 +94,7 @@ Future<ShoppingListModel?> _runSmartReplenishmentFlow(
     AppToast.show(
       context,
       message:
-          'Ainda nao ha dados suficientes para sugerir uma reposicao inteligente.',
+          'Ainda não há dados suficientes para sugerir uma reposição inteligente.',
       type: AppToastType.warning,
       duration: const Duration(seconds: 4),
     );
@@ -120,7 +120,7 @@ Future<ShoppingListModel?> _runSmartReplenishmentFlow(
 
   final name = await showListNameDialog(
     context,
-    title: 'Nova lista por reposicao inteligente',
+    title: 'Nova lista por reposição inteligente',
     confirmLabel: 'Criar lista',
     initialValue: _buildReplenishmentListName(selectedSuggestions.first.source),
   );
@@ -537,7 +537,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
                         child: FilledButton.icon(
                           onPressed: _openMyProfile,
                           icon: const Icon(Icons.manage_accounts_rounded),
-                          label: const Text('Meus Dados'),
+                          label: const Text('Meus dados'),
                         ),
                       ),
                       if (widget.onSignOut != null) ...[
@@ -1032,7 +1032,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
         : trimmedName.substring(0, 1).toUpperCase();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Meus Dados')),
+      appBar: AppBar(title: const Text('Meus dados')),
       body: AppGradientScene(
         child: SafeArea(
           child: ListView(
@@ -1211,7 +1211,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
                                   )
                                 : const Icon(Icons.save_rounded),
                             label: Text(
-                              _isSaving ? 'Salvando...' : 'Salvar Meus Dados',
+                              _isSaving ? 'Salvando...' : 'Salvar meus dados',
                             ),
                           ),
                         ),
@@ -1456,7 +1456,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Future<void> _openSharedListEditor(String listId) async {
     final repository = widget.sharedListsRepository;
     if (repository == null) {
-      _showSnack('Compartilhamento indisponivel neste modo.');
+      _showSnack('Compartilhamento indisponível neste modo.');
       return;
     }
     await Navigator.push<void>(
@@ -1475,25 +1475,25 @@ class _DashboardPageState extends State<DashboardPage> {
     final repository = widget.sharedListsRepository;
     final uid = FirebaseAuth.instance.currentUser?.uid.trim() ?? '';
     if (repository == null) {
-      _showSnack('Compartilhamento indisponivel neste modo.');
+      _showSnack('Compartilhamento indisponível neste modo.');
       return;
     }
     if (uid.isEmpty) {
-      _showSnack('Faca login para entrar em lista compartilhada.');
+      _showSnack('Faça login para entrar em lista compartilhada.');
       return;
     }
     final controller = TextEditingController();
     final rawCode = await showAppDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Entrar na lista com codigo'),
+        title: const Text('Entrar na lista com código'),
         content: TextField(
           controller: controller,
           autofocus: true,
           textCapitalization: TextCapitalization.characters,
           textInputAction: TextInputAction.done,
           decoration: const InputDecoration(
-            labelText: 'Codigo',
+            labelText: 'Código',
             hintText: 'Ex.: A1B2C3D4',
             prefixIcon: Icon(Icons.qr_code_rounded),
           ),
@@ -1535,18 +1535,18 @@ class _DashboardPageState extends State<DashboardPage> {
         final code = error.code.trim().toLowerCase();
         if (code == 'permission-denied') {
           _showSnack(
-            'Permissao negada. Verifique se o codigo ainda esta ativo.',
+            'Permissão negada. Verifique se o código ainda está ativo.',
           );
           return;
         }
-        _showSnack('Nao foi possivel entrar: ${error.message ?? code}');
+        _showSnack('Não foi possível entrar: ${error.message ?? code}');
         return;
       }
       if (error is StateError) {
         _showSnack(error.message);
         return;
       }
-      _showSnack('Nao foi possivel entrar com o codigo.');
+      _showSnack('Não foi possível entrar com o código.');
     }
   }
 
@@ -1568,11 +1568,11 @@ class _DashboardPageState extends State<DashboardPage> {
     final closedListsCount = lists.where((list) => list.isClosed).length;
     final totalValue = lists.fold<double>(
       0,
-      (sum, list) => sum + list.totalValue,
+      (total, list) => total + list.totalValue,
     );
     final pendingValue = lists.fold<double>(
       0,
-      (sum, list) => sum + list.pendingValue,
+      (total, list) => total + list.pendingValue,
     );
     final sharedRepository = widget.sharedListsRepository;
     final authUser = sharedRepository == null
@@ -1680,9 +1680,9 @@ class _DashboardPageState extends State<DashboardPage> {
                     key: const ValueKey('dash_action_join_code'),
                     delay: const Duration(milliseconds: 84),
                     child: _ActionTile(
-                      title: 'Entrar na lista com codigo',
+                      title: 'Entrar na lista com código',
                       subtitle:
-                          'Digite o codigo compartilhado para entrar em uma lista.',
+                          'Digite o código compartilhado para entrar em uma lista.',
                       icon: Icons.group_add_rounded,
                       tag: 'Compartilhar',
                       onTap: _joinSharedListByCode,
@@ -1733,7 +1733,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   child: _SectionHeader(
                     title: 'Listas recentes',
                     subtitle: lists.isEmpty
-                        ? 'Crie sua primeira lista para comecar.'
+                        ? 'Crie sua primeira lista para começar.'
                         : 'Abra rapidamente suas ultimas listas salvas.',
                     actionLabel: lists.isEmpty ? null : 'Ver todas',
                     onAction: lists.isEmpty ? null : _openMyLists,
@@ -1781,9 +1781,9 @@ class _DashboardPageState extends State<DashboardPage> {
                   key: const ValueKey('dash_action_replenishment'),
                   delay: const Duration(milliseconds: 215),
                   child: _ActionTile(
-                    title: 'Reposicao inteligente',
+                    title: 'Reposição inteligente',
                     subtitle:
-                        'Monte uma nova lista com base no historico recente.',
+                        'Monte uma nova lista com base no histórico recente.',
                     icon: Icons.auto_awesome_rounded,
                     tag: 'Sugestao',
                     onTap: _createSmartReplenishmentList,
@@ -1816,7 +1816,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               'Entre para ver listas compartilhadas',
                             ),
                             subtitle: const Text(
-                              'Faca login para carregar seus convites e listas.',
+                              'Faça login para carregar seus convites e listas.',
                             ),
                           ),
                         );
@@ -1909,7 +1909,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                       'Nenhuma lista compartilhada',
                                     ),
                                     subtitle: const Text(
-                                      'Use "Entrar na lista com codigo" ou compartilhe uma lista sua.',
+                                      'Use "Entrar na lista com código" ou compartilhe uma lista sua.',
                                     ),
                                     trailing: TextButton(
                                       onPressed: _joinSharedListByCode,
@@ -1940,7 +1940,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                             ),
                                             title: Text(shared.name),
                                             subtitle: Text(
-                                              '${shared.memberCount} membro(s) - ${isOwner ? 'Dono' : 'Membro'}',
+                                              '${formatCountLabel(shared.memberCount, 'membro', 'membros')} - ${isOwner ? 'Dono' : 'Membro'}',
                                             ),
                                             trailing: const Icon(
                                               Icons.chevron_right_rounded,
@@ -2124,7 +2124,9 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Excluir selecionados?'),
-        content: Text('Deseja excluir $count produto(s) do catálogo?'),
+        content: Text(
+          'Deseja excluir ${formatCountLabel(count, 'produto', 'produtos')} do catálogo?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -2149,7 +2151,10 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
       return;
     }
     _toggleBatchMode(false);
-    _showSnack('$count produto(s) removido(s).', type: AppToastType.success);
+    _showSnack(
+      count == 1 ? '1 produto removido.' : '$count produtos removidos.',
+      type: AppToastType.success,
+    );
   }
 
   Future<void> _updateCategoryForSelectedProducts() async {
@@ -2219,7 +2224,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
       return;
     }
     _showSnack(
-      'Categoria aplicada em ${_selectedProductIds.length} produto(s).',
+      'Categoria aplicada em ${formatCountLabel(_selectedProductIds.length, 'produto', 'produtos')}.',
       type: AppToastType.success,
     );
   }
@@ -2323,10 +2328,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
       return;
     }
     setState(() {});
-    _showSnack(
-      'Produto adicionado ao catálogo.',
-      type: AppToastType.success,
-    );
+    _showSnack('Produto adicionado ao catálogo.', type: AppToastType.success);
   }
 
   Future<void> _editCatalogProduct(CatalogProduct product) async {
@@ -2498,16 +2500,14 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
         actions: [
           if (_batchMode)
             IconButton(
-              tooltip: 'Selecionar Visíveis',
+              tooltip: 'Selecionar visíveis',
               onPressed: () => _toggleSelectAllVisible(
                 _visibleProducts(widget.store.catalogProducts),
               ),
               icon: const Icon(Icons.select_all_rounded),
             ),
           IconButton(
-            tooltip: _batchMode
-                ? 'Sair da seleção'
-                : 'Seleção em lote',
+            tooltip: _batchMode ? 'Sair da seleção' : 'Seleção em lote',
             onPressed: () => _toggleBatchMode(),
             icon: Icon(
               _batchMode
@@ -2558,15 +2558,14 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
                             controller: _searchController,
                             decoration: const InputDecoration(
                               prefixIcon: Icon(Icons.search_rounded),
-                              hintText:
-                                  'Buscar no catálogo por nome ou código',
+                              hintText: 'Buscar no catálogo por nome ou código',
                             ),
                           ),
                           const SizedBox(height: 8),
                           Row(
                             children: [
                               Text(
-                                '${visibleProducts.length} de ${allProducts.length} produto(s)',
+                                '${visibleProducts.length} de ${formatCountLabel(allProducts.length, 'produto', 'produtos')}',
                                 style: textTheme.bodySmall?.copyWith(
                                   color: colorScheme.onSurfaceVariant,
                                   fontWeight: FontWeight.w600,
@@ -2585,7 +2584,9 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
                                       vertical: 4,
                                     ),
                                     child: Text(
-                                      '${_selectedProductIds.length} selecionado(s)',
+                                      _selectedProductIds.length == 1
+                                          ? '1 selecionado'
+                                          : '${_selectedProductIds.length} selecionados',
                                       style: textTheme.labelMedium?.copyWith(
                                         color: colorScheme.onPrimaryContainer,
                                         fontWeight: FontWeight.w700,
@@ -3119,7 +3120,7 @@ class _MyListsPageState extends State<MyListsPage> {
   Future<void> _openSharedList(SharedShoppingListSummary shared) async {
     final repository = widget.sharedListsRepository;
     if (repository == null) {
-      _showSnack('Compartilhamento indisponivel neste modo.');
+      _showSnack('Compartilhamento indisponível neste modo.');
       return;
     }
     await Navigator.push<void>(
@@ -3289,7 +3290,7 @@ class _MyListsPageState extends State<MyListsPage> {
         content: Text(
           clearAll
               ? 'Essa ação vai remover todas as listas de compras.'
-              : 'Deseja excluir $count lista(s) selecionada(s)?',
+              : 'Deseja excluir ${formatCountLabel(count, 'lista selecionada', 'listas selecionadas')}?',
         ),
         actions: [
           TextButton(
@@ -3331,7 +3332,7 @@ class _MyListsPageState extends State<MyListsPage> {
       return;
     }
     _exitSelectionMode();
-    _showSnack('$count lista(s) removida(s).');
+    _showSnack(count == 1 ? '1 lista removida.' : '$count listas removidas.');
   }
 
   Future<void> _clearAllLists(List<ShoppingListModel> lists) async {
@@ -3353,7 +3354,7 @@ class _MyListsPageState extends State<MyListsPage> {
       return;
     }
     _exitSelectionMode();
-    _showSnack('$count lista(s) removida(s).');
+    _showSnack(count == 1 ? '1 lista removida.' : '$count listas removidas.');
   }
 
   Future<void> _exportBackup() async {
@@ -3390,7 +3391,7 @@ class _MyListsPageState extends State<MyListsPage> {
       builder: (context) => AlertDialog(
         title: const Text('Importar backup'),
         content: Text(
-          'Foram encontradas $incomingCount lista(s) no arquivo. Deseja substituir suas listas atuais ou mesclar com as existentes?',
+          'Foram encontradas ${formatCountLabel(incomingCount, 'lista', 'listas')} no arquivo. Deseja substituir suas listas atuais ou mesclar com as existentes?',
         ),
         actions: [
           TextButton(
@@ -3440,9 +3441,9 @@ class _MyListsPageState extends State<MyListsPage> {
       if (!mounted) {
         return;
       }
-      final action = report.replaced ? 'substituido' : 'mesclado';
+      final action = report.replaced ? 'substituído' : 'mesclado';
       _showSnack(
-        '${report.importedLists} lista(s): backup $action com sucesso.',
+        '${formatCountLabel(report.importedLists, 'lista', 'listas')}: backup $action com sucesso.',
       );
     } on FormatException {
       _showSnack('Não foi possível interpretar o arquivo selecionado.');
@@ -3522,7 +3523,9 @@ class _MyListsPageState extends State<MyListsPage> {
                 : null,
             title: Text(
               _selectionMode
-                  ? '$selectedCount selecionada(s)'
+                  ? selectedCount == 1
+                        ? '1 selecionada'
+                        : '$selectedCount selecionadas'
                   : 'Minhas listas',
             ),
             actions: [
@@ -3573,7 +3576,7 @@ class _MyListsPageState extends State<MyListsPage> {
                     ),
                     PopupMenuItem(
                       value: _MyListsMenuAction.smartReplenishment,
-                      child: Text('Reposicao inteligente'),
+                      child: Text('Reposição inteligente'),
                     ),
                     PopupMenuItem(
                       value: _MyListsMenuAction.selectMany,
@@ -3640,8 +3643,10 @@ class _MyListsPageState extends State<MyListsPage> {
                               child: _SectionHeader(
                                 title: 'Suas listas',
                                 subtitle: hasActiveFilters
-                                    ? '${visibleLists.length} resultado(s) filtrado(s).'
-                                    : 'Abertas, fechadas e compartilhadas em um so lugar.',
+                                    ? visibleLists.length == 1
+                                          ? '1 resultado filtrado.'
+                                          : '${visibleLists.length} resultados filtrados.'
+                                    : 'Abertas, fechadas e compartilhadas em um só lugar.',
                                 actionLabel: hasActiveFilters
                                     ? 'Limpar filtros'
                                     : null,
@@ -3872,7 +3877,7 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
         final grouped = _filteredHistoryByMonth();
         final totalEntries = grouped.values.fold<int>(
           0,
-          (sum, entries) => sum + entries.length,
+          (entryTotal, entries) => entryTotal + entries.length,
         );
 
         return Scaffold(
@@ -3945,12 +3950,13 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
                                 final entries = group.value;
                                 final monthTotal = entries.fold<double>(
                                   0,
-                                  (sum, purchase) => sum + purchase.totalValue,
+                                  (total, purchase) =>
+                                      total + purchase.totalValue,
                                 );
                                 final monthPurchased = entries.fold<double>(
                                   0,
-                                  (sum, purchase) =>
-                                      sum + purchase.purchasedValue,
+                                  (total, purchase) =>
+                                      total + purchase.purchasedValue,
                                 );
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 14),
@@ -3975,8 +3981,11 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
                                           children: [
                                             _PillLabel(
                                               icon: Icons.receipt_long_rounded,
-                                              text:
-                                                  '${entries.length} fechamento(s)',
+                                              text: formatCountLabel(
+                                                entries.length,
+                                                'fechamento',
+                                                'fechamentos',
+                                              ),
                                             ),
                                             _PillLabel(
                                               icon: Icons.payments_rounded,
@@ -4260,11 +4269,13 @@ class _CompletedPurchaseDetailsSheet extends StatelessWidget {
                 children: [
                   _PillLabel(
                     icon: Icons.shopping_bag_rounded,
-                    text: '${purchase.productsCount} produto(s)',
+                    text: purchase.productsCount == 1
+                        ? '1 produto'
+                        : '${purchase.productsCount} produtos',
                   ),
                   _PillLabel(
                     icon: Icons.confirmation_number_rounded,
-                    text: '${purchase.totalItems} unidade(s)',
+                    text: formatUnitCount(purchase.totalItems),
                   ),
                   _PillLabel(
                     icon: Icons.attach_money_rounded,
@@ -4277,7 +4288,9 @@ class _CompletedPurchaseDetailsSheet extends StatelessWidget {
                   if (purchase.pendingProductsCount > 0)
                     _PillLabel(
                       icon: Icons.pending_actions_rounded,
-                      text: '${purchase.pendingProductsCount} pendente(s)',
+                      text: purchase.pendingProductsCount == 1
+                          ? '1 pendente'
+                          : '${purchase.pendingProductsCount} pendentes',
                     ),
                   if (purchase.hasBudget)
                     _PillLabel(
@@ -4572,7 +4585,7 @@ class _ListEditorActionsSheet extends StatelessWidget {
           );
         case _ListEditorMenuAction.shareList:
           return _ListEditorActionMeta(
-            label: 'Gerar codigo de compartilhamento',
+            label: 'Gerar código de compartilhamento',
             shortLabel: 'Compartilhar',
             icon: Icons.qr_code_rounded,
             color: const Color(0xFF1565C0),
@@ -5209,9 +5222,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     final sourceLocalId = shared.sourceLocalListId?.trim() ?? '';
     if (sourceLocalId.isNotEmpty && sourceLocalId != _list.id) {
       if (showSnack) {
-        _showSnack(
-          'Esta lista não corresponde ao compartilhamento vinculado.',
-        );
+        _showSnack('Esta lista não corresponde ao compartilhamento vinculado.');
       }
       return;
     }
@@ -5345,10 +5356,35 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         .where((item) => existing == null || item.id != existing.id)
         .map((item) => normalizeQuery(item.name))
         .toSet();
-    final suggestionCatalog = widget.store.suggestProductNames(
-      currentListId: _list.id,
-      limit: 20,
-    );
+    final suggestionCatalog = _itemSuggestionCatalog();
+
+    if (existing == null) {
+      final drafts = await showShoppingItemsEditorSheet(
+        context,
+        blockedNormalizedNames: blockedNames,
+        suggestionCatalog: suggestionCatalog,
+        onLookupBarcode: widget.store.lookupProductByBarcode,
+        onLookupCatalogByName: widget.store.lookupCatalogProductByName,
+      );
+
+      if (!mounted || drafts == null || drafts.isEmpty) {
+        return;
+      }
+
+      final items = [..._list.items];
+      for (final draft in drafts) {
+        items.add(_shoppingItemFromDraft(draft));
+        unawaited(widget.store.saveDraftToCatalog(draft));
+      }
+
+      _updateList(
+        _list.copyWith(items: items),
+        message: drafts.length == 1
+            ? 'Produto adicionado.'
+            : '${drafts.length} produtos adicionados.',
+      );
+      return;
+    }
 
     final draft = await showShoppingItemEditorSheet(
       context,
@@ -5364,63 +5400,64 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     }
 
     final items = [..._list.items];
-    if (existing == null) {
-      items.add(
-        ShoppingItem(
-          id: uniqueId(),
-          name: draft.name,
-          quantity: draft.quantity,
-          unitPrice: draft.unitPrice,
-          barcode: draft.barcode,
-          category: draft.category,
-          priceHistory: [
-            PriceHistoryEntry(
-              price: draft.unitPrice,
-              recordedAt: DateTime.now(),
-            ),
-          ],
-        ),
-      );
-    } else {
-      final index = items.indexWhere((item) => item.id == existing.id);
-      if (index != -1) {
-        final history = [...existing.priceHistory];
-        if (history.isEmpty) {
-          history.add(
-            PriceHistoryEntry(
-              price: existing.unitPrice,
-              recordedAt: DateTime.now(),
-            ),
-          );
-        }
-        final shouldAddHistory =
-            history.isEmpty ||
-            (history.last.price - draft.unitPrice).abs() > 0.0001;
-        if (shouldAddHistory) {
-          history.add(
-            PriceHistoryEntry(
-              price: draft.unitPrice,
-              recordedAt: DateTime.now(),
-            ),
-          );
-        }
-
-        items[index] = existing.copyWith(
-          name: draft.name,
-          quantity: draft.quantity,
-          unitPrice: draft.unitPrice,
-          barcode: draft.barcode,
-          category: draft.category,
-          priceHistory: history,
+    final index = items.indexWhere((item) => item.id == existing.id);
+    if (index != -1) {
+      final history = [...existing.priceHistory];
+      if (history.isEmpty) {
+        history.add(
+          PriceHistoryEntry(
+            price: existing.unitPrice,
+            recordedAt: DateTime.now(),
+          ),
         );
       }
+      final shouldAddHistory =
+          history.isEmpty ||
+          (history.last.price - draft.unitPrice).abs() > 0.0001;
+      if (shouldAddHistory) {
+        history.add(
+          PriceHistoryEntry(price: draft.unitPrice, recordedAt: DateTime.now()),
+        );
+      }
+
+      items[index] = existing.copyWith(
+        name: draft.name,
+        quantity: draft.quantity,
+        unitPrice: draft.unitPrice,
+        barcode: draft.barcode,
+        category: draft.category,
+        priceHistory: history,
+      );
     }
 
-    _updateList(
-      _list.copyWith(items: items),
-      message: existing == null ? 'Produto adicionado.' : 'Produto atualizado.',
-    );
+    _updateList(_list.copyWith(items: items), message: 'Produto atualizado.');
     unawaited(widget.store.saveDraftToCatalog(draft));
+  }
+
+  List<String> _itemSuggestionCatalog() {
+    final suggestions = <String>[
+      for (final product in widget.store.catalogProducts) product.name,
+      ...widget.store.suggestProductNames(currentListId: _list.id, limit: 30),
+    ];
+    final seen = <String>{};
+    return [
+      for (final name in suggestions)
+        if (seen.add(normalizeQuery(name))) name,
+    ];
+  }
+
+  ShoppingItem _shoppingItemFromDraft(ShoppingItemDraft draft) {
+    return ShoppingItem(
+      id: uniqueId(),
+      name: draft.name,
+      quantity: draft.quantity,
+      unitPrice: draft.unitPrice,
+      barcode: draft.barcode,
+      category: draft.category,
+      priceHistory: [
+        PriceHistoryEntry(price: draft.unitPrice, recordedAt: DateTime.now()),
+      ],
+    );
   }
 
   Future<void> _importFromFiscalReceipt() async {
@@ -5502,7 +5539,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     _updateList(
       _list.copyWith(items: items),
       message:
-          'Cupom importado: $addedCount novo(s), $mergedCount atualizado(s).',
+          'Cupom importado: ${formatCountLabel(addedCount, 'novo', 'novos')}, ${formatCountLabel(mergedCount, 'atualizado', 'atualizados')}.',
     );
   }
 
@@ -5706,7 +5743,9 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         .toList(growable: false);
     _updateList(
       _list.copyWith(items: remaining),
-      message: '$removedCount item(ns) removido(s).',
+      message: removedCount == 1
+          ? '1 item removido.'
+          : '$removedCount itens removidos.',
     );
   }
 
@@ -5819,7 +5858,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     final updatedBalances = result.value ?? const <PaymentBalance>[];
     final updatedBalancesTotal = updatedBalances.fold<double>(
       0,
-      (sum, entry) => sum + entry.amount,
+      (total, entry) => total + entry.amount,
     );
     final delta = updatedBalancesTotal - previousBalancesTotal;
     final double nextBudget = previousBudget == null
@@ -5868,13 +5907,13 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     final repository = widget.sharedListsRepository;
     if (repository == null) {
       _logShare('share repository is null');
-      _showSnack('Compartilhamento indisponivel neste modo.');
+      _showSnack('Compartilhamento indisponível neste modo.');
       return;
     }
     final uid = FirebaseAuth.instance.currentUser?.uid.trim() ?? '';
     if (uid.isEmpty) {
       _logShare('share blocked: uid vazio');
-      _showSnack('Faca login para compartilhar a lista.');
+      _showSnack('Faça login para compartilhar a lista.');
       return;
     }
     try {
@@ -5887,7 +5926,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         'createOrGetSharedListFromLocal ok sharedId=${sharedList.id} invite=${sharedList.inviteCode ?? '-'}',
       );
       if (sharedList.inviteCode == null || sharedList.inviteCode!.isEmpty) {
-        _logShare('invite vazio, gerando novo codigo...');
+        _logShare('invite vazio, gerando novo código...');
         await repository.generateInviteCode(
           listId: sharedList.id,
           requesterUid: uid,
@@ -5937,7 +5976,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       } else {
         _logShare('share error $error');
       }
-      _showSnack('Nao foi possivel compartilhar a lista: $error');
+      _showSnack('Não foi possível compartilhar a lista: $error');
     }
   }
 
@@ -6015,9 +6054,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
 
   Future<void> _finalizePurchase() async {
     if (_list.isClosed) {
-      _showSnack(
-        'A lista já está fechada. Toque em reabrir para editar.',
-      );
+      _showSnack('A lista já está fechada. Toque em reabrir para editar.');
       return;
     }
     if (_list.items.isEmpty) {
@@ -6321,8 +6358,9 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                   child: _InlineInfoBanner(
                     icon: Icons.visibility_outlined,
-                    message:
-                        '$_purchasedItemsCount item(ns) comprado(s) oculto(s) para deixar a lista mais objetiva.',
+                    message: _purchasedItemsCount == 1
+                        ? '1 item comprado oculto para deixar a lista mais objetiva.'
+                        : '$_purchasedItemsCount itens comprados ocultos para deixar a lista mais objetiva.',
                     actionLabel: 'Ver',
                     onAction: () =>
                         _setItemsVisibility(_EditorItemsVisibility.purchased),
@@ -6475,10 +6513,10 @@ class _ShoppingMarketModePageState extends State<ShoppingMarketModePage> {
       _list.items.where((item) => item.isPurchased).length;
   int get _pendingUnits => _list.items
       .where((item) => !item.isPurchased)
-      .fold<int>(0, (sum, item) => sum + item.quantity);
+      .fold<int>(0, (unitTotal, item) => unitTotal + item.quantity);
   double get _pendingValue => _list.items
       .where((item) => !item.isPurchased)
-      .fold<double>(0, (sum, item) => sum + item.subtotal);
+      .fold<double>(0, (total, item) => total + item.subtotal);
   double get _completion =>
       _list.items.isEmpty ? 0 : _purchasedProductsCount / _list.items.length;
 
@@ -6610,8 +6648,9 @@ class _ShoppingMarketModePageState extends State<ShoppingMarketModePage> {
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
                     child: _InlineInfoBanner(
                       icon: Icons.visibility_outlined,
-                      message:
-                          '$_purchasedProductsCount item(ns) comprado(s) estão ocultos para facilitar a compra.',
+                      message: _purchasedProductsCount == 1
+                          ? '1 item comprado está oculto para facilitar a compra.'
+                          : '$_purchasedProductsCount itens comprados estão ocultos para facilitar a compra.',
                       actionLabel: 'Mostrar',
                       onAction: () {
                         HapticFeedback.selectionClick();
@@ -7035,7 +7074,7 @@ class _HomeSummaryCard extends StatelessWidget {
     return Semantics(
       container: true,
       label:
-          'Centro de controle. $totalLists listas no total, $totalCatalogProducts produtos no catalogo e ${formatCurrency(pendingValue)} pendente.',
+          'Centro de controle. $totalLists listas no total, $totalCatalogProducts produtos no catálogo e ${formatCurrency(pendingValue)} pendente.',
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -7094,8 +7133,8 @@ class _HomeSummaryCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           totalLists == 0
-                              ? 'Crie a primeira lista para comecar a acompanhar valores.'
-                              : '$openListsCount aberta(s), $closedListsCount fechada(s) e ${formatCurrency(pendingValue)} ainda pendente.',
+                              ? 'Crie a primeira lista para começar a acompanhar valores.'
+                              : '${formatCountLabel(openListsCount, 'aberta', 'abertas')}, ${formatCountLabel(closedListsCount, 'fechada', 'fechadas')} e ${formatCurrency(pendingValue)} ainda pendente.',
                           style: textTheme.bodySmall?.copyWith(
                             color: colorScheme.onPrimaryContainer.withValues(
                               alpha: 0.9,
@@ -7148,7 +7187,7 @@ class _HomeSummaryCard extends StatelessWidget {
                     ),
                     _QuickSummaryActionChip(
                       icon: Icons.event_note_rounded,
-                      label: 'Historico',
+                      label: 'Histórico',
                       onTap: onOpenHistory,
                     ),
                   ],
@@ -7206,12 +7245,12 @@ class _CloudSyncStatusCard extends StatelessWidget {
     );
     final lastSyncLabel = lastCloudSyncAt == null
         ? 'Nunca sincronizado'
-        : 'Ultima sync: ${DateFormat('dd/MM HH:mm').format(lastCloudSyncAt!.toLocal())}';
+        : 'Última sinc.: ${DateFormat('dd/MM HH:mm').format(lastCloudSyncAt!.toLocal())}';
 
     return Semantics(
       container: true,
       label:
-          'Status da sincronizacao: ${status.title}. ${status.description}. $safeSynced de $safeTotal registros sincronizados.',
+          'Status da sincronização: ${status.title}. ${status.description}. $safeSynced de $safeTotal registros sincronizados.',
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: backgroundGradient,
@@ -7870,8 +7909,8 @@ class _MyListsOverviewCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               totalLists == 1
-                  ? 'Voce tem 1 lista salva pronta para abrir, editar ou reutilizar.'
-                  : 'Voce tem $totalLists listas salvas para acompanhar compras e historicos.',
+                  ? 'Você tem 1 lista salva pronta para abrir, editar ou reutilizar.'
+                  : 'Você tem $totalLists listas salvas para acompanhar compras e históricos.',
               style: textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -8059,7 +8098,7 @@ class _EmptyFilteredListsState extends StatelessWidget {
             Text(
               query.isEmpty
                   ? 'Ajuste os filtros para ver mais listas.'
-                  : 'Nao encontramos resultados para "$query".',
+                  : 'Não encontramos resultados para "$query".',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -8285,8 +8324,10 @@ class _RecentListCard extends StatelessWidget {
                   lineItemsCount == 0
                       ? 'Sem itens adicionados ainda.'
                       : list.isClosed
-                      ? 'Compra finalizada com $purchasedCount item(ns) marcados.'
-                      : '$purchasedCount de $lineItemsCount item(ns) ja foram marcados.',
+                      ? purchasedCount == 1
+                            ? 'Compra finalizada com 1 item marcado.'
+                            : 'Compra finalizada com $purchasedCount itens marcados.'
+                      : '$purchasedCount de ${formatItemCount(lineItemsCount)} já foram marcados.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w600,
@@ -8431,7 +8472,7 @@ class _EmptyRecentListsCard extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Nenhuma lista recente ainda. Crie a primeira para comecar.',
+                'Nenhuma lista recente ainda. Crie a primeira para começar.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w600,
@@ -8660,10 +8701,12 @@ class _MyListCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(
                   lineItemsCount == 0
-                      ? 'Sem itens ainda. Abra a lista para comecar.'
+                      ? 'Sem itens ainda. Abra a lista para começar.'
                       : list.isClosed
-                      ? 'Compra fechada com $purchasedCount item(ns) marcados.'
-                      : '$purchasedCount de $lineItemsCount item(ns) marcados ate agora.',
+                      ? purchasedCount == 1
+                            ? 'Compra fechada com 1 item marcado.'
+                            : 'Compra fechada com $purchasedCount itens marcados.'
+                      : '$purchasedCount de ${formatItemCount(lineItemsCount)} marcados até agora.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w600,
@@ -9367,7 +9410,7 @@ class _ItemsToolsBar extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  '$visibleCount de $totalCount item(ns)',
+                  '$visibleCount de ${formatItemCount(totalCount)}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w600,
