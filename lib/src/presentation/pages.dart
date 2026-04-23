@@ -369,7 +369,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
   String _buildResolvedName({String? displayName, String? email}) {
     final fallbackName = (email != null && email.contains('@'))
         ? email.split('@').first
-        : 'UsuÃƒÂ¡rio';
+        : 'Usuário';
     return (displayName != null && displayName.isNotEmpty)
         ? displayName
         : fallbackName;
@@ -439,7 +439,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
         ? 'U'
         : _resolvedName[0].toUpperCase();
     return Scaffold(
-      appBar: AppBar(title: const Text('OpÃƒÂ§ÃƒÂµes')),
+      appBar: AppBar(title: const Text('Opções')),
       body: AppGradientScene(
         child: SafeArea(
           child: ListView(
@@ -457,7 +457,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Gerencie conta, aparÃƒÂªncia, sincronizaÃƒÂ§ÃƒÂ£o e ajuda em um sÃƒÂ³ lugar.',
+                      'Gerencie conta, aparência, sincronização e ajuda em um só lugar.',
                       style: textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -469,7 +469,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
               _buildSectionHeader(
                 context,
                 title: 'Conta',
-                subtitle: 'Perfil e sessÃƒÂ£o',
+                subtitle: 'Perfil e sessão',
               ),
               _ContentPanel(
                 child: Padding(
@@ -561,8 +561,8 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
               const SizedBox(height: 10),
               _buildSectionHeader(
                 context,
-                title: 'AparÃƒÂªncia',
-                subtitle: 'Tema e preferÃƒÂªncias visuais',
+                title: 'Aparência',
+                subtitle: 'Tema e preferências visuais',
               ),
               _ContentPanel(
                 child: Padding(
@@ -609,7 +609,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
                       const SizedBox(height: 12),
                       Text(
                         _selectedThemeMode == ThemeMode.dark
-                            ? 'Modo escuro ativo com contraste reforÃƒÂ§ado.'
+                            ? 'Modo escuro ativo com contraste reforçado.'
                             : 'Modo claro ativo (visual original).',
                         style: textTheme.bodyMedium?.copyWith(
                           color: colorScheme.onSurfaceVariant,
@@ -623,7 +623,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
               _buildSectionHeader(
                 context,
                 title: 'Dados',
-                subtitle: 'SincronizaÃƒÂ§ÃƒÂ£o e armazenamento',
+                subtitle: 'Sincronização e armazenamento',
               ),
               if (widget.showCloudSyncStatus)
                 _CloudSyncStatusCard(
@@ -651,7 +651,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'SincronizaÃƒÂ§ÃƒÂ£o em nuvem indisponÃƒÂ­vel no momento.',
+                            'Sincronização em nuvem indisponível no momento.',
                             style: textTheme.bodyMedium?.copyWith(
                               color: colorScheme.onSurfaceVariant,
                             ),
@@ -714,7 +714,7 @@ class MyProfilePage extends StatefulWidget {
   final String? initialEmail;
   final String? initialPhotoUrl;
 
-  /// InstÃƒÂ¢ncia prÃƒÂ©-inicializada do Firestore (necessÃƒÂ¡ria na Web para evitar
+  /// Instância pré-inicializada do Firestore (necessária na Web para evitar
   /// LateInitializationError com databaseId customizado).
   final FirebaseFirestore? firestoreInstance;
 
@@ -829,7 +829,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       _showMessage(
-        'SessÃƒÂ£o invÃƒÂ¡lida. FaÃƒÂ§a login novamente.',
+        'Sessão inválida. Faça login novamente.',
         type: AppToastType.error,
       );
       return;
@@ -934,7 +934,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       _showMessage(
-        'SessÃƒÂ£o invÃƒÂ¡lida. FaÃƒÂ§a login novamente.',
+        'Sessão inválida. Faça login novamente.',
         type: AppToastType.error,
       );
       return;
@@ -954,7 +954,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
       if (refreshedUser == null) {
         throw FirebaseAuthException(
           code: 'user-not-found',
-          message: 'UsuÃƒÂ¡rio nÃƒÂ£o encontrado apÃƒÂ³s atualizar perfil.',
+          message: 'Usuário não encontrado após atualizar perfil.',
         );
       }
 
@@ -1054,7 +1054,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Atualize nome, foto e informaÃƒÂ§ÃƒÂµes exibidas na sua conta.',
+                          'Atualize nome, foto e informações exibidas na sua conta.',
                           style: textTheme.bodyMedium?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                           ),
@@ -1085,7 +1085,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
                                   _photoUrlController.clear();
                                 });
                                 _showMessage(
-                                  'NÃƒÂ£o foi possÃƒÂ­vel carregar a foto.',
+                                  'Não foi possível carregar a foto.',
                                   type: AppToastType.warning,
                                 );
                               },
@@ -1151,7 +1151,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
                         _InlineInfoBanner(
                           icon: Icons.info_outline_rounded,
                           message:
-                              'Se usar uma URL, prefira um link direto e estÃƒÂ¡vel para evitar falha no carregamento da foto.',
+                              'Se usar uma URL, prefira um link direto e estável para evitar falha no carregamento da foto.',
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
@@ -1179,10 +1179,10 @@ class _MyProfilePageState extends State<MyProfilePage> {
                           validator: (value) {
                             final trimmed = value?.trim() ?? '';
                             if (trimmed.length < 2) {
-                              return 'Informe um nome vÃƒÂ¡lido.';
+                              return 'Informe um nome válido.';
                             }
                             if (trimmed.length > 80) {
-                              return 'Nome muito longo (mÃƒÂ¡ximo 80).';
+                              return 'Nome muito longo (máximo 80).';
                             }
                             return null;
                           },
@@ -1437,7 +1437,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<void> _createBasedOnOld() async {
     if (widget.store.lists.isEmpty) {
-      _showSnack('VocÃƒÂª ainda NÃƒÂ£o tem listas para usar como base.');
+      _showSnack('Você ainda Não tem listas para usar como base.');
       return;
     }
 
@@ -1601,11 +1601,11 @@ class _DashboardPageState extends State<DashboardPage> {
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: _DashboardMenuAction.options,
-                child: Text('OpÃƒÂ§ÃƒÂµes'),
+                child: Text('Opções'),
               ),
               const PopupMenuItem(
                 value: _DashboardMenuAction.catalog,
-                child: Text('CatÃƒÂ¡logo de produtos'),
+                child: Text('Catálogo de produtos'),
               ),
               if (widget.onSignOut != null)
                 const PopupMenuItem(
@@ -1655,7 +1655,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   key: const ValueKey('dash_action_new'),
                   delay: const Duration(milliseconds: 40),
                   child: _ActionTile(
-                    title: 'ComeÃƒÂ§ar nova lista de compras',
+                    title: 'Começar nova lista de compras',
                     subtitle: 'Crie uma lista do zero e adicione os produtos.',
                     icon: Icons.playlist_add_rounded,
                     tag: 'Mais usado',
@@ -1694,8 +1694,8 @@ class _DashboardPageState extends State<DashboardPage> {
                   key: const ValueKey('dash_action_history'),
                   delay: const Duration(milliseconds: 100),
                   child: _ActionTile(
-                    title: 'HistÃƒÂ³rico mensal',
-                    subtitle: 'Revise fechamentos e totais por mÃƒÂªs.',
+                    title: 'Histórico mensal',
+                    subtitle: 'Revise fechamentos e totais por mês.',
                     icon: Icons.event_note_rounded,
                     tag: 'Analise',
                     onTap: _openPurchaseHistory,
@@ -1706,7 +1706,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   key: const ValueKey('dash_action_template'),
                   delay: const Duration(milliseconds: 130),
                   child: _ActionTile(
-                    title: 'CatÃƒÂ¡logo de produtos',
+                    title: 'Catálogo de produtos',
                     subtitle:
                         'Gerencie produtos salvos localmente e/ou sincronizados.',
                     icon: Icons.local_offer_rounded,
@@ -2036,13 +2036,13 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
   String _sortLabel(_CatalogSortOption option) {
     switch (option) {
       case _CatalogSortOption.updatedAt:
-        return 'AtualizaÃƒÂ§ÃƒÂ£o';
+        return 'Atualização';
       case _CatalogSortOption.name:
         return 'Nome';
       case _CatalogSortOption.usage:
         return 'Uso';
       case _CatalogSortOption.price:
-        return 'preÃƒÂ§o';
+        return 'preço';
     }
   }
 
@@ -2124,7 +2124,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Excluir selecionados?'),
-        content: Text('Deseja excluir $count produto(s) do catÃƒÂ¡logo?'),
+        content: Text('Deseja excluir $count produto(s) do catálogo?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -2324,7 +2324,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
     }
     setState(() {});
     _showSnack(
-      'Produto adicionado ao catÃƒÂ¡logo.',
+      'Produto adicionado ao catálogo.',
       type: AppToastType.success,
     );
   }
@@ -2382,7 +2382,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Atualizar preÃƒÂ§o'),
+          title: const Text('Atualizar preço'),
           content: Form(
             key: formKey,
             child: TextFormField(
@@ -2393,13 +2393,13 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
               ),
               inputFormatters: [formatter],
               decoration: const InputDecoration(
-                labelText: 'Novo preÃƒÂ§o',
+                labelText: 'Novo preço',
                 prefixIcon: Icon(Icons.attach_money_rounded),
               ),
               validator: (value) {
                 final parsed = BrlCurrencyInputFormatter.tryParse(value ?? '');
                 if (parsed == null || parsed <= 0) {
-                  return 'Informe um preÃƒÂ§o vÃƒÂ¡lido.';
+                  return 'Informe um preço válido.';
                 }
                 return null;
               },
@@ -2448,7 +2448,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
     if (!mounted) {
       return;
     }
-    _showSnack('preÃƒÂ§o atualizado.', type: AppToastType.success);
+    _showSnack('preço atualizado.', type: AppToastType.success);
   }
 
   Future<void> _deleteCatalogProduct(CatalogProduct product) async {
@@ -2456,7 +2456,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Excluir produto?'),
-        content: Text('Deseja excluir "${product.name}" do catÃƒÂ¡logo?'),
+        content: Text('Deseja excluir "${product.name}" do catálogo?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -2481,7 +2481,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
     if (!mounted) {
       return;
     }
-    _showSnack('Produto removido do catÃƒÂ¡logo.', type: AppToastType.success);
+    _showSnack('Produto removido do catálogo.', type: AppToastType.success);
   }
 
   @override
@@ -2492,13 +2492,13 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
       appBar: AppBar(
         title: Text(
           _batchMode
-              ? 'CatÃƒÂ¡logo (${_selectedProductIds.length})'
-              : 'CatÃƒÂ¡logo de produtos',
+              ? 'Catálogo (${_selectedProductIds.length})'
+              : 'Catálogo de produtos',
         ),
         actions: [
           if (_batchMode)
             IconButton(
-              tooltip: 'Selecionar VisÃƒÂ­veis',
+              tooltip: 'Selecionar Visíveis',
               onPressed: () => _toggleSelectAllVisible(
                 _visibleProducts(widget.store.catalogProducts),
               ),
@@ -2506,8 +2506,8 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
             ),
           IconButton(
             tooltip: _batchMode
-                ? 'Sair da seleÃƒÂ§ÃƒÂ£o'
-                : 'SeleÃƒÂ§ÃƒÂ£o em lote',
+                ? 'Sair da seleção'
+                : 'Seleção em lote',
             onPressed: () => _toggleBatchMode(),
             icon: Icon(
               _batchMode
@@ -2559,7 +2559,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
                             decoration: const InputDecoration(
                               prefixIcon: Icon(Icons.search_rounded),
                               hintText:
-                                  'Buscar no catÃƒÂ¡logo por nome ou cÃƒÂ³digo',
+                                  'Buscar no catálogo por nome ou código',
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -2697,7 +2697,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
                                     >(
                                       initialValue: _priceFilter,
                                       decoration: const InputDecoration(
-                                        labelText: 'PreÃƒÂ§o',
+                                        labelText: 'Preço',
                                         prefixIcon: Icon(
                                           Icons.attach_money_rounded,
                                         ),
@@ -2710,7 +2710,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
                                         DropdownMenuItem(
                                           value:
                                               _CatalogPriceFilter.withoutPrice,
-                                          child: Text('Sem preÃƒÂ§o'),
+                                          child: Text('Sem preço'),
                                         ),
                                       ],
                                       onChanged: (value) {
@@ -2738,7 +2738,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
                                   });
                                 },
                                 avatar: const Icon(Icons.qr_code_2_rounded),
-                                label: const Text('Com cÃƒÂ³digo de barras'),
+                                label: const Text('Com código de barras'),
                               ),
                               if (_hasActiveFilters)
                                 ActionChip(
@@ -2862,7 +2862,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
                                                         _SummaryPill(
                                                           icon: Icons
                                                               .qr_code_2_rounded,
-                                                          label: 'CÃƒÂ³digo',
+                                                          label: 'Código',
                                                           value:
                                                               product.barcode!,
                                                         ),
@@ -2909,7 +2909,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
                                                     value: _CatalogProductAction
                                                         .updatePrice,
                                                     child: Text(
-                                                      'Atualizar preÃƒÂ§o',
+                                                      'Atualizar preço',
                                                     ),
                                                   ),
                                                   PopupMenuItem(
@@ -2928,7 +2928,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
                                           children: [
                                             Text(
                                               product.unitPrice == null
-                                                  ? 'Sem preÃƒÂ§o'
+                                                  ? 'Sem preço'
                                                   : formatCurrency(
                                                       product.unitPrice!,
                                                     ),
@@ -2995,7 +2995,7 @@ class _CatalogEmptyState extends StatelessWidget {
             Text(
               hasQuery
                   ? 'Nenhum produto encontrado.'
-                  : 'Seu catÃƒÂ¡logo ainda estÃƒÂ¡ vazio.',
+                  : 'Seu catálogo ainda está vazio.',
               textAlign: TextAlign.center,
               style: textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w800,
@@ -3005,7 +3005,7 @@ class _CatalogEmptyState extends StatelessWidget {
             Text(
               hasQuery
                   ? 'Tente outro termo de busca.'
-                  : 'Adicione produtos para reaproveitar preÃƒÂ§os e dados nas prÃƒÂ³ximas compras.',
+                  : 'Adicione produtos para reaproveitar preços e dados nas próximas compras.',
               textAlign: TextAlign.center,
               style: textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
@@ -3158,7 +3158,7 @@ class _MyListsPageState extends State<MyListsPage> {
   Future<void> _createFromPicker() async {
     final lists = widget.store.lists;
     if (lists.isEmpty) {
-      _showSnack('NÃƒÂ£o hÃƒÂ¡ listas antigas para copiar.');
+      _showSnack('Não há listas antigas para copiar.');
       return;
     }
 
@@ -3229,7 +3229,7 @@ class _MyListsPageState extends State<MyListsPage> {
     if (!mounted) {
       return;
     }
-    _showSnack('Lista excluÃƒÂ­da.');
+    _showSnack('Lista excluída.');
   }
 
   Future<void> _reopenList(ShoppingListModel list) async {
@@ -3237,7 +3237,7 @@ class _MyListsPageState extends State<MyListsPage> {
     if (!mounted || updated == null) {
       return;
     }
-    _showSnack('Lista reaberta para ediÃƒÂ§ÃƒÂ£o.');
+    _showSnack('Lista reaberta para edição.');
   }
 
   void _enterSelectionMode([String? firstId]) {
@@ -3288,7 +3288,7 @@ class _MyListsPageState extends State<MyListsPage> {
         title: Text(clearAll ? 'Limpar todas as listas?' : 'Excluir listas?'),
         content: Text(
           clearAll
-              ? 'Essa aÃƒÂ§ÃƒÂ£o vai remover todas as listas de compras.'
+              ? 'Essa ação vai remover todas as listas de compras.'
               : 'Deseja excluir $count lista(s) selecionada(s)?',
         ),
         actions: [
@@ -3376,7 +3376,7 @@ class _MyListsPageState extends State<MyListsPage> {
             : 'arquivo salvo em ${result.location}';
         _showSnack('Backup exportado: $location.');
       case BackupExportMode.clipboard:
-        _showSnack('Backup copiado para a ÃƒÂ¡rea de transferÃƒÂªncia.');
+        _showSnack('Backup copiado para a área de transferência.');
     }
   }
 
@@ -3418,7 +3418,7 @@ class _MyListsPageState extends State<MyListsPage> {
 
     final preview = widget.store.tryParseBackup(payload);
     if (preview == null) {
-      _showSnack('Arquivo invÃƒÂ¡lido. Use um backup JSON exportado pelo app.');
+      _showSnack('Arquivo inválido. Use um backup JSON exportado pelo app.');
       return;
     }
 
@@ -3445,7 +3445,7 @@ class _MyListsPageState extends State<MyListsPage> {
         '${report.importedLists} lista(s): backup $action com sucesso.',
       );
     } on FormatException {
-      _showSnack('NÃƒÂ£o foi possÃƒÂ­vel interpretar o arquivo selecionado.');
+      _showSnack('Não foi possível interpretar o arquivo selecionado.');
     }
   }
 
@@ -3515,7 +3515,7 @@ class _MyListsPageState extends State<MyListsPage> {
           appBar: AppBar(
             leading: _selectionMode
                 ? IconButton(
-                    tooltip: 'Cancelar seleÃƒÂ§ÃƒÂ£o',
+                    tooltip: 'Cancelar seleção',
                     onPressed: _exitSelectionMode,
                     icon: const Icon(Icons.close_rounded),
                   )
@@ -3569,7 +3569,7 @@ class _MyListsPageState extends State<MyListsPage> {
                   itemBuilder: (context) => const [
                     PopupMenuItem(
                       value: _MyListsMenuAction.viewHistory,
-                      child: Text('HistÃƒÂ³rico mensal'),
+                      child: Text('Histórico mensal'),
                     ),
                     PopupMenuItem(
                       value: _MyListsMenuAction.smartReplenishment,
@@ -3577,7 +3577,7 @@ class _MyListsPageState extends State<MyListsPage> {
                     ),
                     PopupMenuItem(
                       value: _MyListsMenuAction.selectMany,
-                      child: Text('Selecionar vÃƒÂ¡rias'),
+                      child: Text('Selecionar várias'),
                     ),
                     PopupMenuItem(
                       value: _MyListsMenuAction.importBackup,
@@ -3820,7 +3820,7 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
     }
     AppToast.show(
       context,
-      message: 'Fechamento removido do histÃƒÂ³rico.',
+      message: 'Fechamento removido do histórico.',
       type: AppToastType.success,
       duration: const Duration(seconds: 4),
     );
@@ -3833,9 +3833,9 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
     final confirm = await showAppDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Limpar histÃƒÂ³rico mensal?'),
+        title: const Text('Limpar histórico mensal?'),
         content: const Text(
-          'Essa aÃƒÂ§ÃƒÂ£o remove todos os fechamentos salvos no histÃƒÂ³rico.',
+          'Essa ação remove todos os fechamentos salvos no histórico.',
         ),
         actions: [
           TextButton(
@@ -3858,7 +3858,7 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
     }
     AppToast.show(
       context,
-      message: 'HistÃƒÂ³rico mensal limpo com sucesso.',
+      message: 'Histórico mensal limpo com sucesso.',
       type: AppToastType.success,
       duration: const Duration(seconds: 4),
     );
@@ -3877,10 +3877,10 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('HistÃƒÂ³rico mensal'),
+            title: const Text('Histórico mensal'),
             actions: [
               IconButton(
-                tooltip: 'Limpar histÃƒÂ³rico',
+                tooltip: 'Limpar histórico',
                 onPressed: widget.store.purchaseHistory.isEmpty
                     ? null
                     : _clearHistory,
@@ -4169,7 +4169,7 @@ class _EmptyPurchaseHistoryState extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = hasQuery
         ? 'Nenhum fechamento encontrado'
-        : 'Sem histÃƒÂ³rico de compras';
+        : 'Sem histórico de compras';
     final description = hasQuery
         ? 'Tente outro termo para lista ou produto.'
         : 'Feche uma compra para gerar relatorios mensais.';
@@ -4282,7 +4282,7 @@ class _CompletedPurchaseDetailsSheet extends StatelessWidget {
                   if (purchase.hasBudget)
                     _PillLabel(
                       icon: Icons.account_balance_wallet_rounded,
-                      text: 'OrÃƒÂ§amento ${formatCurrency(purchase.budget!)}',
+                      text: 'Orçamento ${formatCurrency(purchase.budget!)}',
                     ),
                   if (purchase.hasPaymentBalances)
                     _PillLabel(
@@ -4600,15 +4600,15 @@ class _ListEditorActionsSheet extends StatelessWidget {
           );
         case _ListEditorMenuAction.openCatalog:
           return _ListEditorActionMeta(
-            label: 'Abrir catÃƒÂ¡logo de produtos',
-            shortLabel: 'CatÃƒÂ¡logo',
+            label: 'Abrir catálogo de produtos',
+            shortLabel: 'Catálogo',
             icon: Icons.local_offer_rounded,
             color: const Color(0xFF0277BD),
           );
         case _ListEditorMenuAction.viewHistory:
           return _ListEditorActionMeta(
-            label: 'HistÃƒÂ³rico mensal',
-            shortLabel: 'HistÃƒÂ³rico',
+            label: 'Histórico mensal',
+            shortLabel: 'Histórico',
             icon: Icons.event_note_rounded,
             color: const Color(0xFF6D4C41),
           );
@@ -4623,8 +4623,8 @@ class _ListEditorActionsSheet extends StatelessWidget {
           );
         case _ListEditorMenuAction.editBudget:
           return _ListEditorActionMeta(
-            label: 'Definir orÃƒÂ§amento',
-            shortLabel: 'OrÃƒÂ§amento',
+            label: 'Definir orçamento',
+            shortLabel: 'Orçamento',
             icon: Icons.account_balance_wallet_rounded,
             color: const Color(0xFF3949AB),
           );
@@ -4669,19 +4669,19 @@ class _ListEditorActionsSheet extends StatelessWidget {
         padding: EdgeInsets.fromLTRB(16, 8, 16, 20 + bottomInset),
         children: [
           Text(
-            'AÃƒÂ§ÃƒÂµes da lista',
+            'Ações da lista',
             style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 4),
           Text(
-            'Tudo em um ÃƒÂºnico menu, com atalhos para as aÃƒÂ§ÃƒÂµes principais.',
+            'Tudo em um único menu, com atalhos para as ações principais.',
             style: textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 12),
           Text(
-            'AÃƒÂ§ÃƒÂµes rÃƒÂ¡pidas',
+            'Ações rápidas',
             style: textTheme.labelLarge?.copyWith(
               color: colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.w700,
@@ -4711,7 +4711,7 @@ class _ListEditorActionsSheet extends StatelessWidget {
           if (settingsActions.isNotEmpty) ...[
             const SizedBox(height: 8),
             _ListEditorActionSection(
-              title: 'ConfiguraÃƒÂ§ÃƒÂµes',
+              title: 'Configurações',
               actions: settingsActions,
               resolveMeta: resolveMeta,
               onTap: (action) => Navigator.pop(context, action),
@@ -5001,7 +5001,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     if (_list.isClosed) {
       _showSnack(
         message ??
-            'Esta lista estÃƒÂ¡ fechada. Reabra a lista para editar produtos.',
+            'Esta lista está fechada. Reabra a lista para editar produtos.',
       );
       return false;
     }
@@ -5142,13 +5142,13 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         builder: (context) => AlertDialog(
           title: const Text('Lista compartilhada detectada'),
           content: const Text(
-            'Esta lista tem uma versÃƒÂ£o compartilhada. Para ver atualizaÃƒÂ§ÃƒÂµes em '
+            'Esta lista tem uma versão compartilhada. Para ver atualizações em '
             'tempo real, abra a lista compartilhada.',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Agora nÃƒÂ£o'),
+              child: const Text('Agora não'),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
@@ -5210,7 +5210,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     if (sourceLocalId.isNotEmpty && sourceLocalId != _list.id) {
       if (showSnack) {
         _showSnack(
-          'Esta lista nÃƒÂ£o corresponde ao compartilhamento vinculado.',
+          'Esta lista não corresponde ao compartilhamento vinculado.',
         );
       }
       return;
@@ -5219,7 +5219,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       final latest = await repository.fetchSharedList(shared.id);
       if (latest == null) {
         if (showSnack) {
-          _showSnack('Lista compartilhada nÃƒÂ£o encontrada.');
+          _showSnack('Lista compartilhada não encontrada.');
         }
         return;
       }
@@ -5252,7 +5252,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       }
     } catch (error) {
       if (showSnack) {
-        _showSnack('NÃƒÂ£o foi possÃƒÂ­vel sincronizar: $error');
+        _showSnack('Não foi possível sincronizar: $error');
       }
     }
   }
@@ -5296,7 +5296,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       }
     } catch (error) {
       if (showSnack) {
-        _showSnack('NÃƒÂ£o foi possÃƒÂ­vel sincronizar: $error');
+        _showSnack('Não foi possível sincronizar: $error');
       }
     } finally {
       _isSyncingToShared = false;
@@ -5495,7 +5495,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     }
 
     if (addedCount == 0 && mergedCount == 0) {
-      _showSnack('Nenhum item vÃƒÂ¡lido foi extraÃƒÂ­do do cupom.');
+      _showSnack('Nenhum item válido foi extraído do cupom.');
       return;
     }
 
@@ -5538,10 +5538,10 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     final existingNames = _list.items
         .map((entry) => normalizeQuery(entry.name))
         .toSet();
-    var candidate = '$baseName (cÃƒÂ³pia)';
+    var candidate = '$baseName (cópia)';
     var counter = 2;
     while (existingNames.contains(normalizeQuery(candidate))) {
-      candidate = '$baseName (cÃƒÂ³pia $counter)';
+      candidate = '$baseName (cópia $counter)';
       counter++;
     }
     return candidate;
@@ -5681,7 +5681,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       builder: (context) => AlertDialog(
         title: const Text('Limpar comprados?'),
         content: const Text(
-          'Essa aÃƒÂ§ÃƒÂ£o remove apenas os itens marcados como comprados.',
+          'Essa ação remove apenas os itens marcados como comprados.',
         ),
         actions: [
           TextButton(
@@ -5733,7 +5733,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         if (isNearLimit && !_didShowBudgetNearLimitWarning) {
           _didShowBudgetNearLimitWarning = true;
           _showSnack(
-            'OrÃƒÂ§amento em 85% ou mais. Restante: ${formatCurrency(updatedList.budgetRemaining)}.',
+            'Orçamento em 85% ou mais. Restante: ${formatCurrency(updatedList.budgetRemaining)}.',
           );
           unawaited(
             widget.store.notifyBudgetNearLimit(
@@ -5752,7 +5752,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     if (updatedList.isOverBudget && !_didShowBudgetWarning) {
       _didShowBudgetWarning = true;
       _showSnack(
-        'OrÃƒÂ§amento excedido em ${formatCurrency(updatedList.overBudgetAmount)}.',
+        'Orçamento excedido em ${formatCurrency(updatedList.overBudgetAmount)}.',
       );
       return;
     }
@@ -5778,7 +5778,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     if (result.clear) {
       _updateList(
         _list.copyWith(clearBudget: true),
-        message: 'OrÃƒÂ§amento removido.',
+        message: 'Orçamento removido.',
       );
       return;
     }
@@ -5790,7 +5790,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
 
     _updateList(
       _list.copyWith(budget: value),
-      message: 'OrÃƒÂ§amento atualizado.',
+      message: 'Orçamento atualizado.',
     );
   }
 
@@ -5829,7 +5829,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     _updateList(
       _list.copyWith(paymentBalances: updatedBalances, budget: nextBudget),
       message:
-          'Saldos atualizados. OrÃƒÂ§amento ajustado para ${formatCurrency(nextBudget)}.',
+          'Saldos atualizados. Orçamento ajustado para ${formatCurrency(nextBudget)}.',
     );
   }
 
@@ -5987,7 +5987,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       final repository = widget.sharedListsRepository;
       final uid = FirebaseAuth.instance.currentUser?.uid.trim() ?? '';
       if (repository == null || uid.isEmpty) {
-        _showSnack('NÃƒÂ£o foi possÃƒÂ­vel reabrir no modo compartilhado.');
+        _showSnack('Não foi possível reabrir no modo compartilhado.');
         return;
       }
       try {
@@ -5997,7 +5997,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         );
         await _syncLinkedSharedNow(showSnack: true);
       } catch (error) {
-        _showSnack('NÃƒÂ£o foi possÃƒÂ­vel reabrir: $error');
+        _showSnack('Não foi possível reabrir: $error');
       }
       return;
     }
@@ -6010,13 +6010,13 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       _didShowBudgetWarning = _list.isOverBudget;
       _didShowBudgetNearLimitWarning = false;
     });
-    _showSnack('Lista reaberta. EdiÃƒÂ§ÃƒÂµes liberadas.');
+    _showSnack('Lista reaberta. Edições liberadas.');
   }
 
   Future<void> _finalizePurchase() async {
     if (_list.isClosed) {
       _showSnack(
-        'A lista jÃƒÂ¡ estÃƒÂ¡ fechada. Toque em reabrir para editar.',
+        'A lista já está fechada. Toque em reabrir para editar.',
       );
       return;
     }
@@ -6034,7 +6034,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       final repository = widget.sharedListsRepository;
       final uid = FirebaseAuth.instance.currentUser?.uid.trim() ?? '';
       if (repository == null || uid.isEmpty) {
-        _showSnack('NÃƒÂ£o foi possÃƒÂ­vel fechar no modo compartilhado.');
+        _showSnack('Não foi possível fechar no modo compartilhado.');
         return;
       }
       try {
@@ -6056,9 +6056,9 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
           markPendingAsPurchased: checkout.markPendingAsPurchased,
         );
         await _syncLinkedSharedNow(showSnack: true);
-        _showSnack('Compra fechada e salva no histÃƒÂ³rico compartilhado.');
+        _showSnack('Compra fechada e salva no histórico compartilhado.');
       } catch (error) {
-        _showSnack('NÃƒÂ£o foi possÃƒÂ­vel fechar: $error');
+        _showSnack('Não foi possível fechar: $error');
       }
       return;
     }
@@ -6072,7 +6072,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     if (!mounted || !didFinalize) {
       return;
     }
-    _showSnack('Compra fechada e salva no histÃƒÂ³rico mensal.');
+    _showSnack('Compra fechada e salva no histórico mensal.');
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
@@ -6164,7 +6164,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   Widget build(BuildContext context) {
     if (_notFound) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Lista NÃƒÂ£o encontrada')),
+        appBar: AppBar(title: const Text('Lista Não encontrada')),
         body: Center(
           child: FilledButton(
             onPressed: () => Navigator.pop(context),
@@ -6191,7 +6191,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         title: Text(_list.name),
         actions: [
           IconButton(
-            tooltip: 'AÃƒÂ§ÃƒÂµes da lista',
+            tooltip: 'Ações da lista',
             onPressed: _showListActionsSheet,
             icon: const Icon(Icons.more_vert_rounded),
           ),
@@ -6397,7 +6397,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
                                 secondaryBackground:
                                     const _MarketSwipeBackground(
                                       icon: Icons.bolt_rounded,
-                                      label: 'AÃƒÂ§ÃƒÂµes rÃƒÂ¡pidas',
+                                      label: 'Ações rápidas',
                                       alignRight: true,
                                     ),
                                 child: _ShoppingItemCard(
@@ -6611,7 +6611,7 @@ class _ShoppingMarketModePageState extends State<ShoppingMarketModePage> {
                     child: _InlineInfoBanner(
                       icon: Icons.visibility_outlined,
                       message:
-                          '$_purchasedProductsCount item(ns) comprado(s) estÃƒÂ£o ocultos para facilitar a compra.',
+                          '$_purchasedProductsCount item(ns) comprado(s) estão ocultos para facilitar a compra.',
                       actionLabel: 'Mostrar',
                       onAction: () {
                         HapticFeedback.selectionClick();
@@ -6844,7 +6844,7 @@ class _MarketModeItemCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${item.category.label} Ã¢â‚¬Â¢ ${formatCurrency(item.unitPrice)}',
+                        '${item.category.label} • ${formatCurrency(item.unitPrice)}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -6953,8 +6953,8 @@ class _EmptyMarketModeState extends StatelessWidget {
     final description = hasQuery
         ? 'Ajuste sua busca para localizar produtos.'
         : showOnlyPending
-        ? 'ParabÃƒÂ©ns. Todos os itens estÃƒÂ£o marcados como comprados.'
-        : 'Sua lista estÃƒÂ¡ vazia.';
+        ? 'Parabéns. Todos os itens estão marcados como comprados.'
+        : 'Sua lista está vazia.';
 
     return Center(
       child: Padding(
@@ -7292,7 +7292,7 @@ class _CloudSyncStatusCard extends StatelessWidget {
               const SizedBox(height: 10),
               if (compact)
                 Text(
-                  '$lastSyncLabel Ã¢â‚¬Â¢ Listas: $listRecords Ã¢â‚¬Â¢ histÃƒÂ³rico: $historyRecords Ã¢â‚¬Â¢ catÃƒÂ¡logo: $catalogRecords',
+                  '$lastSyncLabel • Listas: $listRecords • histórico: $historyRecords • catálogo: $catalogRecords',
                   style: textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -7321,13 +7321,13 @@ class _CloudSyncStatusCard extends StatelessWidget {
                         ),
                         Expanded(
                           child: Text(
-                            'histÃƒÂ³rico: $historyRecords',
+                            'histórico: $historyRecords',
                             style: textTheme.bodySmall,
                           ),
                         ),
                         Expanded(
                           child: Text(
-                            'catÃƒÂ¡logo: $catalogRecords',
+                            'catálogo: $catalogRecords',
                             style: textTheme.bodySmall,
                           ),
                         ),
@@ -7388,8 +7388,8 @@ class _CloudSyncStatusCard extends StatelessWidget {
         secondaryColor: colorScheme.errorContainer,
         title: 'Modo offline',
         description: pending > 0
-            ? 'Sem internet. $pending registros aguardam conexÃƒÂ£o.'
-            : 'Sem internet. AlteraÃƒÂ§ÃƒÂµes continuam salvas no aparelho.',
+            ? 'Sem internet. $pending registros aguardam conexão.'
+            : 'Sem internet. Alterações continuam salvas no aparelho.',
         showLoading: false,
       );
     }
@@ -7399,8 +7399,8 @@ class _CloudSyncStatusCard extends StatelessWidget {
         icon: Icons.sync_rounded,
         color: colorScheme.primary,
         secondaryColor: colorScheme.secondary,
-        title: 'AlteraÃƒÂ§ÃƒÂµes pendentes',
-        description: '$pending registros aguardando sincronizaÃƒÂ§ÃƒÂ£o.',
+        title: 'Alterações pendentes',
+        description: '$pending registros aguardando sincronização.',
         showLoading: true,
       );
     }
@@ -7424,7 +7424,7 @@ class _CloudSyncStatusCard extends StatelessWidget {
       color: colorScheme.primary,
       secondaryColor: colorScheme.secondary,
       title: 'Pronto para sincronizar',
-      description: 'Suas listas serÃƒÂ£o sincronizadas automaticamente online.',
+      description: 'Suas listas serão sincronizadas automaticamente online.',
       showLoading: false,
     );
   }
@@ -8481,7 +8481,7 @@ class _EmptyListsState extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             Text(
-              'VocÃƒÂª ainda NÃƒÂ£o tem listas',
+              'Você ainda Não tem listas',
               style: Theme.of(
                 context,
               ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
@@ -8841,7 +8841,7 @@ class _ListSummaryPanel extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            statusParts.join(' â€¢ '),
+                            statusParts.join(' • '),
                             maxLines: collapsed ? 1 : 2,
                             overflow: TextOverflow.ellipsis,
                             style: textTheme.bodySmall?.copyWith(
@@ -8991,10 +8991,10 @@ class _ListSummaryPanel extends StatelessWidget {
                         ),
                         _MetricTag(
                           icon: Icons.account_balance_wallet_rounded,
-                          label: 'OrÃ§amento disponÃ­vel',
+                          label: 'Orçamento disponível',
                           value: list.hasBudget
                               ? formatCurrency(max(0, list.budgetRemaining))
-                              : 'NÃ£o definido',
+                              : 'Não definido',
                           onTap: onBudgetTap,
                         ),
                         _MetricTag(
@@ -9002,7 +9002,7 @@ class _ListSummaryPanel extends StatelessWidget {
                           label: 'Saldos',
                           value: list.hasPaymentBalances
                               ? formatCurrency(list.paymentBalancesTotal)
-                              : 'NÃ£o definido',
+                              : 'Não definido',
                           onTap: onPaymentBalancesTap,
                         ),
                         _MetricTag(
@@ -9047,8 +9047,8 @@ class _ListSummaryPanel extends StatelessWidget {
                         _QuickSummaryActionChip(
                           icon: Icons.account_balance_wallet_rounded,
                           label: list.hasBudget
-                              ? 'Editar orÃ§amento'
-                              : 'Definir orÃ§amento',
+                              ? 'Editar orçamento'
+                              : 'Definir orçamento',
                           onTap: onBudgetTap,
                         ),
                         _QuickSummaryActionChip(
@@ -9096,7 +9096,7 @@ class _ListSummaryPanel extends StatelessWidget {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'Valor total acima do orÃ§amento por .',
+                                  'Valor total acima do orçamento por .',
                                   style: textTheme.bodyMedium?.copyWith(
                                     color: colorScheme.onErrorContainer,
                                     fontWeight: FontWeight.w600,
@@ -9711,13 +9711,13 @@ class _ShoppingItemCard extends StatelessWidget {
                     icon: const Icon(Icons.edit_rounded),
                   ),
                 IconButton(
-                  tooltip: 'HistÃƒÂ³rico de preÃƒÂ§o',
+                  tooltip: 'Histórico de preço',
                   onPressed: onViewHistory,
                   icon: const Icon(Icons.query_stats_rounded),
                 ),
                 if (!readOnly)
                   PopupMenuButton<_ShoppingItemCardAction>(
-                    tooltip: 'Mais aÃƒÂ§ÃƒÂµes',
+                    tooltip: 'Mais ações',
                     onSelected: (action) {
                       if (action == _ShoppingItemCardAction.delete) {
                         onDelete();
@@ -9762,7 +9762,7 @@ class _PriceHistorySheet extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(16, 8, 16, 20 + bottomInset),
       children: [
         Text(
-          'HistÃƒÂ³rico de PreÃƒÂ§o',
+          'Histórico de Preço',
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
@@ -9776,7 +9776,7 @@ class _PriceHistorySheet extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         if (history.isEmpty)
-          const ListTile(title: Text('Sem histÃƒÂ³rico registrado ainda.'))
+          const ListTile(title: Text('Sem histórico registrado ainda.'))
         else
           ...history.asMap().entries.map((entry) {
             final index = entry.key;
@@ -9970,7 +9970,7 @@ class _EmptyItemsState extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  'Esta lista estÃƒÂ¡ vazia',
+                  'Esta lista está vazia',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -9978,7 +9978,7 @@ class _EmptyItemsState extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Adicione o primeiro produto e acompanhe subtotal e total automÃƒÂ¡ticos.',
+                  'Adicione o primeiro produto e acompanhe subtotal e total automáticos.',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -9986,7 +9986,7 @@ class _EmptyItemsState extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Use o botÃƒÂ£o "Adicionar item" para incluir o primeiro produto.',
+                  'Use o botão "Adicionar item" para incluir o primeiro produto.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -10016,8 +10016,8 @@ class _SharedSyncStatusPill extends StatelessWidget {
     final label = isSyncing
         ? 'Sincronizando...'
         : lastSyncAt == null
-        ? 'SincronizaÃƒÂ§ÃƒÂ£o pendente'
-        : 'Sincronizado ÃƒÂ s ${formatDateTime(lastSyncAt!)}';
+        ? 'Sincronização pendente'
+        : 'Sincronizado às ${formatDateTime(lastSyncAt!)}';
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colorScheme.surface.withValues(alpha: 0.72),
