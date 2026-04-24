@@ -30,6 +30,14 @@ ItemPriceInsight? buildPriceInsight({
   }
 
   final roundedPercent = percentDelta.abs().round();
+  if (roundedPercent == 0) {
+    return ItemPriceInsight(
+      direction: PriceInsightDirection.same,
+      percentDelta: percentDelta,
+      label: 'Mesmo preco da ultima compra',
+    );
+  }
+
   if (percentDelta.isNegative) {
     return ItemPriceInsight(
       direction: PriceInsightDirection.down,

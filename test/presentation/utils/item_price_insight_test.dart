@@ -10,8 +10,8 @@ void main() {
 
     expect(insight, isNotNull);
     expect(insight!.direction, PriceInsightDirection.down);
-    expect(insight.label, contains('menor'));
-    expect(insight.label, contains('ultimo preco salvo'));
+    expect(insight.percentDelta, closeTo(-15, 0.0001));
+    expect(insight.label, '15% menor que o ultimo preco salvo');
   });
 
   test('buildPriceInsight returns increase copy', () {
@@ -22,7 +22,8 @@ void main() {
 
     expect(insight, isNotNull);
     expect(insight!.direction, PriceInsightDirection.up);
-    expect(insight.label, contains('maior'));
+    expect(insight.percentDelta, closeTo(20, 0.0001));
+    expect(insight.label, '20% maior que o ultimo preco salvo');
   });
 
   test('buildPriceInsight returns neutral copy', () {
@@ -33,6 +34,19 @@ void main() {
 
     expect(insight, isNotNull);
     expect(insight!.direction, PriceInsightDirection.same);
+    expect(insight.percentDelta, 0);
+    expect(insight.label, 'Mesmo preco da ultima compra');
+  });
+
+  test('buildPriceInsight returns neutral copy for rounded zero delta', () {
+    final insight = buildPriceInsight(
+      currentPrice: 10.04,
+      referencePrice: 10,
+    );
+
+    expect(insight, isNotNull);
+    expect(insight!.direction, PriceInsightDirection.same);
+    expect(insight.percentDelta, closeTo(0.4, 0.0001));
     expect(insight.label, 'Mesmo preco da ultima compra');
   });
 
