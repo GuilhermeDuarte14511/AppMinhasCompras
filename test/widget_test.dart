@@ -340,6 +340,7 @@ void main() {
           name: 'Molho de Tomate',
           barcode: '7890000003333',
           unitPrice: 10,
+          category: ShoppingCategory.cleaning,
         ),
       ]),
     );
@@ -350,6 +351,10 @@ void main() {
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Código de barras (opcional)'),
       '1111111111111',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Valor unitário'),
+      '999',
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Molho de Tomate'));
@@ -371,8 +376,69 @@ void main() {
           ?.text,
       '7890000003333',
     );
-    expect(_textContains('10,00'), findsWidgets);
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.widgetWithText(TextFormField, 'Valor unitário'),
+          )
+          .controller
+          ?.text,
+      'R\$\u00A010,00',
+    );
+    expect(
+      tester
+          .widget<DropdownButtonFormField<ShoppingCategory>>(
+            find.byType(DropdownButtonFormField<ShoppingCategory>),
+          )
+          .initialValue,
+      ShoppingCategory.cleaning,
+    );
   });
+
+  testWidgets(
+    'Selecting a catalog suggestion clears stale manual price without saved price',
+    (WidgetTester tester) async {
+      await _pumpApp(
+        tester,
+        catalogStorage: _MemoryProductCatalogStorage([
+          CatalogProduct(
+            id: uniqueId(),
+            name: 'Molho de Tomate',
+            category: ShoppingCategory.grocery,
+            barcode: '7890000004444',
+            unitPrice: null,
+            usageCount: 10,
+            updatedAt: DateTime(2026, 4, 1),
+            priceHistory: const <PriceHistoryEntry>[],
+          ),
+        ]),
+      );
+
+      await _createListFromDashboard(tester, 'Compra sem preco');
+      await _openAddItemSheet(tester);
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Item'),
+        'molho',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Valor unitário'),
+        '999',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Molho de Tomate'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.widgetWithText(TextFormField, 'Valor unitário'),
+            )
+            .controller
+            ?.text,
+        isEmpty,
+      );
+    },
+  );
 
   testWidgets('Add item sheet can add multiple catalog products', (
     WidgetTester tester,
@@ -726,6 +792,7 @@ CatalogProduct _catalogProduct({
   required String name,
   required String barcode,
   required double unitPrice,
+  ShoppingCategory category = ShoppingCategory.grocery,
   int usageCount = 10,
   DateTime? updatedAt,
 }) {
@@ -733,7 +800,7 @@ CatalogProduct _catalogProduct({
   return CatalogProduct(
     id: uniqueId(),
     name: name,
-    category: ShoppingCategory.grocery,
+    category: category,
     unitPrice: unitPrice,
     barcode: barcode,
     usageCount: usageCount,

@@ -1828,7 +1828,9 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     final price = product.unitPrice;
     if (price != null && price > 0) {
       _priceController.text = _currencyFormatter.formatValue(price);
+      return;
     }
+    _priceController.clear();
   }
 
   void _applyLookupResult(ProductLookupResult result) {
