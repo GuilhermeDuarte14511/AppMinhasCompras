@@ -1680,11 +1680,21 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
         continue;
       }
       suggestions.add(product);
-      if (suggestions.length >= 6) {
-        break;
-      }
     }
-    return suggestions;
+    suggestions.sort(_compareCatalogSuggestions);
+    return suggestions.take(6).toList(growable: false);
+  }
+
+  int _compareCatalogSuggestions(CatalogProduct a, CatalogProduct b) {
+    final byUsage = b.usageCount.compareTo(a.usageCount);
+    if (byUsage != 0) {
+      return byUsage;
+    }
+    final byDate = b.updatedAt.compareTo(a.updatedAt);
+    if (byDate != 0) {
+      return byDate;
+    }
+    return normalizeQuery(a.name).compareTo(normalizeQuery(b.name));
   }
 
   Future<void> _applySuggestion(CatalogProduct product) async {

@@ -248,6 +248,88 @@ void main() {
     expect(find.text('Produtos encontrados'), findsOneWidget);
   });
 
+  testWidgets('Item editor ranks rich catalog suggestions and limits to 6', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      catalogStorage: _MemoryProductCatalogStorage([
+        _catalogProduct(
+          name: 'Tomate Alfa',
+          barcode: '7890000001101',
+          unitPrice: 2,
+          usageCount: 1,
+          updatedAt: DateTime(2026, 4, 1, 8),
+        ),
+        _catalogProduct(
+          name: 'Tomate Beta',
+          barcode: '7890000001102',
+          unitPrice: 2,
+          usageCount: 1,
+          updatedAt: DateTime(2026, 4, 1, 9),
+        ),
+        _catalogProduct(
+          name: 'Tomate Gama',
+          barcode: '7890000001103',
+          unitPrice: 2,
+          usageCount: 1,
+          updatedAt: DateTime(2026, 4, 1, 10),
+        ),
+        _catalogProduct(
+          name: 'Tomate Delta',
+          barcode: '7890000001104',
+          unitPrice: 2,
+          usageCount: 1,
+          updatedAt: DateTime(2026, 4, 1, 11),
+        ),
+        _catalogProduct(
+          name: 'Tomate Epsilon',
+          barcode: '7890000001105',
+          unitPrice: 2,
+          usageCount: 1,
+          updatedAt: DateTime(2026, 4, 1, 12),
+        ),
+        _catalogProduct(
+          name: 'Tomate Zeta',
+          barcode: '7890000001106',
+          unitPrice: 2,
+          usageCount: 1,
+          updatedAt: DateTime(2026, 4, 1, 13),
+        ),
+        _catalogProduct(
+          name: 'Tomate Premium',
+          barcode: '7890000001107',
+          unitPrice: 2,
+          usageCount: 90,
+          updatedAt: DateTime(2026, 3, 1),
+        ),
+        _catalogProduct(
+          name: 'Tomate Favorito',
+          barcode: '7890000001108',
+          unitPrice: 2,
+          usageCount: 80,
+          updatedAt: DateTime(2026, 2, 1),
+        ),
+      ]),
+    );
+
+    await _createListFromDashboard(tester, 'Ranking guiado');
+    await _openAddItemSheet(tester);
+    await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'to');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tomate Premium'), findsOneWidget);
+    expect(find.text('Tomate Favorito'), findsOneWidget);
+    expect(find.text('Tomate Zeta'), findsOneWidget);
+    expect(find.text('Tomate Epsilon'), findsOneWidget);
+    expect(find.text('Tomate Delta'), findsOneWidget);
+    expect(find.text('Tomate Gama'), findsOneWidget);
+    expect(find.text('Tomate Beta'), findsNothing);
+    expect(find.text('Tomate Alfa'), findsNothing);
+    expect(find.text('7890000001107'), findsOneWidget);
+    expect(find.text('7890000001108'), findsOneWidget);
+  });
+
   testWidgets('Add item sheet can add multiple catalog products', (
     WidgetTester tester,
   ) async {
