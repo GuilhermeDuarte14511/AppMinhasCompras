@@ -217,6 +217,37 @@ void main() {
     expect(_textContains('12,34'), findsWidgets);
   });
 
+  testWidgets('Item editor shows rich catalog suggestions for partial text', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      catalogStorage: _MemoryProductCatalogStorage([
+        _catalogProduct(
+          name: 'Tomate Italiano',
+          barcode: '7890000001111',
+          unitPrice: 10,
+        ),
+        _catalogProduct(
+          name: 'Tomilho',
+          barcode: '7890000002222',
+          unitPrice: 5,
+        ),
+      ]),
+    );
+
+    await _createListFromDashboard(tester, 'Compra guiada');
+    await _openAddItemSheet(tester);
+    await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'to');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tomate Italiano'), findsOneWidget);
+    expect(find.text('Tomilho'), findsOneWidget);
+    expect(find.text('7890000001111'), findsOneWidget);
+    expect(find.text('7890000002222'), findsOneWidget);
+    expect(find.text('Produtos encontrados'), findsOneWidget);
+  });
+
   testWidgets('Add item sheet can add multiple catalog products', (
     WidgetTester tester,
   ) async {

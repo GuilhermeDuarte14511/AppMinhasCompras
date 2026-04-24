@@ -2316,7 +2316,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
     final draft = await showShoppingItemEditorSheet(
       context,
       blockedNormalizedNames: blockedNames,
-      suggestionCatalog: widget.store.suggestProductNames(limit: 30),
+      catalogProducts: widget.store.catalogProducts,
       onLookupBarcode: widget.store.lookupProductByBarcode,
       onLookupCatalogByName: widget.store.lookupCatalogProductByName,
     );
@@ -2340,7 +2340,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
       context,
       existingItem: _editableItemFromCatalog(product),
       blockedNormalizedNames: blockedNames,
-      suggestionCatalog: widget.store.suggestProductNames(limit: 30),
+      catalogProducts: widget.store.catalogProducts,
       onLookupBarcode: widget.store.lookupProductByBarcode,
       onLookupCatalogByName: widget.store.lookupCatalogProductByName,
     );
@@ -5356,13 +5356,12 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         .where((item) => existing == null || item.id != existing.id)
         .map((item) => normalizeQuery(item.name))
         .toSet();
-    final suggestionCatalog = _itemSuggestionCatalog();
 
     if (existing == null) {
       final drafts = await showShoppingItemsEditorSheet(
         context,
         blockedNormalizedNames: blockedNames,
-        suggestionCatalog: suggestionCatalog,
+        catalogProducts: widget.store.catalogProducts,
         onLookupBarcode: widget.store.lookupProductByBarcode,
         onLookupCatalogByName: widget.store.lookupCatalogProductByName,
       );
@@ -5390,7 +5389,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       context,
       existingItem: existing,
       blockedNormalizedNames: blockedNames,
-      suggestionCatalog: suggestionCatalog,
+      catalogProducts: widget.store.catalogProducts,
       onLookupBarcode: widget.store.lookupProductByBarcode,
       onLookupCatalogByName: widget.store.lookupCatalogProductByName,
     );
@@ -5432,18 +5431,6 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
 
     _updateList(_list.copyWith(items: items), message: 'Produto atualizado.');
     unawaited(widget.store.saveDraftToCatalog(draft));
-  }
-
-  List<String> _itemSuggestionCatalog() {
-    final suggestions = <String>[
-      for (final product in widget.store.catalogProducts) product.name,
-      ...widget.store.suggestProductNames(currentListId: _list.id, limit: 30),
-    ];
-    final seen = <String>{};
-    return [
-      for (final name in suggestions)
-        if (seen.add(normalizeQuery(name))) name,
-    ];
   }
 
   ShoppingItem _shoppingItemFromDraft(ShoppingItemDraft draft) {

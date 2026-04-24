@@ -1543,7 +1543,7 @@ Future<ShoppingItemDraft?> showShoppingItemEditorSheet(
   BuildContext context, {
   ShoppingItem? existingItem,
   Set<String> blockedNormalizedNames = const <String>{},
-  List<String> suggestionCatalog = const <String>[],
+  List<CatalogProduct> catalogProducts = const <CatalogProduct>[],
   Future<ProductLookupResult> Function(String barcode)? onLookupBarcode,
   Future<CatalogProduct?> Function(String name)? onLookupCatalogByName,
   ShoppingItemEditorMode mode = ShoppingItemEditorMode.listItem,
@@ -1557,7 +1557,7 @@ Future<ShoppingItemDraft?> showShoppingItemEditorSheet(
       return _ShoppingItemEditorSheet(
         existingItem: existingItem,
         blockedNormalizedNames: blockedNormalizedNames,
-        suggestionCatalog: suggestionCatalog,
+        catalogProducts: catalogProducts,
         onLookupBarcode: onLookupBarcode,
         onLookupCatalogByName: onLookupCatalogByName,
         mode: mode,
@@ -1570,7 +1570,7 @@ Future<ShoppingItemDraft?> showShoppingItemEditorSheet(
 Future<List<ShoppingItemDraft>?> showShoppingItemsEditorSheet(
   BuildContext context, {
   Set<String> blockedNormalizedNames = const <String>{},
-  List<String> suggestionCatalog = const <String>[],
+  List<CatalogProduct> catalogProducts = const <CatalogProduct>[],
   Future<ProductLookupResult> Function(String barcode)? onLookupBarcode,
   Future<CatalogProduct?> Function(String name)? onLookupCatalogByName,
 }) {
@@ -1583,7 +1583,7 @@ Future<List<ShoppingItemDraft>?> showShoppingItemsEditorSheet(
       return _ShoppingItemEditorSheet(
         existingItem: null,
         blockedNormalizedNames: blockedNormalizedNames,
-        suggestionCatalog: suggestionCatalog,
+        catalogProducts: catalogProducts,
         onLookupBarcode: onLookupBarcode,
         onLookupCatalogByName: onLookupCatalogByName,
         mode: ShoppingItemEditorMode.listItem,
@@ -1597,7 +1597,7 @@ class _ShoppingItemEditorSheet extends StatefulWidget {
   const _ShoppingItemEditorSheet({
     required this.existingItem,
     required this.blockedNormalizedNames,
-    required this.suggestionCatalog,
+    required this.catalogProducts,
     required this.onLookupBarcode,
     required this.onLookupCatalogByName,
     required this.mode,
@@ -1606,7 +1606,7 @@ class _ShoppingItemEditorSheet extends StatefulWidget {
 
   final ShoppingItem? existingItem;
   final Set<String> blockedNormalizedNames;
-  final List<String> suggestionCatalog;
+  final List<CatalogProduct> catalogProducts;
   final Future<ProductLookupResult> Function(String barcode)? onLookupBarcode;
   final Future<CatalogProduct?> Function(String name)? onLookupCatalogByName;
   final ShoppingItemEditorMode mode;
@@ -1627,7 +1627,6 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
   late final TextEditingController _priceController;
   final FocusNode _nameFocusNode = FocusNode();
   late ShoppingCategory _selectedCategory;
-  late final List<String> _normalizedSuggestionCatalog;
   bool _isLookingUpBarcode = false;
   bool _isLookingUpCatalog = false;
   String? _lookupFeedback;
@@ -1653,26 +1652,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     );
     _selectedCategory =
         widget.existingItem?.category ?? ShoppingCategory.grocery;
-    _normalizedSuggestionCatalog = _buildSuggestionCatalog(
-      widget.suggestionCatalog,
-    );
     _nameController.addListener(_handleNameChanged);
-  }
-
-  List<String> _buildSuggestionCatalog(List<String> source) {
-    final seen = <String>{};
-    final values = <String>[];
-    for (final raw in source) {
-      final trimmed = raw.trim();
-      if (trimmed.isEmpty) {
-        continue;
-      }
-      final normalized = normalizeQuery(trimmed);
-      if (seen.add(normalized)) {
-        values.add(trimmed);
-      }
-    }
-    return values;
   }
 
   void _handleNameChanged() {
@@ -1688,18 +1668,18 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     }
   }
 
-  List<String> get _matchingSuggestions {
+  List<CatalogProduct> get _matchingCatalogSuggestions {
     final query = normalizeQuery(_nameController.text);
-    final suggestions = <String>[];
-    for (final value in _normalizedSuggestionCatalog) {
-      final normalized = normalizeQuery(value);
+    final suggestions = <CatalogProduct>[];
+    for (final product in widget.catalogProducts) {
+      final normalized = normalizeQuery(product.name);
       final shouldInclude = query.isEmpty ? true : normalized.contains(query);
       if (!shouldInclude ||
           normalized == query ||
           _blockedNormalizedNames.contains(normalized)) {
         continue;
       }
-      suggestions.add(value);
+      suggestions.add(product);
       if (suggestions.length >= 6) {
         break;
       }
@@ -1707,11 +1687,18 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     return suggestions;
   }
 
-  Future<void> _applySuggestion(String value) async {
+  Future<void> _applySuggestion(CatalogProduct product) async {
+    final value = product.name;
     _nameController
       ..text = value
       ..selection = TextSelection.collapsed(offset: value.length);
-    await _lookupCatalogByName(value, true);
+    _applyCatalogProduct(product);
+    setState(() {
+      final latestPrice = product.unitPrice;
+      _lookupFeedback = latestPrice != null && latestPrice > 0
+          ? 'Sugestão local aplicada com último preço salvo (${formatCurrency(latestPrice)}).'
+          : 'Sugestão local aplicada a partir do catálogo.';
+    });
   }
 
   Set<String> get _blockedNormalizedNames {
@@ -2111,7 +2098,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                 },
                 onFieldSubmitted: (_) => _lookupCatalogByName(),
               ),
-              if (_matchingSuggestions.isNotEmpty) ...[
+              if (_matchingCatalogSuggestions.isNotEmpty) ...[
                 const SizedBox(height: 10),
                 Text(
                   'Produtos encontrados',
@@ -2120,16 +2107,12 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                Column(
                   children: [
-                    for (final suggestion in _matchingSuggestions)
-                      ActionChip(
-                        avatar: const Icon(Icons.inventory_2_rounded, size: 16),
-                        label: Text(suggestion),
-                        onPressed: () =>
-                            unawaited(_applySuggestion(suggestion)),
+                    for (final suggestion in _matchingCatalogSuggestions)
+                      _CatalogSuggestionTile(
+                        product: suggestion,
+                        onTap: () => unawaited(_applySuggestion(suggestion)),
                       ),
                   ],
                 ),
@@ -2296,6 +2279,25 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CatalogSuggestionTile extends StatelessWidget {
+  const _CatalogSuggestionTile({required this.product, required this.onTap});
+
+  final CatalogProduct product;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.inventory_2_rounded),
+      title: Text(product.name),
+      subtitle: Text(product.barcode ?? 'Sem codigo'),
+      onTap: onTap,
     );
   }
 }
