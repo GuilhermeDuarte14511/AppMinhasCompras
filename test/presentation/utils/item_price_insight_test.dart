@@ -50,10 +50,31 @@ void main() {
     expect(insight.label, 'Mesmo preco da ultima compra');
   });
 
+  test('buildPriceInsight returns neutral copy for rounded zero negative delta', () {
+    final insight = buildPriceInsight(
+      currentPrice: 9.96,
+      referencePrice: 10,
+    );
+
+    expect(insight, isNotNull);
+    expect(insight!.direction, PriceInsightDirection.same);
+    expect(insight.percentDelta, closeTo(-0.4, 0.0001));
+    expect(insight.label, 'Mesmo preco da ultima compra');
+  });
+
   test('buildPriceInsight returns null with invalid reference', () {
     final insight = buildPriceInsight(
       currentPrice: 10,
       referencePrice: 0,
+    );
+
+    expect(insight, isNull);
+  });
+
+  test('buildPriceInsight returns null with invalid current price', () {
+    final insight = buildPriceInsight(
+      currentPrice: 0,
+      referencePrice: 10,
     );
 
     expect(insight, isNull);
