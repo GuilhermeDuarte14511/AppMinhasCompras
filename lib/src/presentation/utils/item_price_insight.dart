@@ -1,5 +1,7 @@
 enum PriceInsightDirection { down, same, up }
 
+const _priceInsightTolerance = 0.0001;
+
 class ItemPriceInsight {
   const ItemPriceInsight({
     required this.direction,
@@ -21,7 +23,7 @@ ItemPriceInsight? buildPriceInsight({
   }
 
   final percentDelta = ((currentPrice - referencePrice) / referencePrice) * 100;
-  if (percentDelta.abs() < 0.0001) {
+  if (percentDelta.abs() < _priceInsightTolerance) {
     return const ItemPriceInsight(
       direction: PriceInsightDirection.same,
       percentDelta: 0,

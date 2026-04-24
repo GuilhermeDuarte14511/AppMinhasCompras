@@ -14,6 +14,7 @@ import '../data/services/fiscal_receipt_parser.dart';
 import '../domain/classifications.dart';
 import '../domain/models_and_utils.dart';
 import 'extensions/classification_ui_extensions.dart';
+import 'utils/item_price_insight.dart';
 import 'utils/app_modal.dart';
 import 'utils/time_utils.dart';
 
@@ -1697,6 +1698,21 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     return normalizeQuery(a.name).compareTo(normalizeQuery(b.name));
   }
 
+  ItemPriceInsight? get _currentPriceInsight {
+    final product = _catalogMatch;
+    final currentPrice = BrlCurrencyInputFormatter.tryParse(
+      _priceController.text,
+    );
+    final referencePrice = product?.unitPrice;
+    if (product == null || currentPrice == null || referencePrice == null) {
+      return null;
+    }
+    return buildPriceInsight(
+      currentPrice: currentPrice,
+      referencePrice: referencePrice,
+    );
+  }
+
   Future<void> _applySuggestion(CatalogProduct product) async {
     final value = product.name;
     _nameController
@@ -1986,6 +2002,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
         ? (isCatalogMode ? 'Salvar produto' : 'Salvar item')
         : (isCatalogMode ? 'Adicionar produto' : 'Adicionar item');
     final nameLabel = isCatalogMode ? 'Produto' : 'Item';
+    final priceInsight = _currentPriceInsight;
 
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
@@ -2007,6 +2024,13 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
               const SizedBox(height: 4),
               Text(
                 'Scanner opcional: você pode escanear ou preencher tudo na mão.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Digite parte do nome para buscar no catálogo, toque numa sugestão e ajuste o valor para comparar o preço na hora.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -2170,6 +2194,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                     prefixIcon: Icon(Icons.monetization_on_rounded),
                     hintText: 'R\$ 0,00',
                   ),
+                  onChanged: (_) => setState(() {}),
                   validator: (value) {
                     final parsed = BrlCurrencyInputFormatter.tryParse(
                       value ?? '',
@@ -2217,6 +2242,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                           prefixIcon: Icon(Icons.monetization_on_rounded),
                           hintText: 'R\$ 0,00',
                         ),
+                        onChanged: (_) => setState(() {}),
                         validator: (value) {
                           final parsed = BrlCurrencyInputFormatter.tryParse(
                             value ?? '',
@@ -2231,6 +2257,10 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                     ),
                   ],
                 ),
+              if (priceInsight != null) ...[
+                const SizedBox(height: 10),
+                _ItemPriceInsightBanner(insight: priceInsight),
+              ],
               if (_catalogMatch != null) ...[
                 const SizedBox(height: 10),
                 _CatalogPriceHint(product: _catalogMatch!),
@@ -2286,6 +2316,63 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                 ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ItemPriceInsightBanner extends StatelessWidget {
+  const _ItemPriceInsightBanner({required this.insight});
+
+  final ItemPriceInsight insight;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final (
+      backgroundColor,
+      foregroundColor,
+      icon,
+    ) = switch (insight.direction) {
+      PriceInsightDirection.down => (
+        colorScheme.primaryContainer.withValues(alpha: 0.78),
+        colorScheme.onPrimaryContainer,
+        Icons.south_rounded,
+      ),
+      PriceInsightDirection.same => (
+        colorScheme.secondaryContainer.withValues(alpha: 0.78),
+        colorScheme.onSecondaryContainer,
+        Icons.remove_rounded,
+      ),
+      PriceInsightDirection.up => (
+        colorScheme.errorContainer.withValues(alpha: 0.86),
+        colorScheme.onErrorContainer,
+        Icons.north_rounded,
+      ),
+    };
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: foregroundColor),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                insight.label,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: foregroundColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
