@@ -1813,21 +1813,18 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
   void _applyCatalogProduct(CatalogProduct product) {
     _catalogMatch = product;
     final productName = product.name.trim();
-    if (productName.isNotEmpty &&
-        normalizeQuery(_nameController.text) == normalizeQuery(productName)) {
-      _nameController
-        ..text = productName
-        ..selection = TextSelection.collapsed(offset: productName.length);
-    }
+
+    _nameController
+      ..text = productName
+      ..selection = TextSelection.collapsed(offset: productName.length);
+
     _selectedCategory = product.category;
+
     final barcode = product.barcode;
-    if (barcode != null &&
-        barcode.isNotEmpty &&
-        _barcodeController.text.trim().isEmpty) {
-      _barcodeController
-        ..text = barcode
-        ..selection = TextSelection.collapsed(offset: barcode.length);
-    }
+    _barcodeController
+      ..text = barcode ?? ''
+      ..selection = TextSelection.collapsed(offset: (barcode ?? '').length);
+
     final price = product.unitPrice;
     if (price != null && price > 0) {
       _priceController.text = _currencyFormatter.formatValue(price);

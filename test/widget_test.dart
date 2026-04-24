@@ -330,6 +330,50 @@ void main() {
     expect(find.text('7890000001108'), findsOneWidget);
   });
 
+  testWidgets('Selecting a catalog suggestion overwrites manual item data', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      catalogStorage: _MemoryProductCatalogStorage([
+        _catalogProduct(
+          name: 'Molho de Tomate',
+          barcode: '7890000003333',
+          unitPrice: 10,
+        ),
+      ]),
+    );
+
+    await _createListFromDashboard(tester, 'Compra inteligente');
+    await _openAddItemSheet(tester);
+    await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'molho');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Código de barras (opcional)'),
+      '1111111111111',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Molho de Tomate'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<TextFormField>(find.widgetWithText(TextFormField, 'Item'))
+          .controller
+          ?.text,
+      'Molho de Tomate',
+    );
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.widgetWithText(TextFormField, 'Código de barras (opcional)'),
+          )
+          .controller
+          ?.text,
+      '7890000003333',
+    );
+    expect(_textContains('10,00'), findsWidgets);
+  });
+
   testWidgets('Add item sheet can add multiple catalog products', (
     WidgetTester tester,
   ) async {
