@@ -543,6 +543,53 @@ void main() {
     },
   );
 
+  testWidgets(
+    'Clearing barcode while editing removes live price insight label',
+    (WidgetTester tester) async {
+      await _pumpApp(
+        tester,
+        catalogStorage: _MemoryProductCatalogStorage([
+          _catalogProduct(
+            name: 'Molho de Tomate',
+            barcode: '7890000003333',
+            unitPrice: 10,
+          ),
+        ]),
+      );
+
+      await _createListFromDashboard(tester, 'Insight invalido por codigo');
+      await _openAddItemSheet(tester);
+      await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'molho');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Molho de Tomate'));
+      await tester.pumpAndSettle();
+      await _tapVisibleButton<FilledButton>(tester, 'Adicionar item');
+
+      await _tapItemActionIcon(
+        tester,
+        itemName: 'Molho de Tomate',
+        icon: Icons.edit_rounded,
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Valor unitário'),
+        '850',
+      );
+      await tester.pumpAndSettle();
+
+      expect(_textContains('menor que o ultimo preco salvo'), findsOneWidget);
+      expect(_textContains('Preço sugerido:'), findsOneWidget);
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Código de barras (opcional)'),
+        '',
+      );
+      await tester.pumpAndSettle();
+
+      expect(_textContains('menor que o ultimo preco salvo'), findsNothing);
+      expect(_textContains('Preço sugerido:'), findsNothing);
+    },
+  );
+
   testWidgets('Add item sheet can add multiple catalog products', (
     WidgetTester tester,
   ) async {

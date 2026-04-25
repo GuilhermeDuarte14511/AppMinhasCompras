@@ -1654,7 +1654,8 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     _selectedCategory =
         widget.existingItem?.category ?? ShoppingCategory.grocery;
     _catalogMatch = _catalogProductFromExistingItem(widget.existingItem);
-    _nameController.addListener(_handleNameChanged);
+    _nameController.addListener(_handleCatalogMatchChanged);
+    _barcodeController.addListener(_handleCatalogMatchChanged);
   }
 
   CatalogProduct? _catalogProductFromExistingItem(ShoppingItem? item) {
@@ -1675,12 +1676,17 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     return null;
   }
 
-  void _handleNameChanged() {
+  void _handleCatalogMatchChanged() {
     final currentName = normalizeQuery(_nameController.text);
     final catalogName = _catalogMatch == null
         ? ''
         : normalizeQuery(_catalogMatch!.name);
-    if (_catalogMatch != null && currentName != catalogName) {
+    final currentBarcode = sanitizeBarcode(_barcodeController.text);
+    final catalogBarcode = _catalogMatch == null
+        ? null
+        : sanitizeBarcode(_catalogMatch!.barcode);
+    if (_catalogMatch != null &&
+        (currentName != catalogName || currentBarcode != catalogBarcode)) {
       _catalogMatch = null;
     }
     if (mounted) {
@@ -1846,7 +1852,6 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
   }
 
   void _applyCatalogProduct(CatalogProduct product) {
-    _catalogMatch = product;
     final productName = product.name.trim();
 
     _nameController
@@ -1863,9 +1868,11 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     final price = product.unitPrice;
     if (price != null && price > 0) {
       _priceController.text = _currencyFormatter.formatValue(price);
+      _catalogMatch = product;
       return;
     }
     _priceController.clear();
+    _catalogMatch = product;
   }
 
   void _applyLookupResult(ProductLookupResult result) {
@@ -1919,7 +1926,8 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
 
   @override
   void dispose() {
-    _nameController.removeListener(_handleNameChanged);
+    _nameController.removeListener(_handleCatalogMatchChanged);
+    _barcodeController.removeListener(_handleCatalogMatchChanged);
     _nameController.dispose();
     _barcodeController.dispose();
     _quantityController.dispose();
