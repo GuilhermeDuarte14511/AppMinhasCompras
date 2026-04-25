@@ -1663,69 +1663,16 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     }
 
     final barcode = sanitizeBarcode(item.barcode);
-    if (barcode != null && barcode.isNotEmpty) {
-      for (final product in widget.catalogProducts) {
-        if (product.barcode == barcode &&
-            _hasIndependentCatalogSignal(product, item)) {
-          return product;
-        }
+    if (barcode == null || barcode.isEmpty) {
+      return null;
+    }
+
+    for (final product in widget.catalogProducts) {
+      if (product.barcode == barcode) {
+        return product;
       }
-    }
-
-    final normalizedName = normalizeQuery(item.name);
-    if (normalizedName.isEmpty) {
-      return null;
-    }
-
-    final nameMatches = widget.catalogProducts.where((product) {
-      return normalizeQuery(product.name) == normalizedName;
-    }).toList(growable: false);
-    if (nameMatches.isEmpty) {
-      return null;
-    }
-
-    final categoryMatches = nameMatches.where((product) {
-      return product.category == item.category;
-    }).toList(growable: false);
-    if (categoryMatches.length == 1) {
-      final match = categoryMatches.single;
-      return _hasIndependentCatalogSignal(match, item) ? match : null;
-    }
-    if (nameMatches.length == 1 && (barcode == null || barcode.isEmpty)) {
-      final match = nameMatches.single;
-      return _hasIndependentCatalogSignal(match, item) ? match : null;
     }
     return null;
-  }
-
-  bool _hasIndependentCatalogSignal(CatalogProduct product, ShoppingItem item) {
-    if (product.usageCount > 1) {
-      return true;
-    }
-
-    if (product.category != item.category ||
-        normalizeQuery(product.name) != normalizeQuery(item.name) ||
-        product.barcode != sanitizeBarcode(item.barcode) ||
-        product.unitPrice != item.unitPrice) {
-      return true;
-    }
-
-    final itemHistory = item.priceHistory;
-    final productHistory = product.priceHistory;
-    if (productHistory.length != itemHistory.length) {
-      return true;
-    }
-
-    for (var index = 0; index < productHistory.length; index++) {
-      final productEntry = productHistory[index];
-      final itemEntry = itemHistory[index];
-      if (productEntry.price != itemEntry.price ||
-          productEntry.recordedAt != itemEntry.recordedAt) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
   void _handleNameChanged() {

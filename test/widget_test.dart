@@ -506,7 +506,7 @@ void main() {
   );
 
   testWidgets(
-    'Editing existing manual item does not show live price insight label',
+    'Editing existing manual same-name item does not show live price insight label',
     (WidgetTester tester) async {
       await _pumpApp(
         tester,
@@ -522,14 +522,14 @@ void main() {
       await _createListFromDashboard(tester, 'Item manual');
       await _addItem(
         tester,
-        name: 'Arroz Solto',
+        name: 'Molho de Tomate',
         quantity: '1',
         unitValueDigits: '1000',
       );
 
       await _tapItemActionIcon(
         tester,
-        itemName: 'Arroz Solto',
+        itemName: 'Molho de Tomate',
         icon: Icons.edit_rounded,
       );
       await tester.enterText(
