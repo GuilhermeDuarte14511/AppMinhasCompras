@@ -468,6 +468,38 @@ void main() {
     expect(_textContains('menor que o ultimo preco salvo'), findsOneWidget);
   });
 
+  testWidgets('Equal suggested price shows neutral label', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      catalogStorage: _MemoryProductCatalogStorage([
+        _catalogProduct(
+          name: 'Molho de Tomate',
+          barcode: '7890000003333',
+          unitPrice: 10,
+        ),
+      ]),
+    );
+
+    await _createListFromDashboard(tester, 'Insight neutro');
+    await _openAddItemSheet(tester);
+    await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'molho');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Molho de Tomate'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Valor unitário'),
+      '1000',
+    );
+    await tester.pumpAndSettle();
+
+    expect(_textContains('Mesmo preco da ultima compra'), findsOneWidget);
+    expect(_textContains('menor que o ultimo preco salvo'), findsNothing);
+    expect(_textContains('maior que o ultimo preco salvo'), findsNothing);
+  });
+
   testWidgets(
     'Editing existing catalog-backed item shows live price insight label',
     (WidgetTester tester) async {
@@ -589,6 +621,149 @@ void main() {
       expect(_textContains('Preço sugerido:'), findsNothing);
     },
   );
+
+  testWidgets(
+    'Add and continue keeps rich catalog flow for multiple items',
+    (WidgetTester tester) async {
+      await _pumpApp(
+        tester,
+        catalogStorage: _MemoryProductCatalogStorage([
+          _catalogProduct(
+            name: 'Banana Prata',
+            barcode: '7890000001111',
+            unitPrice: 6.99,
+          ),
+          _catalogProduct(
+            name: 'Leite Integral',
+            barcode: '7890000002222',
+            unitPrice: 4.79,
+          ),
+        ]),
+      );
+
+      await _createListFromDashboard(tester, 'Compra guiada em fila');
+      await _openAddItemSheet(tester);
+      await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'ban');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Banana Prata'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.widgetWithText(TextFormField, 'Código de barras (opcional)'),
+            )
+            .controller
+            ?.text,
+        '7890000001111',
+      );
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.widgetWithText(TextFormField, 'Valor unitário'),
+            )
+            .controller
+            ?.text,
+        isNotEmpty,
+      );
+      expect(_textContains('Preço sugerido:'), findsOneWidget);
+
+      await _tapVisibleButton<OutlinedButton>(tester, 'Adicionar e continuar');
+
+      expect(_textContains('1 item pronto: Banana Prata'), findsOneWidget);
+      expect(
+        _textContains('Banana Prata adicionado. Continue com o próximo.'),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<TextFormField>(find.widgetWithText(TextFormField, 'Item'))
+            .controller
+            ?.text,
+        isEmpty,
+      );
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.widgetWithText(TextFormField, 'Código de barras (opcional)'),
+            )
+            .controller
+            ?.text,
+        isEmpty,
+      );
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.widgetWithText(TextFormField, 'Valor unitário'),
+            )
+            .controller
+            ?.text,
+        isEmpty,
+      );
+      expect(_textContains('Preço sugerido:'), findsNothing);
+      expect(find.text('Banana Prata'), findsNothing);
+
+      await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'lei');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Leite Integral'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.widgetWithText(TextFormField, 'Código de barras (opcional)'),
+            )
+            .controller
+            ?.text,
+        '7890000002222',
+      );
+      expect(_textContains('Preço sugerido:'), findsOneWidget);
+
+      await _tapVisibleButton<FilledButton>(tester, 'Adicionar item');
+
+      expect(find.text('Banana Prata'), findsOneWidget);
+      expect(find.text('Leite Integral'), findsOneWidget);
+    },
+  );
+
+  testWidgets('Manual item still saves without using catalog suggestion', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(tester);
+
+    await _createListFromDashboard(tester, 'Fluxo manual A');
+    await _addItem(
+      tester,
+      name: 'Cafe Especial',
+      quantity: '1',
+      unitValueDigits: '1234',
+    );
+
+    expect(find.text('Cafe Especial'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await _createListFromDashboard(tester, 'Fluxo manual B');
+    await _openAddItemSheet(tester);
+    await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'cafe');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cafe Especial'), findsOneWidget);
+
+    await tester.tap(find.text('Cafe Especial'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.widgetWithText(TextFormField, 'Valor unitário'),
+          )
+          .controller
+          ?.text,
+      isNotEmpty,
+    );
+  });
 
   testWidgets('Add item sheet can add multiple catalog products', (
     WidgetTester tester,
