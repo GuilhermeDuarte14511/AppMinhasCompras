@@ -1630,6 +1630,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
   late ShoppingCategory _selectedCategory;
   bool _isLookingUpBarcode = false;
   bool _isLookingUpCatalog = false;
+  bool _isApplyingCatalogProduct = false;
   String? _lookupFeedback;
   CatalogProduct? _catalogMatch;
   final List<ShoppingItemDraft> _pendingDrafts = <ShoppingItemDraft>[];
@@ -1677,21 +1678,35 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
   }
 
   void _handleCatalogMatchChanged() {
+    if (_isApplyingCatalogProduct) {
+      return;
+    }
+
+    final match = _catalogMatch;
+    if (match == null) {
+      if (mounted) {
+        setState(() {});
+      }
+      return;
+    }
+
     final currentName = normalizeQuery(_nameController.text);
-    final catalogName = _catalogMatch == null
-        ? ''
-        : normalizeQuery(_catalogMatch!.name);
-    final currentBarcode = sanitizeBarcode(_barcodeController.text);
-    final catalogBarcode = _catalogMatch == null
-        ? null
-        : sanitizeBarcode(_catalogMatch!.barcode);
-    if (_catalogMatch != null &&
-        (currentName != catalogName || currentBarcode != catalogBarcode)) {
+    final catalogName = normalizeQuery(match.name);
+    final currentBarcode = sanitizeBarcode(_barcodeController.text) ?? '';
+    final catalogBarcode = sanitizeBarcode(match.barcode) ?? '';
+    if (currentName == catalogName && currentBarcode == catalogBarcode) {
+      if (mounted) {
+        setState(() {});
+      }
+      return;
+    }
+
+    setState(() {
       _catalogMatch = null;
-    }
-    if (mounted) {
-      setState(() {});
-    }
+      if (_lookupFeedback?.startsWith('Sugestão local aplicada') == true) {
+        _lookupFeedback = null;
+      }
+    });
   }
 
   List<CatalogProduct> get _matchingCatalogSuggestions {
@@ -1852,27 +1867,32 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
   }
 
   void _applyCatalogProduct(CatalogProduct product) {
-    final productName = product.name.trim();
+    _isApplyingCatalogProduct = true;
+    try {
+      final productName = product.name.trim();
 
-    _nameController
-      ..text = productName
-      ..selection = TextSelection.collapsed(offset: productName.length);
+      _nameController
+        ..text = productName
+        ..selection = TextSelection.collapsed(offset: productName.length);
 
-    _selectedCategory = product.category;
+      _selectedCategory = product.category;
 
-    final barcode = product.barcode;
-    _barcodeController
-      ..text = barcode ?? ''
-      ..selection = TextSelection.collapsed(offset: (barcode ?? '').length);
+      final barcode = product.barcode;
+      _barcodeController
+        ..text = barcode ?? ''
+        ..selection = TextSelection.collapsed(offset: (barcode ?? '').length);
 
-    final price = product.unitPrice;
-    if (price != null && price > 0) {
-      _priceController.text = _currencyFormatter.formatValue(price);
+      final price = product.unitPrice;
+      if (price != null && price > 0) {
+        _priceController.text = _currencyFormatter.formatValue(price);
+        _catalogMatch = product;
+        return;
+      }
+      _priceController.clear();
       _catalogMatch = product;
-      return;
+    } finally {
+      _isApplyingCatalogProduct = false;
     }
-    _priceController.clear();
-    _catalogMatch = product;
   }
 
   void _applyLookupResult(ProductLookupResult result) {
@@ -2107,7 +2127,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                           icon: const Icon(Icons.close_rounded),
                         ),
                 ),
-                onChanged: (_) => setState(() {}),
+                onChanged: (_) => _handleCatalogMatchChanged(),
                 onFieldSubmitted: (_) => _lookupBarcode(),
               ),
               if (_lookupFeedback != null) ...[
@@ -2156,6 +2176,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                   }
                   return null;
                 },
+                onChanged: (_) => _handleCatalogMatchChanged(),
                 onFieldSubmitted: (_) => _lookupCatalogByName(),
               ),
               if (_matchingCatalogSuggestions.isNotEmpty) ...[
