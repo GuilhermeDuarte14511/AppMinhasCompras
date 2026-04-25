@@ -1653,7 +1653,32 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     );
     _selectedCategory =
         widget.existingItem?.category ?? ShoppingCategory.grocery;
+    _catalogMatch = _catalogProductFromExistingItem(widget.existingItem);
     _nameController.addListener(_handleNameChanged);
+  }
+
+  CatalogProduct? _catalogProductFromExistingItem(ShoppingItem? item) {
+    if (item == null || item.unitPrice <= 0) {
+      return null;
+    }
+
+    final history = List<PriceHistoryEntry>.from(item.priceHistory);
+    if (history.isEmpty ||
+        hasMeaningfulPriceDifference(history.last.price, item.unitPrice)) {
+      history.add(
+        PriceHistoryEntry(price: item.unitPrice, recordedAt: DateTime.now()),
+      );
+    }
+
+    return CatalogProduct(
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      unitPrice: item.unitPrice,
+      barcode: item.barcode,
+      updatedAt: history.last.recordedAt,
+      priceHistory: history,
+    );
   }
 
   void _handleNameChanged() {

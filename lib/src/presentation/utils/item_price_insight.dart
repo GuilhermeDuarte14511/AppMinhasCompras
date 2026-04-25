@@ -14,6 +14,10 @@ class ItemPriceInsight {
   final String label;
 }
 
+bool hasMeaningfulPriceDifference(double firstPrice, double secondPrice) {
+  return (firstPrice - secondPrice).abs() >= _priceInsightTolerance;
+}
+
 ItemPriceInsight? buildPriceInsight({
   required double currentPrice,
   required double referencePrice,
@@ -23,7 +27,7 @@ ItemPriceInsight? buildPriceInsight({
   }
 
   final percentDelta = ((currentPrice - referencePrice) / referencePrice) * 100;
-  if (percentDelta.abs() < _priceInsightTolerance) {
+  if (!hasMeaningfulPriceDifference(currentPrice, referencePrice)) {
     return const ItemPriceInsight(
       direction: PriceInsightDirection.same,
       percentDelta: 0,
