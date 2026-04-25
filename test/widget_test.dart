@@ -742,7 +742,7 @@ void main() {
       tester,
       catalogStorage: _MemoryProductCatalogStorage([
         _catalogProduct(
-          name: 'Molho de Tomate',
+          name: 'Cafe Tradicional',
           barcode: '7890000003333',
           unitPrice: 10,
         ),
@@ -753,9 +753,14 @@ void main() {
     await _openAddItemSheet(tester);
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Item'),
-      'Cafe Especial Manual',
+      'Cafe',
     );
     await tester.pumpAndSettle();
+
+    expect(find.text('Produtos encontrados'), findsOneWidget);
+    expect(find.text('Cafe Tradicional'), findsOneWidget);
+    expect(_textContains('Preço sugerido:'), findsNothing);
+
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Quantidade'),
       '2',
@@ -766,12 +771,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Produtos encontrados'), findsNothing);
-    expect(_textContains('Preço sugerido:'), findsNothing);
-
     await _tapVisibleButton<FilledButton>(tester, 'Adicionar item');
 
-    expect(find.text('Cafe Especial Manual'), findsOneWidget);
+    expect(find.text('Cafe'), findsOneWidget);
     expect(_textContains('2 x'), findsOneWidget);
     expect(_textContains('24,68'), findsWidgets);
   });
