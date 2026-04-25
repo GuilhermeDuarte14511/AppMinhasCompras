@@ -491,6 +491,15 @@ void main() {
 
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Valor unitário'),
+      '850',
+    );
+    await tester.pumpAndSettle();
+
+    expect(_textContains('menor que o ultimo preco salvo'), findsOneWidget);
+    expect(_textContains('Mesmo preco da ultima compra'), findsNothing);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Valor unitário'),
       '1000',
     );
     await tester.pumpAndSettle();
@@ -729,7 +738,16 @@ void main() {
   testWidgets('Manual item still saves without using catalog suggestion', (
     WidgetTester tester,
   ) async {
-    await _pumpApp(tester);
+    await _pumpApp(
+      tester,
+      catalogStorage: _MemoryProductCatalogStorage([
+        _catalogProduct(
+          name: 'Molho de Tomate',
+          barcode: '7890000003333',
+          unitPrice: 10,
+        ),
+      ]),
+    );
 
     await _createListFromDashboard(tester, 'Fluxo manual');
     await _openAddItemSheet(tester);
@@ -737,6 +755,7 @@ void main() {
       find.widgetWithText(TextFormField, 'Item'),
       'Cafe Especial Manual',
     );
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Quantidade'),
       '2',
@@ -748,6 +767,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Produtos encontrados'), findsNothing);
+    expect(_textContains('Preço sugerido:'), findsNothing);
 
     await _tapVisibleButton<FilledButton>(tester, 'Adicionar item');
 
