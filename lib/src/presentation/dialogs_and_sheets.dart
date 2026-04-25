@@ -1630,6 +1630,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
   late final List<String> _normalizedSuggestionCatalog;
   bool _isLookingUpBarcode = false;
   bool _isLookingUpCatalog = false;
+  bool _isApplyingCatalogProduct = false;
   String? _lookupFeedback;
   CatalogProduct? _catalogMatch;
   final List<ShoppingItemDraft> _pendingDrafts = <ShoppingItemDraft>[];
@@ -1656,7 +1657,8 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     _normalizedSuggestionCatalog = _buildSuggestionCatalog(
       widget.suggestionCatalog,
     );
-    _nameController.addListener(_handleNameChanged);
+    _nameController.addListener(_handleCatalogMatchChanged);
+    _barcodeController.addListener(_handleCatalogMatchChanged);
   }
 
   List<String> _buildSuggestionCatalog(List<String> source) {
@@ -1675,17 +1677,36 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     return values;
   }
 
-  void _handleNameChanged() {
+  void _handleCatalogMatchChanged() {
+    if (_isApplyingCatalogProduct) {
+      return;
+    }
+
+    final match = _catalogMatch;
+    if (match == null) {
+      if (mounted) {
+        setState(() {});
+      }
+      return;
+    }
+
     final currentName = normalizeQuery(_nameController.text);
-    final catalogName = _catalogMatch == null
-        ? ''
-        : normalizeQuery(_catalogMatch!.name);
-    if (_catalogMatch != null && currentName != catalogName) {
+    final catalogName = normalizeQuery(match.name);
+    final currentBarcode = sanitizeBarcode(_barcodeController.text) ?? '';
+    final catalogBarcode = sanitizeBarcode(match.barcode) ?? '';
+    if (currentName == catalogName && currentBarcode == catalogBarcode) {
+      if (mounted) {
+        setState(() {});
+      }
+      return;
+    }
+
+    setState(() {
       _catalogMatch = null;
-    }
-    if (mounted) {
-      setState(() {});
-    }
+      if (_lookupFeedback?.startsWith('Sugestão local aplicada') == true) {
+        _lookupFeedback = null;
+      }
+    });
   }
 
   List<String> get _matchingSuggestions {
@@ -1814,26 +1835,32 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
   }
 
   void _applyCatalogProduct(CatalogProduct product) {
-    _catalogMatch = product;
-    final productName = product.name.trim();
-    if (productName.isNotEmpty &&
-        normalizeQuery(_nameController.text) == normalizeQuery(productName)) {
-      _nameController
-        ..text = productName
-        ..selection = TextSelection.collapsed(offset: productName.length);
-    }
-    _selectedCategory = product.category;
-    final barcode = product.barcode;
-    if (barcode != null &&
-        barcode.isNotEmpty &&
-        _barcodeController.text.trim().isEmpty) {
-      _barcodeController
-        ..text = barcode
-        ..selection = TextSelection.collapsed(offset: barcode.length);
-    }
-    final price = product.unitPrice;
-    if (price != null && price > 0) {
-      _priceController.text = _currencyFormatter.formatValue(price);
+    _isApplyingCatalogProduct = true;
+    try {
+      _catalogMatch = product;
+      final productName = product.name.trim();
+      if (productName.isNotEmpty &&
+          normalizeQuery(_nameController.text) ==
+              normalizeQuery(productName)) {
+        _nameController
+          ..text = productName
+          ..selection = TextSelection.collapsed(offset: productName.length);
+      }
+      _selectedCategory = product.category;
+      final barcode = product.barcode;
+      if (barcode != null &&
+          barcode.isNotEmpty &&
+          _barcodeController.text.trim().isEmpty) {
+        _barcodeController
+          ..text = barcode
+          ..selection = TextSelection.collapsed(offset: barcode.length);
+      }
+      final price = product.unitPrice;
+      if (price != null && price > 0) {
+        _priceController.text = _currencyFormatter.formatValue(price);
+      }
+    } finally {
+      _isApplyingCatalogProduct = false;
     }
   }
 
@@ -1888,7 +1915,8 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
 
   @override
   void dispose() {
-    _nameController.removeListener(_handleNameChanged);
+    _nameController.removeListener(_handleCatalogMatchChanged);
+    _barcodeController.removeListener(_handleCatalogMatchChanged);
     _nameController.dispose();
     _barcodeController.dispose();
     _quantityController.dispose();
@@ -2060,7 +2088,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                           icon: const Icon(Icons.close_rounded),
                         ),
                 ),
-                onChanged: (_) => setState(() {}),
+                onChanged: (_) => _handleCatalogMatchChanged(),
                 onFieldSubmitted: (_) => _lookupBarcode(),
               ),
               if (_lookupFeedback != null) ...[
@@ -2109,6 +2137,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                   }
                   return null;
                 },
+                onChanged: (_) => _handleCatalogMatchChanged(),
                 onFieldSubmitted: (_) => _lookupCatalogByName(),
               ),
               if (_matchingSuggestions.isNotEmpty) ...[

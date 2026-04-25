@@ -259,6 +259,43 @@ void main() {
     expect(find.text('7890000002222'), findsOneWidget);
   });
 
+  testWidgets('Catalog lookup feedback clears after name diverges', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      catalogStorage: _MemoryProductCatalogStorage([
+        _catalogProduct(
+          name: 'Banana Prata',
+          barcode: '7890000001111',
+          unitPrice: 6.99,
+        ),
+      ]),
+    );
+
+    await _createListFromDashboard(tester, 'Limpeza de feedback');
+
+    await _openAddItemSheet(tester);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Item'),
+      'Banana Prata',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.manage_search_rounded));
+    await tester.pumpAndSettle();
+
+    expect(_textContains('Sugestão local aplicada'), findsOneWidget);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Item'),
+      'Arroz',
+    );
+    await tester.pumpAndSettle();
+
+    expect(_textContains('Sugestão local aplicada'), findsNothing);
+  });
+
   testWidgets('Add item sheet can add and continue from keyboard', (
     WidgetTester tester,
   ) async {
