@@ -731,38 +731,29 @@ void main() {
   ) async {
     await _pumpApp(tester);
 
-    await _createListFromDashboard(tester, 'Fluxo manual A');
-    await _addItem(
-      tester,
-      name: 'Cafe Especial',
-      quantity: '1',
-      unitValueDigits: '1234',
-    );
-
-    expect(find.text('Cafe Especial'), findsOneWidget);
-
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-
-    await _createListFromDashboard(tester, 'Fluxo manual B');
+    await _createListFromDashboard(tester, 'Fluxo manual');
     await _openAddItemSheet(tester);
-    await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'cafe');
-    await tester.pumpAndSettle();
-
-    expect(find.text('Cafe Especial'), findsOneWidget);
-
-    await tester.tap(find.text('Cafe Especial'));
-    await tester.pumpAndSettle();
-
-    expect(
-      tester
-          .widget<TextFormField>(
-            find.widgetWithText(TextFormField, 'Valor unitário'),
-          )
-          .controller
-          ?.text,
-      isNotEmpty,
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Item'),
+      'Cafe Especial Manual',
     );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Quantidade'),
+      '2',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Valor unitário'),
+      '1234',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Produtos encontrados'), findsNothing);
+
+    await _tapVisibleButton<FilledButton>(tester, 'Adicionar item');
+
+    expect(find.text('Cafe Especial Manual'), findsOneWidget);
+    expect(_textContains('2 x'), findsOneWidget);
+    expect(_textContains('24,68'), findsWidgets);
   });
 
   testWidgets('Add item sheet can add multiple catalog products', (
