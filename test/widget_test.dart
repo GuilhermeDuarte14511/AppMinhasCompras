@@ -505,6 +505,44 @@ void main() {
     },
   );
 
+  testWidgets(
+    'Editing existing manual item does not show live price insight label',
+    (WidgetTester tester) async {
+      await _pumpApp(
+        tester,
+        catalogStorage: _MemoryProductCatalogStorage([
+          _catalogProduct(
+            name: 'Molho de Tomate',
+            barcode: '7890000003333',
+            unitPrice: 10,
+          ),
+        ]),
+      );
+
+      await _createListFromDashboard(tester, 'Item manual');
+      await _addItem(
+        tester,
+        name: 'Arroz Solto',
+        quantity: '1',
+        unitValueDigits: '1000',
+      );
+
+      await _tapItemActionIcon(
+        tester,
+        itemName: 'Arroz Solto',
+        icon: Icons.edit_rounded,
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Valor unitário'),
+        '850',
+      );
+      await tester.pumpAndSettle();
+
+      expect(_textContains('menor que o ultimo preco salvo'), findsNothing);
+      expect(_textContains('Preço sugerido:'), findsNothing);
+    },
+  );
+
   testWidgets('Add item sheet can add multiple catalog products', (
     WidgetTester tester,
   ) async {
