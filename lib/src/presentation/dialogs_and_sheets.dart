@@ -14,6 +14,7 @@ import '../data/services/fiscal_receipt_parser.dart';
 import '../domain/classifications.dart';
 import '../domain/models_and_utils.dart';
 import 'extensions/classification_ui_extensions.dart';
+import 'utils/item_price_insight.dart';
 import 'utils/app_modal.dart';
 import 'utils/time_utils.dart';
 
@@ -1543,7 +1544,7 @@ Future<ShoppingItemDraft?> showShoppingItemEditorSheet(
   BuildContext context, {
   ShoppingItem? existingItem,
   Set<String> blockedNormalizedNames = const <String>{},
-  List<String> suggestionCatalog = const <String>[],
+  List<CatalogProduct> catalogProducts = const <CatalogProduct>[],
   Future<ProductLookupResult> Function(String barcode)? onLookupBarcode,
   Future<CatalogProduct?> Function(String name)? onLookupCatalogByName,
   ShoppingItemEditorMode mode = ShoppingItemEditorMode.listItem,
@@ -1557,7 +1558,7 @@ Future<ShoppingItemDraft?> showShoppingItemEditorSheet(
       return _ShoppingItemEditorSheet(
         existingItem: existingItem,
         blockedNormalizedNames: blockedNormalizedNames,
-        suggestionCatalog: suggestionCatalog,
+        catalogProducts: catalogProducts,
         onLookupBarcode: onLookupBarcode,
         onLookupCatalogByName: onLookupCatalogByName,
         mode: mode,
@@ -1570,7 +1571,7 @@ Future<ShoppingItemDraft?> showShoppingItemEditorSheet(
 Future<List<ShoppingItemDraft>?> showShoppingItemsEditorSheet(
   BuildContext context, {
   Set<String> blockedNormalizedNames = const <String>{},
-  List<String> suggestionCatalog = const <String>[],
+  List<CatalogProduct> catalogProducts = const <CatalogProduct>[],
   Future<ProductLookupResult> Function(String barcode)? onLookupBarcode,
   Future<CatalogProduct?> Function(String name)? onLookupCatalogByName,
 }) {
@@ -1583,7 +1584,7 @@ Future<List<ShoppingItemDraft>?> showShoppingItemsEditorSheet(
       return _ShoppingItemEditorSheet(
         existingItem: null,
         blockedNormalizedNames: blockedNormalizedNames,
-        suggestionCatalog: suggestionCatalog,
+        catalogProducts: catalogProducts,
         onLookupBarcode: onLookupBarcode,
         onLookupCatalogByName: onLookupCatalogByName,
         mode: ShoppingItemEditorMode.listItem,
@@ -1597,7 +1598,7 @@ class _ShoppingItemEditorSheet extends StatefulWidget {
   const _ShoppingItemEditorSheet({
     required this.existingItem,
     required this.blockedNormalizedNames,
-    required this.suggestionCatalog,
+    required this.catalogProducts,
     required this.onLookupBarcode,
     required this.onLookupCatalogByName,
     required this.mode,
@@ -1606,7 +1607,7 @@ class _ShoppingItemEditorSheet extends StatefulWidget {
 
   final ShoppingItem? existingItem;
   final Set<String> blockedNormalizedNames;
-  final List<String> suggestionCatalog;
+  final List<CatalogProduct> catalogProducts;
   final Future<ProductLookupResult> Function(String barcode)? onLookupBarcode;
   final Future<CatalogProduct?> Function(String name)? onLookupCatalogByName;
   final ShoppingItemEditorMode mode;
@@ -1627,7 +1628,6 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
   late final TextEditingController _priceController;
   final FocusNode _nameFocusNode = FocusNode();
   late ShoppingCategory _selectedCategory;
-  late final List<String> _normalizedSuggestionCatalog;
   bool _isLookingUpBarcode = false;
   bool _isLookingUpCatalog = false;
   bool _isApplyingCatalogProduct = false;
@@ -1654,27 +1654,27 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     );
     _selectedCategory =
         widget.existingItem?.category ?? ShoppingCategory.grocery;
-    _normalizedSuggestionCatalog = _buildSuggestionCatalog(
-      widget.suggestionCatalog,
-    );
+    _catalogMatch = _catalogProductFromExistingItem(widget.existingItem);
     _nameController.addListener(_handleCatalogMatchChanged);
     _barcodeController.addListener(_handleCatalogMatchChanged);
   }
 
-  List<String> _buildSuggestionCatalog(List<String> source) {
-    final seen = <String>{};
-    final values = <String>[];
-    for (final raw in source) {
-      final trimmed = raw.trim();
-      if (trimmed.isEmpty) {
-        continue;
-      }
-      final normalized = normalizeQuery(trimmed);
-      if (seen.add(normalized)) {
-        values.add(trimmed);
+  CatalogProduct? _catalogProductFromExistingItem(ShoppingItem? item) {
+    if (item == null) {
+      return null;
+    }
+
+    final barcode = sanitizeBarcode(item.barcode);
+    if (barcode == null || barcode.isEmpty) {
+      return null;
+    }
+
+    for (final product in widget.catalogProducts) {
+      if (product.barcode == barcode) {
+        return product;
       }
     }
-    return values;
+    return null;
   }
 
   void _handleCatalogMatchChanged() {
@@ -1709,30 +1709,62 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     });
   }
 
-  List<String> get _matchingSuggestions {
+  List<CatalogProduct> get _matchingCatalogSuggestions {
     final query = normalizeQuery(_nameController.text);
-    final suggestions = <String>[];
-    for (final value in _normalizedSuggestionCatalog) {
-      final normalized = normalizeQuery(value);
+    final suggestions = <CatalogProduct>[];
+    for (final product in widget.catalogProducts) {
+      final normalized = normalizeQuery(product.name);
       final shouldInclude = query.isEmpty ? true : normalized.contains(query);
       if (!shouldInclude ||
           normalized == query ||
           _blockedNormalizedNames.contains(normalized)) {
         continue;
       }
-      suggestions.add(value);
-      if (suggestions.length >= 6) {
-        break;
-      }
+      suggestions.add(product);
     }
-    return suggestions;
+    suggestions.sort(_compareCatalogSuggestions);
+    return suggestions.take(6).toList(growable: false);
   }
 
-  Future<void> _applySuggestion(String value) async {
+  int _compareCatalogSuggestions(CatalogProduct a, CatalogProduct b) {
+    final byUsage = b.usageCount.compareTo(a.usageCount);
+    if (byUsage != 0) {
+      return byUsage;
+    }
+    final byDate = b.updatedAt.compareTo(a.updatedAt);
+    if (byDate != 0) {
+      return byDate;
+    }
+    return normalizeQuery(a.name).compareTo(normalizeQuery(b.name));
+  }
+
+  ItemPriceInsight? get _currentPriceInsight {
+    final product = _catalogMatch;
+    final currentPrice = BrlCurrencyInputFormatter.tryParse(
+      _priceController.text,
+    );
+    final referencePrice = product?.unitPrice;
+    if (product == null || currentPrice == null || referencePrice == null) {
+      return null;
+    }
+    return buildPriceInsight(
+      currentPrice: currentPrice,
+      referencePrice: referencePrice,
+    );
+  }
+
+  Future<void> _applySuggestion(CatalogProduct product) async {
+    final value = product.name;
     _nameController
       ..text = value
       ..selection = TextSelection.collapsed(offset: value.length);
-    await _lookupCatalogByName(value, true);
+    _applyCatalogProduct(product);
+    setState(() {
+      final latestPrice = product.unitPrice;
+      _lookupFeedback = latestPrice != null && latestPrice > 0
+          ? 'Sugestão local aplicada com último preço salvo (${formatCurrency(latestPrice)}).'
+          : 'Sugestão local aplicada a partir do catálogo.';
+    });
   }
 
   Set<String> get _blockedNormalizedNames {
@@ -1837,28 +1869,27 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
   void _applyCatalogProduct(CatalogProduct product) {
     _isApplyingCatalogProduct = true;
     try {
-      _catalogMatch = product;
       final productName = product.name.trim();
-      if (productName.isNotEmpty &&
-          normalizeQuery(_nameController.text) ==
-              normalizeQuery(productName)) {
-        _nameController
-          ..text = productName
-          ..selection = TextSelection.collapsed(offset: productName.length);
-      }
+
+      _nameController
+        ..text = productName
+        ..selection = TextSelection.collapsed(offset: productName.length);
+
       _selectedCategory = product.category;
+
       final barcode = product.barcode;
-      if (barcode != null &&
-          barcode.isNotEmpty &&
-          _barcodeController.text.trim().isEmpty) {
-        _barcodeController
-          ..text = barcode
-          ..selection = TextSelection.collapsed(offset: barcode.length);
-      }
+      _barcodeController
+        ..text = barcode ?? ''
+        ..selection = TextSelection.collapsed(offset: (barcode ?? '').length);
+
       final price = product.unitPrice;
       if (price != null && price > 0) {
         _priceController.text = _currencyFormatter.formatValue(price);
+        _catalogMatch = product;
+        return;
       }
+      _priceController.clear();
+      _catalogMatch = product;
     } finally {
       _isApplyingCatalogProduct = false;
     }
@@ -2018,6 +2049,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
         ? (isCatalogMode ? 'Salvar produto' : 'Salvar item')
         : (isCatalogMode ? 'Adicionar produto' : 'Adicionar item');
     final nameLabel = isCatalogMode ? 'Produto' : 'Item';
+    final priceInsight = _currentPriceInsight;
 
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
@@ -2039,6 +2071,13 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
               const SizedBox(height: 4),
               Text(
                 'Scanner opcional: você pode escanear ou preencher tudo na mão.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Digite parte do nome para buscar no catálogo, toque numa sugestão e ajuste o valor para comparar o preço na hora.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -2140,7 +2179,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                 onChanged: (_) => _handleCatalogMatchChanged(),
                 onFieldSubmitted: (_) => _lookupCatalogByName(),
               ),
-              if (_matchingSuggestions.isNotEmpty) ...[
+              if (_matchingCatalogSuggestions.isNotEmpty) ...[
                 const SizedBox(height: 10),
                 Text(
                   'Produtos encontrados',
@@ -2149,16 +2188,12 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                Column(
                   children: [
-                    for (final suggestion in _matchingSuggestions)
-                      ActionChip(
-                        avatar: const Icon(Icons.inventory_2_rounded, size: 16),
-                        label: Text(suggestion),
-                        onPressed: () =>
-                            unawaited(_applySuggestion(suggestion)),
+                    for (final suggestion in _matchingCatalogSuggestions)
+                      _CatalogSuggestionTile(
+                        product: suggestion,
+                        onTap: () => unawaited(_applySuggestion(suggestion)),
                       ),
                   ],
                 ),
@@ -2207,6 +2242,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                     prefixIcon: Icon(Icons.monetization_on_rounded),
                     hintText: 'R\$ 0,00',
                   ),
+                  onChanged: (_) => setState(() {}),
                   validator: (value) {
                     final parsed = BrlCurrencyInputFormatter.tryParse(
                       value ?? '',
@@ -2254,6 +2290,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                           prefixIcon: Icon(Icons.monetization_on_rounded),
                           hintText: 'R\$ 0,00',
                         ),
+                        onChanged: (_) => setState(() {}),
                         validator: (value) {
                           final parsed = BrlCurrencyInputFormatter.tryParse(
                             value ?? '',
@@ -2268,6 +2305,10 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                     ),
                   ],
                 ),
+              if (priceInsight != null) ...[
+                const SizedBox(height: 10),
+                _ItemPriceInsightBanner(insight: priceInsight),
+              ],
               if (_catalogMatch != null) ...[
                 const SizedBox(height: 10),
                 _CatalogPriceHint(product: _catalogMatch!),
@@ -2325,6 +2366,82 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ItemPriceInsightBanner extends StatelessWidget {
+  const _ItemPriceInsightBanner({required this.insight});
+
+  final ItemPriceInsight insight;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final (
+      backgroundColor,
+      foregroundColor,
+      icon,
+    ) = switch (insight.direction) {
+      PriceInsightDirection.down => (
+        colorScheme.primaryContainer.withValues(alpha: 0.78),
+        colorScheme.onPrimaryContainer,
+        Icons.south_rounded,
+      ),
+      PriceInsightDirection.same => (
+        colorScheme.secondaryContainer.withValues(alpha: 0.78),
+        colorScheme.onSecondaryContainer,
+        Icons.remove_rounded,
+      ),
+      PriceInsightDirection.up => (
+        colorScheme.errorContainer.withValues(alpha: 0.86),
+        colorScheme.onErrorContainer,
+        Icons.north_rounded,
+      ),
+    };
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: foregroundColor),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                insight.label,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: foregroundColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CatalogSuggestionTile extends StatelessWidget {
+  const _CatalogSuggestionTile({required this.product, required this.onTap});
+
+  final CatalogProduct product;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.inventory_2_rounded),
+      title: Text(product.name),
+      subtitle: Text(product.barcode ?? 'Sem codigo'),
+      onTap: onTap,
     );
   }
 }

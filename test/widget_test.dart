@@ -52,8 +52,7 @@ void main() {
       find.widgetWithText(TextFormField, 'Valor unitário'),
       '950',
     );
-    await tester.tap(find.widgetWithText(FilledButton, 'Salvar item'));
-    await tester.pumpAndSettle();
+    await _tapVisibleButton<FilledButton>(tester, 'Salvar item');
 
     expect(find.text('Arroz'), findsOneWidget);
     expect(_textContains('3 x'), findsOneWidget);
@@ -168,8 +167,7 @@ void main() {
       find.widgetWithText(TextFormField, 'Valor unitário'),
       '3000',
     );
-    await tester.tap(find.widgetWithText(FilledButton, 'Salvar item'));
-    await tester.pumpAndSettle();
+    await _tapVisibleButton<FilledButton>(tester, 'Salvar item');
 
     await _tapItemActionIcon(
       tester,
@@ -215,6 +213,569 @@ void main() {
     expect(find.text('Lentilha Premium'), findsOneWidget);
     expect(find.text('7890000009999'), findsOneWidget);
     expect(_textContains('12,34'), findsWidgets);
+  });
+
+  testWidgets('Item editor shows rich catalog suggestions for partial text', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      catalogStorage: _MemoryProductCatalogStorage([
+        _catalogProduct(
+          name: 'Tomate Italiano',
+          barcode: '7890000001111',
+          unitPrice: 10,
+        ),
+        _catalogProduct(
+          name: 'Tomilho',
+          barcode: '7890000002222',
+          unitPrice: 5,
+        ),
+      ]),
+    );
+
+    await _createListFromDashboard(tester, 'Compra guiada');
+    await _openAddItemSheet(tester);
+    await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'to');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tomate Italiano'), findsOneWidget);
+    expect(find.text('Tomilho'), findsOneWidget);
+    expect(find.text('7890000001111'), findsOneWidget);
+    expect(find.text('7890000002222'), findsOneWidget);
+    expect(find.text('Produtos encontrados'), findsOneWidget);
+  });
+
+  testWidgets('Item editor ranks rich catalog suggestions and limits to 6', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      catalogStorage: _MemoryProductCatalogStorage([
+        _catalogProduct(
+          name: 'Tomate Alfa',
+          barcode: '7890000001101',
+          unitPrice: 2,
+          usageCount: 1,
+          updatedAt: DateTime(2026, 4, 1, 8),
+        ),
+        _catalogProduct(
+          name: 'Tomate Beta',
+          barcode: '7890000001102',
+          unitPrice: 2,
+          usageCount: 1,
+          updatedAt: DateTime(2026, 4, 1, 9),
+        ),
+        _catalogProduct(
+          name: 'Tomate Gama',
+          barcode: '7890000001103',
+          unitPrice: 2,
+          usageCount: 1,
+          updatedAt: DateTime(2026, 4, 1, 10),
+        ),
+        _catalogProduct(
+          name: 'Tomate Delta',
+          barcode: '7890000001104',
+          unitPrice: 2,
+          usageCount: 1,
+          updatedAt: DateTime(2026, 4, 1, 11),
+        ),
+        _catalogProduct(
+          name: 'Tomate Epsilon',
+          barcode: '7890000001105',
+          unitPrice: 2,
+          usageCount: 1,
+          updatedAt: DateTime(2026, 4, 1, 12),
+        ),
+        _catalogProduct(
+          name: 'Tomate Zeta',
+          barcode: '7890000001106',
+          unitPrice: 2,
+          usageCount: 1,
+          updatedAt: DateTime(2026, 4, 1, 13),
+        ),
+        _catalogProduct(
+          name: 'Tomate Premium',
+          barcode: '7890000001107',
+          unitPrice: 2,
+          usageCount: 90,
+          updatedAt: DateTime(2026, 3, 1),
+        ),
+        _catalogProduct(
+          name: 'Tomate Favorito',
+          barcode: '7890000001108',
+          unitPrice: 2,
+          usageCount: 80,
+          updatedAt: DateTime(2026, 2, 1),
+        ),
+      ]),
+    );
+
+    await _createListFromDashboard(tester, 'Ranking guiado');
+    await _openAddItemSheet(tester);
+    await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'to');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tomate Premium'), findsOneWidget);
+    expect(find.text('Tomate Favorito'), findsOneWidget);
+    expect(find.text('Tomate Zeta'), findsOneWidget);
+    expect(find.text('Tomate Epsilon'), findsOneWidget);
+    expect(find.text('Tomate Delta'), findsOneWidget);
+    expect(find.text('Tomate Gama'), findsOneWidget);
+    expect(find.text('Tomate Beta'), findsNothing);
+    expect(find.text('Tomate Alfa'), findsNothing);
+    expect(find.text('7890000001107'), findsOneWidget);
+    expect(find.text('7890000001108'), findsOneWidget);
+  });
+
+  testWidgets('Selecting a catalog suggestion overwrites manual item data', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      catalogStorage: _MemoryProductCatalogStorage([
+        _catalogProduct(
+          name: 'Molho de Tomate',
+          barcode: '7890000003333',
+          unitPrice: 10,
+          category: ShoppingCategory.cleaning,
+        ),
+      ]),
+    );
+
+    await _createListFromDashboard(tester, 'Compra inteligente');
+    await _openAddItemSheet(tester);
+    await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'molho');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Código de barras (opcional)'),
+      '1111111111111',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Valor unitário'),
+      '999',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Molho de Tomate'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<TextFormField>(find.widgetWithText(TextFormField, 'Item'))
+          .controller
+          ?.text,
+      'Molho de Tomate',
+    );
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.widgetWithText(TextFormField, 'Código de barras (opcional)'),
+          )
+          .controller
+          ?.text,
+      '7890000003333',
+    );
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.widgetWithText(TextFormField, 'Valor unitário'),
+          )
+          .controller
+          ?.text,
+      'R\$\u00A010,00',
+    );
+    expect(
+      tester
+          .widget<DropdownButtonFormField<ShoppingCategory>>(
+            find.byType(DropdownButtonFormField<ShoppingCategory>),
+          )
+          .initialValue,
+      ShoppingCategory.cleaning,
+    );
+  });
+
+  testWidgets(
+    'Selecting a catalog suggestion clears stale manual price without saved price',
+    (WidgetTester tester) async {
+      await _pumpApp(
+        tester,
+        catalogStorage: _MemoryProductCatalogStorage([
+          CatalogProduct(
+            id: uniqueId(),
+            name: 'Molho de Tomate',
+            category: ShoppingCategory.grocery,
+            barcode: '7890000004444',
+            unitPrice: null,
+            usageCount: 10,
+            updatedAt: DateTime(2026, 4, 1),
+            priceHistory: const <PriceHistoryEntry>[],
+          ),
+        ]),
+      );
+
+      await _createListFromDashboard(tester, 'Compra sem preco');
+      await _openAddItemSheet(tester);
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Item'),
+        'molho',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Valor unitário'),
+        '999',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Molho de Tomate'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.widgetWithText(TextFormField, 'Valor unitário'),
+            )
+            .controller
+            ?.text,
+        isEmpty,
+      );
+    },
+  );
+
+  testWidgets('Changing suggested price shows live price insight label', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      catalogStorage: _MemoryProductCatalogStorage([
+        _catalogProduct(
+          name: 'Molho de Tomate',
+          barcode: '7890000003333',
+          unitPrice: 10,
+        ),
+      ]),
+    );
+
+    await _createListFromDashboard(tester, 'Insight de preco');
+    await _openAddItemSheet(tester);
+    await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'molho');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Molho de Tomate'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Valor unitário'),
+      '850',
+    );
+    await tester.pumpAndSettle();
+
+    expect(_textContains('menor que o ultimo preco salvo'), findsOneWidget);
+  });
+
+  testWidgets('Equal suggested price shows neutral label', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      catalogStorage: _MemoryProductCatalogStorage([
+        _catalogProduct(
+          name: 'Molho de Tomate',
+          barcode: '7890000003333',
+          unitPrice: 10,
+        ),
+      ]),
+    );
+
+    await _createListFromDashboard(tester, 'Insight neutro');
+    await _openAddItemSheet(tester);
+    await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'molho');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Molho de Tomate'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Valor unitário'),
+      '850',
+    );
+    await tester.pumpAndSettle();
+
+    expect(_textContains('menor que o ultimo preco salvo'), findsOneWidget);
+    expect(_textContains('Mesmo preco da ultima compra'), findsNothing);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Valor unitário'),
+      '1000',
+    );
+    await tester.pumpAndSettle();
+
+    expect(_textContains('Mesmo preco da ultima compra'), findsOneWidget);
+    expect(_textContains('menor que o ultimo preco salvo'), findsNothing);
+    expect(_textContains('maior que o ultimo preco salvo'), findsNothing);
+  });
+
+  testWidgets(
+    'Editing existing catalog-backed item shows live price insight label',
+    (WidgetTester tester) async {
+      await _pumpApp(
+        tester,
+        catalogStorage: _MemoryProductCatalogStorage([
+          _catalogProduct(
+            name: 'Molho de Tomate',
+            barcode: '7890000003333',
+            unitPrice: 10,
+          ),
+        ]),
+      );
+
+      await _createListFromDashboard(tester, 'Insight ao editar');
+      await _openAddItemSheet(tester);
+      await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'molho');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Molho de Tomate'));
+      await tester.pumpAndSettle();
+      await _tapVisibleButton<FilledButton>(tester, 'Adicionar item');
+
+      await _tapItemActionIcon(
+        tester,
+        itemName: 'Molho de Tomate',
+        icon: Icons.edit_rounded,
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Valor unitário'),
+        '850',
+      );
+      await tester.pumpAndSettle();
+
+      expect(_textContains('menor que o ultimo preco salvo'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Editing existing manual same-name item does not show live price insight label',
+    (WidgetTester tester) async {
+      await _pumpApp(
+        tester,
+        catalogStorage: _MemoryProductCatalogStorage([
+          _catalogProduct(
+            name: 'Molho de Tomate',
+            barcode: '7890000003333',
+            unitPrice: 10,
+          ),
+        ]),
+      );
+
+      await _createListFromDashboard(tester, 'Item manual');
+      await _addItem(
+        tester,
+        name: 'Molho de Tomate',
+        quantity: '1',
+        unitValueDigits: '1000',
+      );
+
+      await _tapItemActionIcon(
+        tester,
+        itemName: 'Molho de Tomate',
+        icon: Icons.edit_rounded,
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Valor unitário'),
+        '850',
+      );
+      await tester.pumpAndSettle();
+
+      expect(_textContains('menor que o ultimo preco salvo'), findsNothing);
+      expect(_textContains('Preço sugerido:'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'Clearing barcode while editing removes live price insight label',
+    (WidgetTester tester) async {
+      await _pumpApp(
+        tester,
+        catalogStorage: _MemoryProductCatalogStorage([
+          _catalogProduct(
+            name: 'Molho de Tomate',
+            barcode: '7890000003333',
+            unitPrice: 10,
+          ),
+        ]),
+      );
+
+      await _createListFromDashboard(tester, 'Insight invalido por codigo');
+      await _openAddItemSheet(tester);
+      await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'molho');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Molho de Tomate'));
+      await tester.pumpAndSettle();
+      await _tapVisibleButton<FilledButton>(tester, 'Adicionar item');
+
+      await _tapItemActionIcon(
+        tester,
+        itemName: 'Molho de Tomate',
+        icon: Icons.edit_rounded,
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Valor unitário'),
+        '850',
+      );
+      await tester.pumpAndSettle();
+
+      expect(_textContains('menor que o ultimo preco salvo'), findsOneWidget);
+      expect(_textContains('Preço sugerido:'), findsOneWidget);
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Código de barras (opcional)'),
+        '',
+      );
+      await tester.pumpAndSettle();
+
+      expect(_textContains('menor que o ultimo preco salvo'), findsNothing);
+      expect(_textContains('Preço sugerido:'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'Add and continue keeps rich catalog flow for multiple items',
+    (WidgetTester tester) async {
+      await _pumpApp(
+        tester,
+        catalogStorage: _MemoryProductCatalogStorage([
+          _catalogProduct(
+            name: 'Banana Prata',
+            barcode: '7890000001111',
+            unitPrice: 6.99,
+          ),
+          _catalogProduct(
+            name: 'Leite Integral',
+            barcode: '7890000002222',
+            unitPrice: 4.79,
+          ),
+        ]),
+      );
+
+      await _createListFromDashboard(tester, 'Compra guiada em fila');
+      await _openAddItemSheet(tester);
+      await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'ban');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Banana Prata'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.widgetWithText(TextFormField, 'Código de barras (opcional)'),
+            )
+            .controller
+            ?.text,
+        '7890000001111',
+      );
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.widgetWithText(TextFormField, 'Valor unitário'),
+            )
+            .controller
+            ?.text,
+        isNotEmpty,
+      );
+      expect(_textContains('Preço sugerido:'), findsOneWidget);
+
+      await _tapVisibleButton<OutlinedButton>(tester, 'Adicionar e continuar');
+
+      expect(_textContains('1 item pronto: Banana Prata'), findsOneWidget);
+      expect(
+        _textContains('Banana Prata adicionado. Continue com o próximo.'),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<TextFormField>(find.widgetWithText(TextFormField, 'Item'))
+            .controller
+            ?.text,
+        isEmpty,
+      );
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.widgetWithText(TextFormField, 'Código de barras (opcional)'),
+            )
+            .controller
+            ?.text,
+        isEmpty,
+      );
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.widgetWithText(TextFormField, 'Valor unitário'),
+            )
+            .controller
+            ?.text,
+        isEmpty,
+      );
+      expect(_textContains('Preço sugerido:'), findsNothing);
+      expect(find.text('Banana Prata'), findsNothing);
+
+      await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'lei');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Leite Integral'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.widgetWithText(TextFormField, 'Código de barras (opcional)'),
+            )
+            .controller
+            ?.text,
+        '7890000002222',
+      );
+      expect(_textContains('Preço sugerido:'), findsOneWidget);
+
+      await _tapVisibleButton<FilledButton>(tester, 'Adicionar item');
+
+      expect(find.text('Banana Prata'), findsOneWidget);
+      expect(find.text('Leite Integral'), findsOneWidget);
+    },
+  );
+
+  testWidgets('Manual item still saves without using catalog suggestion', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      catalogStorage: _MemoryProductCatalogStorage([
+        _catalogProduct(
+          name: 'Cafe Tradicional',
+          barcode: '7890000003333',
+          unitPrice: 10,
+        ),
+      ]),
+    );
+
+    await _createListFromDashboard(tester, 'Fluxo manual');
+    await _openAddItemSheet(tester);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Item'),
+      'Cafe',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Produtos encontrados'), findsOneWidget);
+    expect(find.text('Cafe Tradicional'), findsOneWidget);
+    expect(_textContains('Preço sugerido:'), findsNothing);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Quantidade'),
+      '2',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Valor unitário'),
+      '1234',
+    );
+    await tester.pumpAndSettle();
+
+    await _tapVisibleButton<FilledButton>(tester, 'Adicionar item');
+
+    expect(find.text('Cafe'), findsOneWidget);
+    expect(_textContains('2 x'), findsOneWidget);
+    expect(_textContains('24,68'), findsWidgets);
   });
 
   testWidgets('Add item sheet can add multiple catalog products', (
@@ -606,6 +1167,7 @@ CatalogProduct _catalogProduct({
   required String name,
   required String barcode,
   required double unitPrice,
+  ShoppingCategory category = ShoppingCategory.grocery,
   int usageCount = 10,
   DateTime? updatedAt,
 }) {
@@ -613,7 +1175,7 @@ CatalogProduct _catalogProduct({
   return CatalogProduct(
     id: uniqueId(),
     name: name,
-    category: ShoppingCategory.grocery,
+    category: category,
     unitPrice: unitPrice,
     barcode: barcode,
     usageCount: usageCount,

@@ -1044,12 +1044,11 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
         .where((item) => existing == null || item.id != existing.id)
         .map((item) => normalizeQuery(item.name))
         .toSet();
-    final suggestionCatalog = widget.store.suggestProductNames(limit: 20);
     final draft = await showShoppingItemEditorSheet(
       context,
       existingItem: existing?.toShoppingItem(),
       blockedNormalizedNames: blockedNames,
-      suggestionCatalog: suggestionCatalog,
+      catalogProducts: widget.store.catalogProducts,
       onLookupBarcode: widget.store.lookupProductByBarcode,
       onLookupCatalogByName: widget.store.lookupCatalogProductByName,
     );
