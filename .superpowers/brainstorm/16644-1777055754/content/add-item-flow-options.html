@@ -1,0 +1,124 @@
+<h2>Qual fluxo de adição parece mais certo para o app?</h2>
+<p class="subtitle">Todos incluem busca por catálogo ao digitar, toque para preencher código de barras + nome + valor, e uma label mostrando se o preço subiu, caiu ou se manteve.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">A. Compra Rápida</div>
+        <div class="mockup-body">
+          <div class="mock-input">Pesquisar produto ou digitar novo item</div>
+          <div style="display:grid;gap:8px;margin-top:10px">
+            <div style="padding:10px;border:1px solid #d6e4da;border-radius:12px;background:#f7fbf8">
+              <strong>Tomate</strong><br>
+              <span class="subtitle">7891234567890 • R$ 8,99</span><br>
+              <span style="display:inline-block;margin-top:6px;padding:4px 8px;border-radius:999px;background:#ffe7e7;color:#8c1d18;font-size:12px;font-weight:700">+12% vs últimas compras</span>
+            </div>
+            <div style="padding:10px;border:1px solid #d6e4da;border-radius:12px;background:#fff">
+              <strong>Tomilho</strong><br>
+              <span class="subtitle">Sem código • R$ 4,50</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="mock-button">Adicionar e continuar</button>
+            <button class="mock-button" style="opacity:.75">Adicionar item</button>
+          </div>
+          <div style="margin-top:12px;padding:10px;border-radius:12px;background:#e6f4ec">
+            3 itens prontos: Arroz, Feijão, Tomate
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Compra Rápida</h3>
+      <p>Melhor para quem quer digitar, tocar na sugestão e seguir adicionando vários produtos sem sair do fluxo.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">B. Busca Inteligente</div>
+        <div class="mockup-body">
+          <div class="mock-input">Buscar no catálogo: "to"</div>
+          <div style="display:grid;grid-template-columns:1.1fr .9fr;gap:10px;margin-top:10px">
+            <div style="display:grid;gap:8px">
+              <div style="padding:10px;border:2px solid #0f766e;border-radius:12px;background:#eefaf8">
+                <strong>Tomate</strong><br>
+                <span class="subtitle">Código + preço encontrados</span>
+              </div>
+              <div style="padding:10px;border:1px solid #d6e4da;border-radius:12px;background:#fff">
+                <strong>Tomilho</strong><br>
+                <span class="subtitle">Catálogo local</span>
+              </div>
+              <div style="padding:10px;border:1px solid #d6e4da;border-radius:12px;background:#fff">
+                <strong>Torrada Integral</strong><br>
+                <span class="subtitle">Catálogo local</span>
+              </div>
+            </div>
+            <div style="padding:10px;border:1px solid #d6e4da;border-radius:12px;background:#fff">
+              <strong>Pré-preenchido</strong>
+              <div style="margin-top:8px" class="mock-input">Nome: Tomate</div>
+              <div style="margin-top:8px" class="mock-input">Código: 7891234567890</div>
+              <div style="margin-top:8px" class="mock-input">Valor: R$ 8,99</div>
+              <div style="margin-top:10px;padding:8px;border-radius:12px;background:#fff4d6;color:#7c5a00;font-size:12px;font-weight:700">Preço estável vs última compra</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Busca Inteligente</h3>
+      <p>Melhor quando o catálogo é protagonista: a pessoa pesquisa, escolhe o produto e o formulário é preenchido automaticamente.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">C. Reposição + Adição</div>
+        <div class="mockup-body">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <div style="padding:6px 10px;border-radius:999px;background:#e8f0ff;color:#23408e;font-size:12px;font-weight:700">Recomprar 8 itens do mês passado</div>
+            <div style="padding:6px 10px;border-radius:999px;background:#eefaf8;color:#0f766e;font-size:12px;font-weight:700">Adicionar manualmente</div>
+          </div>
+          <div style="display:grid;gap:8px;margin-top:12px">
+            <div style="padding:10px;border:1px solid #d6e4da;border-radius:12px;background:#fff">
+              <strong>Arroz</strong> <span class="subtitle">sugerido</span><br>
+              <span style="display:inline-block;margin-top:6px;padding:4px 8px;border-radius:999px;background:#ffe7e7;color:#8c1d18;font-size:12px;font-weight:700">+9%</span>
+            </div>
+            <div style="padding:10px;border:1px solid #d6e4da;border-radius:12px;background:#fff">
+              <strong>Feijão</strong> <span class="subtitle">sugerido</span><br>
+              <span style="display:inline-block;margin-top:6px;padding:4px 8px;border-radius:999px;background:#e6f4ec;color:#17653f;font-size:12px;font-weight:700">-4%</span>
+            </div>
+            <div class="mock-input">Adicionar outro item: "to"</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Reposição + Adição</h3>
+      <p>Melhor para transformar o app em assistente de compra: ele sugere a base da lista e você complementa com busca rápida.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:22px">
+  <h3>O que muda em qualquer opção</h3>
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Entraria</h4>
+      <ul>
+        <li>Autocomplete real por trecho digitado, como "to".</li>
+        <li>Toque na sugestão preenchendo nome, código de barras e último preço salvo.</li>
+        <li>Label de preço com "subiu", "caiu" ou "manteve".</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Ponto de decisão</h4>
+      <ul>
+        <li>Qual desses três deve ser o fluxo principal da tela?</li>
+      </ul>
+    </div>
+  </div>
+</div>
