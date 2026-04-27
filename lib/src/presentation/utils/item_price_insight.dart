@@ -31,7 +31,7 @@ ItemPriceInsight? buildPriceInsight({
     return const ItemPriceInsight(
       direction: PriceInsightDirection.same,
       percentDelta: 0,
-      label: 'Mesmo preco da ultima compra',
+      label: 'Mesmo preço da última compra',
     );
   }
 
@@ -40,7 +40,7 @@ ItemPriceInsight? buildPriceInsight({
     return ItemPriceInsight(
       direction: PriceInsightDirection.same,
       percentDelta: percentDelta,
-      label: 'Mesmo preco da ultima compra',
+      label: 'Mesmo preço da última compra',
     );
   }
 
@@ -48,13 +48,13 @@ ItemPriceInsight? buildPriceInsight({
     return ItemPriceInsight(
       direction: PriceInsightDirection.down,
       percentDelta: percentDelta,
-      label: '$roundedPercent% menor que o ultimo preco salvo',
+      label: '$roundedPercent% menor que o último preço salvo',
     );
   }
 
   return ItemPriceInsight(
     direction: PriceInsightDirection.up,
     percentDelta: percentDelta,
-    label: '$roundedPercent% maior que o ultimo preco salvo',
+    label: '$roundedPercent% maior que o último preço salvo',
   );
 }

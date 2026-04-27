@@ -66,7 +66,7 @@ class _SharedSummarySkeleton extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
-                  const Text('Sincronizando membros e configuracoes.'),
+                  const Text('Sincronizando membros e configurações.'),
                   const SizedBox(height: 16),
                   Wrap(
                     spacing: 8,
@@ -2681,7 +2681,7 @@ class _SharedItemCard extends StatelessWidget {
                   ),
                 ),
                 PopupMenuButton<String>(
-                  tooltip: 'Mais acoes do item',
+                  tooltip: 'Mais ações do item',
                   onSelected: (action) {
                     if (action == 'edit') {
                       onEdit();

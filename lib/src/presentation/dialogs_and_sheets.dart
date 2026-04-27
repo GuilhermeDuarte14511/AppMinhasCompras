@@ -2440,7 +2440,7 @@ class _CatalogSuggestionTile extends StatelessWidget {
       contentPadding: EdgeInsets.zero,
       leading: const Icon(Icons.inventory_2_rounded),
       title: Text(product.name),
-      subtitle: Text(product.barcode ?? 'Sem codigo'),
+      subtitle: Text(product.barcode ?? 'Sem código'),
       onTap: onTap,
     );
   }

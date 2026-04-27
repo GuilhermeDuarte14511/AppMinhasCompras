@@ -412,7 +412,7 @@ void main() {
         ]),
       );
 
-      await _createListFromDashboard(tester, 'Compra sem preco');
+      await _createListFromDashboard(tester, 'Compra sem preço');
       await _openAddItemSheet(tester);
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Item'),
@@ -452,7 +452,7 @@ void main() {
       ]),
     );
 
-    await _createListFromDashboard(tester, 'Insight de preco');
+    await _createListFromDashboard(tester, 'Insight de preço');
     await _openAddItemSheet(tester);
     await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'molho');
     await tester.pumpAndSettle();
@@ -465,7 +465,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(_textContains('menor que o ultimo preco salvo'), findsOneWidget);
+    expect(_textContains('menor que o último preço salvo'), findsOneWidget);
   });
 
   testWidgets('Equal suggested price shows neutral label', (
@@ -495,8 +495,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(_textContains('menor que o ultimo preco salvo'), findsOneWidget);
-    expect(_textContains('Mesmo preco da ultima compra'), findsNothing);
+    expect(_textContains('menor que o último preço salvo'), findsOneWidget);
+    expect(_textContains('Mesmo preço da última compra'), findsNothing);
 
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Valor unitário'),
@@ -504,9 +504,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(_textContains('Mesmo preco da ultima compra'), findsOneWidget);
-    expect(_textContains('menor que o ultimo preco salvo'), findsNothing);
-    expect(_textContains('maior que o ultimo preco salvo'), findsNothing);
+    expect(_textContains('Mesmo preço da última compra'), findsOneWidget);
+    expect(_textContains('menor que o último preço salvo'), findsNothing);
+    expect(_textContains('maior que o último preço salvo'), findsNothing);
   });
 
   testWidgets(
@@ -542,7 +542,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(_textContains('menor que o ultimo preco salvo'), findsOneWidget);
+      expect(_textContains('menor que o último preço salvo'), findsOneWidget);
     },
   );
 
@@ -579,7 +579,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(_textContains('menor que o ultimo preco salvo'), findsNothing);
+      expect(_textContains('menor que o último preço salvo'), findsNothing);
       expect(_textContains('Preço sugerido:'), findsNothing);
     },
   );
@@ -598,7 +598,7 @@ void main() {
         ]),
       );
 
-      await _createListFromDashboard(tester, 'Insight invalido por codigo');
+      await _createListFromDashboard(tester, 'Insight inválido por código');
       await _openAddItemSheet(tester);
       await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'molho');
       await tester.pumpAndSettle();
@@ -617,7 +617,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(_textContains('menor que o ultimo preco salvo'), findsOneWidget);
+      expect(_textContains('menor que o último preço salvo'), findsOneWidget);
       expect(_textContains('Preço sugerido:'), findsOneWidget);
 
       await tester.enterText(
@@ -626,7 +626,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(_textContains('menor que o ultimo preco salvo'), findsNothing);
+      expect(_textContains('menor que o último preço salvo'), findsNothing);
       expect(_textContains('Preço sugerido:'), findsNothing);
     },
   );

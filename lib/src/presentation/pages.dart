@@ -1644,9 +1644,9 @@ class _DashboardPageState extends State<DashboardPage> {
                     key: const ValueKey('dash_actions_title'),
                     delay: const Duration(milliseconds: 20),
                     child: const _SectionHeader(
-                      title: 'Acesso rapido',
+                      title: 'Acesso rápido',
                       subtitle:
-                          'As acoes mais usadas para montar e revisar compras.',
+                          'As ações mais usadas para montar e revisar compras.',
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -1670,7 +1670,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     title: 'Minhas listas de compras',
                     subtitle: 'Abra, edite e exclua suas listas salvas.',
                     icon: Icons.inventory_2_rounded,
-                    tag: 'Organizacao',
+                    tag: 'Organização',
                     onTap: _openMyLists,
                   ),
                 ),
@@ -1890,7 +1890,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                         'Falha ao carregar listas compartilhadas',
                                       ),
                                       subtitle: const Text(
-                                        'Verifique permissoes ou conexao e tente novamente.',
+                                        'Verifique permissões ou conexão e tente novamente.',
                                       ),
                                       trailing: TextButton(
                                         onPressed: () => setState(() {}),
@@ -4181,7 +4181,7 @@ class _EmptyPurchaseHistoryState extends StatelessWidget {
         : 'Sem histórico de compras';
     final description = hasQuery
         ? 'Tente outro termo para lista ou produto.'
-        : 'Feche uma compra para gerar relatorios mensais.';
+        : 'Feche uma compra para gerar relatórios mensais.';
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -6188,7 +6188,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   Widget build(BuildContext context) {
     if (_notFound) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Lista Não encontrada')),
+        appBar: AppBar(title: const Text('Lista não encontrada')),
         body: Center(
           child: FilledButton(
             onPressed: () => Navigator.pop(context),
@@ -6254,8 +6254,8 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Abra a versao compartilhada para ver '
-                                  'atualizacoes em tempo real.',
+                                  'Abra a versão compartilhada para ver '
+                                  'atualizações em tempo real.',
                                   style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(
                                         color: Theme.of(

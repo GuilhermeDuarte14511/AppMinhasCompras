@@ -4,94 +4,94 @@ App Flutter moderno (Material 3) para lista de compras, com foco em uso local/of
 
 ## O que o app tem hoje
 - Menu inicial com:
-  - `Comecar nova lista de compras`
+- `Começar nova lista de compras`
   - `Minhas listas de compras`
   - `Nova lista baseada em antiga`
-- Animacao de abertura moderna ao iniciar o app (carrinhos/bolsas, ~2.5s).
-- Persistencia local no celular com `SharedPreferences`.
-- Criacao, edicao, exclusao e clonagem de listas.
-- Exclusao em lote e `Limpar todas as listas` em `Minhas listas`.
+- Animação de abertura moderna ao iniciar o app (carrinhos/bolsas, ~2.5s).
+- Persistência local no celular com `SharedPreferences`.
+- Criação, edição, exclusão e clonagem de listas.
+- Exclusão em lote e `Limpar todas as listas` em `Minhas listas`.
 - Cadastro de itens com:
-  - botao `Ler codigo de barras` (opcional)
-  - campo manual de codigo de barras opcional
+  - botão `Ler código de barras` (opcional)
+  - campo manual de código de barras opcional
   - nome
   - categoria
   - quantidade
-  - valor unitario com mascara monetaria (`R$ 0,00`)
-- Consulta por codigo em APIs online:
+  - valor unitário com máscara monetária (`R$ 0,00`)
+- Consulta por código em APIs online:
   - Cosmos API (Brasil, quando `COSMOS_API_TOKEN` for informado)
   - Open Products Facts
   - Open Food Facts
-- Fallback para catalogo local por codigo quando nenhuma API retorna produto.
-- Cadastro manual continua disponivel (scanner nao e obrigatorio).
-- Importacao de cupom fiscal por texto (OCR/PDF):
+- Fallback para catálogo local por código quando nenhuma API retorna produto.
+- Cadastro manual continua disponível (scanner não é obrigatório).
+- Importação de cupom fiscal por texto (OCR/PDF):
   - cola o texto bruto do cupom
   - parser tenta extrair nome, quantidade e valor
   - preview antes de importar
   - mescla com itens existentes da lista
-- Todo produto adicionado/atualizado entra no catalogo local para autocomplete.
-- Calculo automatico de subtotal por item e total da lista.
-- Busca, ordenacao, filtro por categoria e modo mercado.
+- Todo produto adicionado/atualizado entra no catálogo local para autocomplete.
+- Cálculo automático de subtotal por item e total da lista.
+- Busca, ordenação, filtro por categoria e modo mercado.
 - Modo compra no mercado (tela dedicada):
   - foco em itens pendentes
   - swipe para marcar comprado/pendente
-  - controle rapido de quantidade
+  - controle rápido de quantidade
   - progresso de compra em tempo real
 - Fechamento de compra:
-  - botao para fechar compra direto na tela da lista
-  - opcao de marcar pendentes como comprados no fechamento
-  - snapshot completo salvo no historico
+  - botão para fechar compra direto na tela da lista
+  - opção de marcar pendentes como comprados no fechamento
+  - snapshot completo salvo no histórico
   - ao fechar, volta automaticamente para a tela inicial
-  - lista fica bloqueada para edicao ate ser reaberta manualmente
-- Historico mensal de compras:
-  - agrupamento por mes/ano
-  - totais planejado x comprado por mes
+  - lista fica bloqueada para edição até ser reaberta manualmente
+- Histórico mensal de compras:
+  - agrupamento por mês/ano
+  - totais planejado x comprado por mês
   - detalhe por fechamento (itens, valores, status)
   - snapshot de saldos no fechamento e consumo por prioridade
-  - exclusao individual e limpeza total do historico
-- Orcamento por lista com alerta de excesso.
-- Historico de preco por produto.
+  - exclusão individual e limpeza total do histórico
+- Orçamento por lista com alerta de excesso.
+- Histórico de preço por produto.
 - Bloqueio de item duplicado por nome na mesma lista.
-- Lembrete local por data e horario (dia/mes/ano + hora), sem servidor.
+- Lembrete local por data e horário (dia/mês/ano + hora), sem servidor.
 - Widgets de tela inicial (Android), atualizados automaticamente:
-  - `Resumo de Compras` (listas, pendentes, total, ultima atualizacao)
-  - `Lista Prioritaria` (lista em foco, total e status de orcamento)
+  - `Resumo de Compras` (listas, pendentes, total, última atualização)
+  - `Lista Prioritária` (lista em foco, total e status de orçamento)
 - Backup local em JSON:
-  - exportar para arquivo (ou area de transferencia)
+  - exportar para arquivo (ou área de transferência)
   - importar de arquivo JSON
   - escolher entre mesclar ou substituir listas
-  - inclui listas + historico mensal de fechamentos
+  - inclui listas + histórico mensal de fechamentos
 
 ## Arquitetura aplicada
 - `app`:
-  - `shopping_list_app.dart` (composicao do app, DI e ciclo de inicializacao)
+  - `shopping_list_app.dart` (composição do app, DI e ciclo de inicialização)
 - `core`:
-  - `utils/id_utils.dart` (geracao de IDs)
-  - `utils/text_utils.dart` (normalizacao e sanitizacao)
-  - `utils/format_utils.dart` (formatacao monetaria e datas)
+  - `utils/id_utils.dart` (geração de IDs)
+  - `utils/text_utils.dart` (normalização e sanitização)
+  - `utils/format_utils.dart` (formatação monetária e datas)
 - `presentation`:
   - `launch.dart` (splash/entrada animada)
   - `pages.dart` (telas principais)
-  - `dialogs_and_sheets.dart` (modais, formularios, scanner, formatadores)
-  - `extensions/classification_ui_extensions.dart` (icones e adaptacao visual)
-  - `utils/time_utils.dart` (formatacao de horario para UI)
+  - `dialogs_and_sheets.dart` (modais, formulários, scanner, formatadores)
+  - `extensions/classification_ui_extensions.dart` (ícones e adaptação visual)
+  - `utils/time_utils.dart` (formatação de horário para UI)
 - `domain`:
   - `models_and_utils.dart` (entidades e value objects)
-  - `classifications.dart` (categorias, filtros e ordenacao sem dependencia de UI)
+  - `classifications.dart` (categorias, filtros e ordenação sem dependência de UI)
 - `application`:
   - `ports.dart` (contratos/interfaces e gateways)
-  - `store_and_services.dart` (`ShoppingListsStore`, orquestracao e regras)
+  - `store_and_services.dart` (`ShoppingListsStore`, orquestração e regras)
 - `data`:
-  - `local/storages.dart` (persistencia local via `SharedPreferences`, incluindo historico de fechamentos)
-  - `repositories/product_catalog_repository.dart` (implementa gateway de catalogo)
+  - `local/storages.dart` (persistência local via `SharedPreferences`, incluindo histórico de fechamentos)
+  - `repositories/product_catalog_repository.dart` (implementa gateway de catálogo)
   - `remote/open_food_facts_product_lookup_service.dart` (Open Facts)
   - `remote/cosmos_product_lookup_service.dart` (Cosmos API Brasil)
   - `services/backup_service.dart` (import/export JSON)
-  - `services/reminder_service.dart` (notificacoes locais)
-  - `services/home_widget_service.dart` (integracao com widgets Android)
-- Injecao de dependencias pelo `ShoppingListApp` para facilitar testes e evolucao.
-- Sem uso de `part/part of`: cada modulo e um arquivo Dart independente.
-- `main.dart` contem apenas bootstrap (sem export global de camadas internas).
+  - `services/reminder_service.dart` (notificações locais)
+  - `services/home_widget_service.dart` (integração com widgets Android)
+- Injeção de dependências pelo `ShoppingListApp` para facilitar testes e evolução.
+- Sem uso de `part/part of`: cada módulo é um arquivo Dart independente.
+- `main.dart` contém apenas bootstrap (sem export global de camadas internas).
 
 ## Tecnologias
 - Flutter + Dart
@@ -120,10 +120,10 @@ cd "d:\Projetos\Android Flutter\lista_compras_material"
 ```
 
 ## Publicar Web no Firebase Hosting
-Pre-requisitos:
+Pré-requisitos:
 - Firebase CLI instalado (`npm i -g firebase-tools`)
 - Login no Firebase (`firebase login`)
-- Projeto selecionado (este repo ja inclui `.firebaserc` com `minhascompras-3abbe`)
+- Projeto selecionado (este repo já inclui `.firebaserc` com `minhascompras-3abbe`)
 
 Build e deploy:
 ```powershell
@@ -132,10 +132,10 @@ cd "d:\Projetos\Android Flutter\lista_compras_material"
 firebase deploy --only hosting
 ```
 
-Observacoes:
-- O app Web usa a mesma base de codigo Dart, mesmas telas e mesma logica.
-- O Hosting esta configurado para SPA (qualquer rota cai em `index.html`).
-- O conteudo servido vem de `build/web`.
+Observações:
+- O app Web usa a mesma base de código Dart, mesmas telas e mesma lógica.
+- O Hosting está configurado para SPA (qualquer rota cai em `index.html`).
+- O conteúdo servido vem de `build/web`.
 
 ## Executar com Cosmos API (opcional)
 Se quiser habilitar busca da Cosmos por GTIN, rode com `--dart-define`:
@@ -149,7 +149,7 @@ Para release:
 & "C:\flutter\bin\flutter.bat" run -d ZF524V2GB4 --release `
   --dart-define=COSMOS_API_TOKEN=SEU_TOKEN_AQUI
 ```
-Nao salve token hardcoded no codigo ou em arquivo versionado.
+Não salve token hardcoded no código ou em arquivo versionado.
 
 ## Emulador Android
 ```powershell
@@ -172,7 +172,7 @@ cd "d:\Projetos\Android Flutter\lista_compras_material"
 & "C:\flutter\bin\flutter.bat" pub get
 ```
 
-## Permissoes Android
+## Permissões Android
 No `AndroidManifest.xml` foram adicionadas:
 - `POST_NOTIFICATIONS`
 - `SCHEDULE_EXACT_ALARM`
@@ -182,15 +182,15 @@ No `AndroidManifest.xml` foram adicionadas:
 
 ## Widgets na tela inicial (Android)
 1. Abra o app e crie/atualize listas.
-2. Na tela inicial do celular, toque e segure em uma area vazia.
+2. Na tela inicial do celular, toque e segure em uma área vazia.
 3. Entre em `Widgets`.
 4. Procure por `Minhas Compras`.
 5. Adicione:
    - `Resumo de Compras`
-   - `Lista Prioritaria`
+   - `Lista Prioritária`
 6. Toque no widget para abrir o app.
 
-## Testes e analise
+## Testes e análise
 ```powershell
 cd "d:\Projetos\Android Flutter\lista_compras_material"
 & "C:\flutter\bin\flutter.bat" analyze
@@ -198,13 +198,13 @@ cd "d:\Projetos\Android Flutter\lista_compras_material"
 ```
 
 ## Estrutura principal
-- `lib/main.dart`: bootstrap do app e exports publicos para testes.
-- `lib/src/app/shopping_list_app.dart`: configuracao do MaterialApp e composicao de dependencias.
+- `lib/main.dart`: bootstrap do app e exports públicos para testes.
+- `lib/src/app/shopping_list_app.dart`: configuração do MaterialApp e composição de dependências.
 - `lib/src/presentation/*`: telas e componentes visuais.
-- `lib/src/domain/*`: modelos e utilitarios de dominio.
+- `lib/src/domain/*`: modelos e utilitários de domínio.
 - `lib/src/application/*`: contratos e store.
-- `lib/src/data/*`: persistencia, repositorio e servicos.
+- `lib/src/data/*`: persistência, repositório e serviços.
 - `test/widget_test.dart`: testes de fluxo principal.
 
-## Proximo passo natural (quando quiser servidor)
-- Adicionar autenticacao e sincronizacao para compartilhar listas entre dispositivos.
+## Próximo passo natural (quando quiser servidor)
+- Adicionar autenticação e sincronização para compartilhar listas entre dispositivos.
