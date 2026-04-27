@@ -91,6 +91,39 @@ void main() {
     expect(_textContains('existe na lista'), findsOneWidget);
   });
 
+  testWidgets('Add item can be marked as already picked', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(tester);
+
+    await _createListFromDashboard(tester, 'Compra já iniciada');
+    await _openAddItemSheet(tester);
+
+    await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'Arroz');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Quantidade'),
+      '1',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Valor unitário'),
+      '1000',
+    );
+    await tester.tap(find.text('Já peguei este item'));
+    await tester.pumpAndSettle();
+    await _tapVisibleButton<FilledButton>(tester, 'Adicionar item');
+
+    expect(
+      _textContains('1 item comprado oculto para deixar a lista mais objetiva.'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Ver'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Arroz'), findsOneWidget);
+    expect(find.text('Comprado'), findsOneWidget);
+  });
+
   testWidgets('Search and sort products in list editor', (
     WidgetTester tester,
   ) async {

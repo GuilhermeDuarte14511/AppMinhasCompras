@@ -1062,7 +1062,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
       name: draft.name,
       quantity: max(1, draft.quantity),
       unitPrice: max(0, draft.unitPrice),
-      isPurchased: existing?.isPurchased ?? false,
+      isPurchased: draft.isPurchased,
       updatedBy: uid,
       updatedAt: now,
       createdAt: existing?.createdAt ?? now,

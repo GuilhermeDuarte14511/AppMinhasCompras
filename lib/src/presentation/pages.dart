@@ -5425,6 +5425,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         unitPrice: draft.unitPrice,
         barcode: draft.barcode,
         category: draft.category,
+        isPurchased: draft.isPurchased,
         priceHistory: history,
       );
     }
@@ -5441,6 +5442,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       unitPrice: draft.unitPrice,
       barcode: draft.barcode,
       category: draft.category,
+      isPurchased: draft.isPurchased,
       priceHistory: [
         PriceHistoryEntry(price: draft.unitPrice, recordedAt: DateTime.now()),
       ],

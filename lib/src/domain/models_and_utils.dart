@@ -580,6 +580,7 @@ class ShoppingItemDraft {
     required this.unitPrice,
     required this.category,
     this.barcode,
+    this.isPurchased = false,
   });
 
   final String name;
@@ -587,6 +588,7 @@ class ShoppingItemDraft {
   final double unitPrice;
   final ShoppingCategory category;
   final String? barcode;
+  final bool isPurchased;
 }
 
 enum ReplenishmentSuggestionSource {

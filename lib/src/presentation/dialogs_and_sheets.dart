@@ -1631,6 +1631,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
   bool _isLookingUpBarcode = false;
   bool _isLookingUpCatalog = false;
   bool _isApplyingCatalogProduct = false;
+  late bool _isPurchased;
   String? _lookupFeedback;
   CatalogProduct? _catalogMatch;
   final List<ShoppingItemDraft> _pendingDrafts = <ShoppingItemDraft>[];
@@ -1654,6 +1655,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     );
     _selectedCategory =
         widget.existingItem?.category ?? ShoppingCategory.grocery;
+    _isPurchased = widget.existingItem?.isPurchased ?? false;
     _catalogMatch = _catalogProductFromExistingItem(widget.existingItem);
     _nameController.addListener(_handleCatalogMatchChanged);
     _barcodeController.addListener(_handleCatalogMatchChanged);
@@ -1978,6 +1980,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
       unitPrice: unitPrice,
       category: _selectedCategory,
       barcode: sanitizeBarcode(_barcodeController.text),
+      isPurchased: _isPurchased,
     );
   }
 
@@ -1989,6 +1992,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     _priceController.clear();
     setState(() {
       _selectedCategory = ShoppingCategory.grocery;
+      _isPurchased = false;
       _catalogMatch = null;
       _lookupFeedback = '$productName adicionado. Continue com o próximo.';
     });
@@ -2305,6 +2309,21 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                     ),
                   ],
                 ),
+              if (!isCatalogMode) ...[
+                const SizedBox(height: 12),
+                CheckboxListTile(
+                  value: _isPurchased,
+                  onChanged: (value) {
+                    setState(() {
+                      _isPurchased = value ?? false;
+                    });
+                  },
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: const Text('Já peguei este item'),
+                  subtitle: const Text('Ele entra na lista como comprado.'),
+                ),
+              ],
               if (priceInsight != null) ...[
                 const SizedBox(height: 10),
                 _ItemPriceInsightBanner(insight: priceInsight),
