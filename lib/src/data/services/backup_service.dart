@@ -17,7 +17,7 @@ class FilePickerShoppingBackupService implements ShoppingBackupService {
         'minhas_compras_backup_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.json';
 
     try {
-      final selectedPath = await FilePicker.platform.saveFile(
+      final selectedPath = await FilePicker.saveFile(
         dialogTitle: 'Exportar backup',
         fileName: fileName,
         type: FileType.custom,
@@ -42,7 +42,7 @@ class FilePickerShoppingBackupService implements ShoppingBackupService {
   @override
   Future<String?> importBackup() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         dialogTitle: 'Importar backup',
         type: FileType.custom,
         allowedExtensions: const <String>['json'],

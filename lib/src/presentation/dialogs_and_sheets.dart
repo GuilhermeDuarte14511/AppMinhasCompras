@@ -13,6 +13,7 @@ import '../core/utils/format_utils.dart';
 import '../data/services/fiscal_receipt_parser.dart';
 import '../domain/classifications.dart';
 import '../domain/models_and_utils.dart';
+import '../domain/product_price_analysis.dart';
 import 'extensions/classification_ui_extensions.dart';
 import 'utils/item_price_insight.dart';
 import 'utils/app_modal.dart';
@@ -1755,6 +1756,21 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     );
   }
 
+  ProductPriceAdvice? get _currentPriceAdvice {
+    final product = _catalogMatch;
+    final currentPrice = BrlCurrencyInputFormatter.tryParse(
+      _priceController.text,
+    );
+    if (product == null || currentPrice == null || currentPrice <= 0) {
+      return null;
+    }
+    final advice = ProductPriceAdvice.forCurrentPrice(
+      history: product.priceHistory,
+      currentPrice: currentPrice,
+    );
+    return _shouldShowPriceAdvice(advice) ? advice : null;
+  }
+
   Future<void> _applySuggestion(CatalogProduct product) async {
     final value = product.name;
     _nameController
@@ -2054,6 +2070,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
         : (isCatalogMode ? 'Adicionar produto' : 'Adicionar item');
     final nameLabel = isCatalogMode ? 'Produto' : 'Item';
     final priceInsight = _currentPriceInsight;
+    final priceAdvice = _currentPriceAdvice;
 
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
@@ -2328,6 +2345,10 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                 const SizedBox(height: 10),
                 _ItemPriceInsightBanner(insight: priceInsight),
               ],
+              if (priceAdvice != null) ...[
+                const SizedBox(height: 10),
+                _LocalPriceAdviceBanner(advice: priceAdvice),
+              ],
               if (_catalogMatch != null) ...[
                 const SizedBox(height: 10),
                 _CatalogPriceHint(product: _catalogMatch!),
@@ -2389,6 +2410,18 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
   }
 }
 
+bool _shouldShowPriceAdvice(ProductPriceAdvice advice) {
+  return switch (advice.type) {
+    ProductPriceAdviceType.bestPrice ||
+    ProductPriceAdviceType.goodPrice ||
+    ProductPriceAdviceType.highPrice ||
+    ProductPriceAdviceType.recordHigh => true,
+    ProductPriceAdviceType.noPrice ||
+    ProductPriceAdviceType.learning ||
+    ProductPriceAdviceType.normalPrice => false,
+  };
+}
+
 class _ItemPriceInsightBanner extends StatelessWidget {
   const _ItemPriceInsightBanner({required this.insight});
 
@@ -2437,6 +2470,90 @@ class _ItemPriceInsightBanner extends StatelessWidget {
                   color: foregroundColor,
                   fontWeight: FontWeight.w700,
                 ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LocalPriceAdviceBanner extends StatelessWidget {
+  const _LocalPriceAdviceBanner({required this.advice});
+
+  final ProductPriceAdvice advice;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final (backgroundColor, foregroundColor, icon) = switch (advice.type) {
+      ProductPriceAdviceType.bestPrice || ProductPriceAdviceType.goodPrice => (
+        colorScheme.primaryContainer.withValues(alpha: 0.82),
+        colorScheme.onPrimaryContainer,
+        Icons.verified_rounded,
+      ),
+      ProductPriceAdviceType.highPrice || ProductPriceAdviceType.recordHigh => (
+        colorScheme.errorContainer.withValues(alpha: 0.88),
+        colorScheme.onErrorContainer,
+        Icons.report_gmailerrorred_rounded,
+      ),
+      ProductPriceAdviceType.normalPrice => (
+        colorScheme.surfaceContainerHighest.withValues(alpha: 0.78),
+        colorScheme.onSurfaceVariant,
+        Icons.balance_rounded,
+      ),
+      ProductPriceAdviceType.learning => (
+        colorScheme.tertiaryContainer.withValues(alpha: 0.78),
+        colorScheme.onTertiaryContainer,
+        Icons.school_rounded,
+      ),
+      ProductPriceAdviceType.noPrice => (
+        colorScheme.secondaryContainer.withValues(alpha: 0.78),
+        colorScheme.onSecondaryContainer,
+        Icons.lightbulb_rounded,
+      ),
+    };
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 20, color: foregroundColor),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Assistente de preço',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: foregroundColor,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    advice.title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: foregroundColor,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    advice.message,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: foregroundColor.withValues(alpha: 0.86),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
