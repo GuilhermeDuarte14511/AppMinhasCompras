@@ -19,6 +19,118 @@ void main() {
     expect(find.byKey(const ValueKey('dash_action_based')), findsOneWidget);
   });
 
+  testWidgets('Dashboard shows smart list card from recurring history', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      historyStorage: _MemoryPurchaseHistoryStorage([
+        _completedPurchase(
+          closedAt: DateTime(2026, 1, 8),
+          items: [_historyItem(name: 'Arroz', quantity: 2, unitPrice: 10)],
+        ),
+        _completedPurchase(
+          closedAt: DateTime(2026, 2, 8),
+          items: [_historyItem(name: 'Arroz', quantity: 2, unitPrice: 11)],
+        ),
+        _completedPurchase(
+          closedAt: DateTime(2026, 3, 8),
+          items: [_historyItem(name: 'Arroz', quantity: 3, unitPrice: 12)],
+        ),
+        _completedPurchase(
+          closedAt: DateTime(2026, 4, 8),
+          items: [_historyItem(name: 'Leite', quantity: 1, unitPrice: 7)],
+        ),
+      ]),
+    );
+
+    expect(
+      find.byKey(const ValueKey('dash_smart_replenishment_card')),
+      findsOneWidget,
+    );
+    expect(find.text('Próxima compra sugerida'), findsOneWidget);
+    expect(find.text('Arroz'), findsWidgets);
+    expect(_textContains('Previsto'), findsOneWidget);
+  });
+
+  testWidgets('Smart list card handles long product names', (
+    WidgetTester tester,
+  ) async {
+    final longItems = [
+      _historyItem(
+        name: 'Arroz branco tipo 1 Camil pacote 1kg',
+        quantity: 1,
+        unitPrice: 8,
+      ),
+      _historyItem(
+        name: 'Molho passata pomodori Mastroianni italiano 420g',
+        quantity: 1,
+        unitPrice: 14,
+      ),
+      _historyItem(
+        name: 'Leite condensado integral Itambé lata 395g',
+        quantity: 2,
+        unitPrice: 7,
+      ),
+    ];
+
+    await _pumpApp(
+      tester,
+      historyStorage: _MemoryPurchaseHistoryStorage([
+        _completedPurchase(closedAt: DateTime(2026, 1, 8), items: longItems),
+        _completedPurchase(closedAt: DateTime(2026, 2, 8), items: longItems),
+        _completedPurchase(closedAt: DateTime(2026, 3, 8), items: longItems),
+      ]),
+    );
+
+    expect(find.text('Próxima compra sugerida'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Smart list card creates editable list from recurring items', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      historyStorage: _MemoryPurchaseHistoryStorage([
+        _completedPurchase(
+          closedAt: DateTime(2026, 1, 8),
+          items: [_historyItem(name: 'Arroz', quantity: 2, unitPrice: 10)],
+        ),
+        _completedPurchase(
+          closedAt: DateTime(2026, 2, 8),
+          items: [_historyItem(name: 'Arroz', quantity: 2, unitPrice: 11)],
+        ),
+        _completedPurchase(
+          closedAt: DateTime(2026, 3, 8),
+          items: [_historyItem(name: 'Arroz', quantity: 3, unitPrice: 12)],
+        ),
+      ]),
+    );
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Criar lista').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reposição inteligente'), findsWidgets);
+    await tester.tap(find.widgetWithText(FilledButton, 'Criar lista').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nova lista por reposição inteligente'), findsOneWidget);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Nome da lista'),
+      'Lista recorrente teste',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Criar lista').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lista recorrente teste'), findsOneWidget);
+    expect(find.text('Arroz'), findsOneWidget);
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextFormField, 'Item'), findsOneWidget);
+  });
+
   testWidgets('Create list, add item and edit item', (
     WidgetTester tester,
   ) async {
@@ -1127,9 +1239,14 @@ void main() {
 Future<void> _pumpApp(
   WidgetTester tester, {
   ProductCatalogStorage? catalogStorage,
+  PurchaseHistoryStorage? historyStorage,
 }) async {
   await tester.pumpWidget(
-    ShoppingListApp(storage: _MemoryStorage(), catalogStorage: catalogStorage),
+    ShoppingListApp(
+      storage: _MemoryStorage(),
+      catalogStorage: catalogStorage,
+      historyStorage: historyStorage,
+    ),
   );
   await tester.pumpAndSettle();
 }
@@ -1221,7 +1338,7 @@ Future<void> _createListFromDashboard(
     find.widgetWithText(TextFormField, 'Nome da lista'),
     listName,
   );
-  await tester.tap(find.text('Criar lista'));
+  await tester.tap(find.widgetWithText(FilledButton, 'Criar lista').last);
   await tester.pumpAndSettle();
 }
 
@@ -1282,6 +1399,34 @@ class _MemoryProductCatalogStorage implements ProductCatalogStorage {
   }
 }
 
+class _MemoryPurchaseHistoryStorage implements PurchaseHistoryStorage {
+  _MemoryPurchaseHistoryStorage([List<CompletedPurchase> history = const []])
+    : _history = _cloneHistory(history);
+
+  List<CompletedPurchase> _history;
+
+  @override
+  Future<List<CompletedPurchase>> loadHistory() async {
+    return _cloneHistory(_history);
+  }
+
+  @override
+  Future<void> saveHistory(List<CompletedPurchase> history) async {
+    _history = _cloneHistory(history);
+  }
+
+  static List<CompletedPurchase> _cloneHistory(List<CompletedPurchase> source) {
+    return source
+        .map(
+          (entry) => entry.copyWith(
+            items: entry.items.map((item) => item.copyWith()).toList(),
+            closedAt: entry.closedAt,
+          ),
+        )
+        .toList(growable: false);
+  }
+}
+
 List<CatalogProduct> _buildCatalogProducts({
   List<CatalogProduct> extraProducts = const [],
 }) {
@@ -1316,5 +1461,36 @@ CatalogProduct _catalogProduct({
     usageCount: usageCount,
     updatedAt: recordedAt,
     priceHistory: [PriceHistoryEntry(price: unitPrice, recordedAt: recordedAt)],
+  );
+}
+
+CompletedPurchase _completedPurchase({
+  required DateTime closedAt,
+  required List<ShoppingItem> items,
+}) {
+  return CompletedPurchase(
+    id: uniqueId(),
+    listId: uniqueId(),
+    listName: 'Compra',
+    closedAt: closedAt,
+    items: items,
+  );
+}
+
+ShoppingItem _historyItem({
+  required String name,
+  required int quantity,
+  required double unitPrice,
+}) {
+  return ShoppingItem(
+    id: uniqueId(),
+    name: name,
+    quantity: quantity,
+    unitPrice: unitPrice,
+    isPurchased: true,
+    category: ShoppingCategory.grocery,
+    priceHistory: [
+      PriceHistoryEntry(price: unitPrice, recordedAt: DateTime(2026, 1, 1)),
+    ],
   );
 }

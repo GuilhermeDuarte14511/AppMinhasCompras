@@ -343,7 +343,7 @@ class _ProductHeader extends StatelessWidget {
             children: [
               DecoratedBox(
                 decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer.withValues(alpha: 0.82),
+                  color: colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(AppTokens.radiusLg),
                 ),
                 child: Padding(
@@ -594,9 +594,7 @@ class _PriceChartPanel extends StatelessWidget {
                   painter: _PriceHistoryChartPainter(
                     entries: chartEntries,
                     lineColor: colorScheme.primary,
-                    fillColor: colorScheme.primaryContainer.withValues(
-                      alpha: 0.30,
-                    ),
+                    fillColor: colorScheme.primaryContainer,
                     gridColor: colorScheme.outlineVariant.withValues(
                       alpha: 0.62,
                     ),
@@ -955,18 +953,11 @@ class _DetailsPanel extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: backgroundColor ?? colorScheme.surface.withValues(alpha: 0.9),
+        color: backgroundColor ?? colorScheme.surface,
         borderRadius: BorderRadius.circular(AppTokens.radiusXl),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.32),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.54),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Padding(padding: const EdgeInsets.all(14), child: child),
     );
@@ -1033,25 +1024,25 @@ _TrendTone _trendTone(
   switch (direction) {
     case ProductPriceTrendDirection.down:
       return _TrendTone(
-        background: colorScheme.primaryContainer.withValues(alpha: 0.78),
+        background: colorScheme.primaryContainer,
         foreground: colorScheme.onPrimaryContainer,
         icon: Icons.trending_down_rounded,
       );
     case ProductPriceTrendDirection.up:
       return _TrendTone(
-        background: colorScheme.errorContainer.withValues(alpha: 0.72),
+        background: colorScheme.errorContainer,
         foreground: colorScheme.onErrorContainer,
         icon: Icons.trending_up_rounded,
       );
     case ProductPriceTrendDirection.same:
       return _TrendTone(
-        background: colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
+        background: colorScheme.surfaceContainerHighest,
         foreground: colorScheme.onSurfaceVariant,
         icon: Icons.trending_flat_rounded,
       );
     case ProductPriceTrendDirection.unknown:
       return _TrendTone(
-        background: colorScheme.tertiaryContainer.withValues(alpha: 0.72),
+        background: colorScheme.tertiaryContainer,
         foreground: colorScheme.onTertiaryContainer,
         icon: Icons.insights_rounded,
       );
@@ -1064,32 +1055,32 @@ _TrendTone _adviceTone(BuildContext context, ProductPriceAdviceType type) {
     case ProductPriceAdviceType.bestPrice:
     case ProductPriceAdviceType.goodPrice:
       return _TrendTone(
-        background: colorScheme.primaryContainer.withValues(alpha: 0.76),
+        background: colorScheme.primaryContainer,
         foreground: colorScheme.onPrimaryContainer,
         icon: Icons.verified_rounded,
       );
     case ProductPriceAdviceType.highPrice:
     case ProductPriceAdviceType.recordHigh:
       return _TrendTone(
-        background: colorScheme.errorContainer.withValues(alpha: 0.72),
+        background: colorScheme.errorContainer,
         foreground: colorScheme.onErrorContainer,
         icon: Icons.report_gmailerrorred_rounded,
       );
     case ProductPriceAdviceType.normalPrice:
       return _TrendTone(
-        background: colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
+        background: colorScheme.surfaceContainerHighest,
         foreground: colorScheme.onSurfaceVariant,
         icon: Icons.balance_rounded,
       );
     case ProductPriceAdviceType.learning:
       return _TrendTone(
-        background: colorScheme.tertiaryContainer.withValues(alpha: 0.72),
+        background: colorScheme.tertiaryContainer,
         foreground: colorScheme.onTertiaryContainer,
         icon: Icons.school_rounded,
       );
     case ProductPriceAdviceType.noPrice:
       return _TrendTone(
-        background: colorScheme.secondaryContainer.withValues(alpha: 0.72),
+        background: colorScheme.secondaryContainer,
         foreground: colorScheme.onSecondaryContainer,
         icon: Icons.lightbulb_rounded,
       );

@@ -830,9 +830,7 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
                               return Card(
                                 clipBehavior: Clip.antiAlias,
                                 color: isSelected
-                                    ? colorScheme.primaryContainer.withValues(
-                                        alpha: 0.45,
-                                      )
+                                    ? colorScheme.primaryContainer
                                     : null,
                                 child: InkWell(
                                   onLongPress: () => _toggleSelection(
@@ -1049,7 +1047,7 @@ class _CatalogEmptyState extends StatelessWidget {
             Text(
               hasQuery
                   ? 'Nenhum produto encontrado.'
-                  : 'Seu catálogo ainda está vazio.',
+                  : 'Adicione produtos frequentes',
               textAlign: TextAlign.center,
               style: textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w800,
@@ -1059,7 +1057,7 @@ class _CatalogEmptyState extends StatelessWidget {
             Text(
               hasQuery
                   ? 'Tente outro termo de busca.'
-                  : 'Adicione produtos para reaproveitar preços e dados nas próximas compras.',
+                  : 'Salve produtos que você compra sempre para reaproveitar nomes, preços e códigos.',
               textAlign: TextAlign.center,
               style: textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
@@ -1070,7 +1068,7 @@ class _CatalogEmptyState extends StatelessWidget {
               FilledButton.icon(
                 onPressed: onCreateProduct,
                 icon: const Icon(Icons.add_rounded),
-                label: const Text('Adicionar produto'),
+                label: const Text('Adicionar produto frequente'),
               ),
             ],
           ],
@@ -1110,10 +1108,10 @@ class _CatalogSummaryPill extends StatelessWidget {
       readOnly: true,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: colorScheme.surface.withValues(alpha: 0.72),
+          color: colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(AppTokens.radiusLg),
           border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.32),
+            color: colorScheme.outlineVariant.withValues(alpha: 0.52),
           ),
         ),
         child: Padding(
@@ -1175,18 +1173,11 @@ class _CatalogContentPanel extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.9),
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(AppTokens.radiusXl),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.32),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.54),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Padding(padding: const EdgeInsets.all(14), child: child),
     );

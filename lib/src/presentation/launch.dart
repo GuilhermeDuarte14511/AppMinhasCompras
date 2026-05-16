@@ -115,39 +115,8 @@ class _SplashBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            colorScheme.primaryContainer.withValues(alpha: 0.38),
-            colorScheme.surface,
-            const Color(0xFFFFF7D8).withValues(alpha: 0.56),
-          ],
-        ),
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Positioned(
-            top: -86,
-            right: -54,
-            child: _SplashAura(
-              size: 240,
-              color: colorScheme.primary.withValues(alpha: 0.10),
-            ),
-          ),
-          Positioned(
-            bottom: -102,
-            left: -62,
-            child: _SplashAura(
-              size: 280,
-              color: const Color(0xFFF5C84C).withValues(alpha: 0.16),
-            ),
-          ),
-          child,
-        ],
-      ),
+      decoration: BoxDecoration(color: colorScheme.surface),
+      child: child,
     );
   }
 }
@@ -284,16 +253,9 @@ class _ProductChip extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.94),
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.22)),
-        boxShadow: [
-          BoxShadow(
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-            color: colorScheme.shadow.withValues(alpha: 0.08),
-          ),
-        ],
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -323,54 +285,36 @@ class _ShoppingBagMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final pulse = sin(progress * pi * 2).clamp(-1.0, 1.0);
     final checkProgress = ((progress - 0.54) / 0.2).clamp(0.0, 1.0);
-    return Transform.translate(
-      offset: Offset(0, pulse * 3),
-      child: Transform.scale(
-        scale: 0.96 + (checkProgress * 0.04),
-        child: DecoratedBox(
-          key: const ValueKey('splash-shopping-bag'),
-          decoration: BoxDecoration(
-            color: colorScheme.primary,
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: [
-              BoxShadow(
-                blurRadius: 38,
-                spreadRadius: 1,
-                offset: const Offset(0, 20),
-                color: colorScheme.primary.withValues(alpha: 0.22),
-              ),
-            ],
-          ),
-          child: SizedBox(
-            width: 124,
-            height: 124,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Icon(
-                  Icons.shopping_bag_outlined,
-                  color: colorScheme.onPrimary,
-                  size: 70,
-                ),
-                Positioned(
-                  bottom: 35,
-                  child: Opacity(
-                    opacity: checkProgress,
-                    child: Transform.scale(
-                      scale: Curves.elasticOut.transform(checkProgress),
-                      child: Icon(
-                        Icons.check_rounded,
-                        color: const Color(0xFFFFE08A),
-                        size: 42,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+    return DecoratedBox(
+      key: const ValueKey('splash-shopping-bag'),
+      decoration: BoxDecoration(
+        color: colorScheme.primary,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: SizedBox(
+        width: 124,
+        height: 124,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Icon(
+              Icons.shopping_bag_outlined,
+              color: colorScheme.onPrimary,
+              size: 70,
             ),
-          ),
+            Positioned(
+              bottom: 35,
+              child: Opacity(
+                opacity: checkProgress,
+                child: Icon(
+                  Icons.check_rounded,
+                  color: const Color(0xFFFFE08A),
+                  size: 42,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -391,38 +335,28 @@ class _ChecklistCard extends StatelessWidget {
       alignment: const Alignment(0.72, 0.64),
       child: Opacity(
         opacity: eased,
-        child: Transform.translate(
-          offset: Offset(0, 18 * (1 - eased)),
-          child: DecoratedBox(
-            key: const ValueKey('splash-checklist'),
-            decoration: BoxDecoration(
-              color: colorScheme.surface.withValues(alpha: 0.96),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: colorScheme.primary.withValues(alpha: 0.14),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  blurRadius: 22,
-                  offset: const Offset(0, 12),
-                  color: colorScheme.shadow.withValues(alpha: 0.10),
-                ),
-              ],
+        child: DecoratedBox(
+          key: const ValueKey('splash-checklist'),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: colorScheme.primary.withValues(alpha: 0.14),
             ),
-            child: const SizedBox(
-              width: 112,
-              child: Padding(
-                padding: EdgeInsets.all(13),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _ChecklistRow(widthFactor: 0.9),
-                    SizedBox(height: 9),
-                    _ChecklistRow(widthFactor: 0.7),
-                    SizedBox(height: 9),
-                    _ChecklistRow(widthFactor: 0.82),
-                  ],
-                ),
+          ),
+          child: const SizedBox(
+            width: 112,
+            child: Padding(
+              padding: EdgeInsets.all(13),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _ChecklistRow(widthFactor: 0.9),
+                  SizedBox(height: 9),
+                  _ChecklistRow(widthFactor: 0.7),
+                  SizedBox(height: 9),
+                  _ChecklistRow(widthFactor: 0.82),
+                ],
               ),
             ),
           ),
@@ -509,7 +443,7 @@ class _SplashLoadingHint extends StatelessWidget {
               key: const ValueKey('splash-ready'),
               icon: Icons.sync_rounded,
               iconColor: colorScheme.primary,
-              label: 'Sincronizando suas compras...',
+              label: 'Sincronizando compras',
             )
           : _SplashStatusRow(
               key: const ValueKey('splash-loading'),
@@ -521,7 +455,7 @@ class _SplashLoadingHint extends StatelessWidget {
                   color: colorScheme.primary,
                 ),
               ),
-              label: 'Abrindo seu painel...',
+              label: 'Abrindo painel',
             ),
     );
   }
@@ -564,21 +498,6 @@ class _SplashStatusRow extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _SplashAura extends StatelessWidget {
-  const _SplashAura({required this.size, required this.color});
-
-  final double size;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-      child: SizedBox(width: size, height: size),
     );
   }
 }
@@ -628,62 +547,11 @@ class AppGradientScene extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            colorScheme.primaryContainer.withValues(alpha: 0.12),
-            colorScheme.surface,
-            colorScheme.secondaryContainer.withValues(alpha: 0.08),
-          ],
-        ),
+        color: Theme.of(context).scaffoldBackgroundColor,
       ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          IgnorePointer(
-            child: Stack(
-              children: [
-                Positioned(
-                  top: -80,
-                  right: -40,
-                  child: _SceneAura(
-                    size: 220,
-                    color: colorScheme.primary.withValues(alpha: 0.09),
-                  ),
-                ),
-                Positioned(
-                  bottom: -90,
-                  left: -46,
-                  child: _SceneAura(
-                    size: 260,
-                    color: colorScheme.tertiary.withValues(alpha: 0.08),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
-class _SceneAura extends StatelessWidget {
-  const _SceneAura({required this.size, required this.color});
-
-  final double size;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-      child: SizedBox(width: size, height: size),
+      child: child,
     );
   }
 }

@@ -582,11 +582,6 @@ class ShoppingListsStore extends ChangeNotifier {
     final stats = <String, _ReplenishmentSuggestionStats>{};
 
     for (final purchase in _history) {
-      if (purchase.closedAt.year != targetMonth.year ||
-          purchase.closedAt.month != targetMonth.month) {
-        continue;
-      }
-
       for (final item in _itemsRelevantForReplenishment(purchase)) {
         final normalizedName = normalizeQuery(item.name);
         if (normalizedName.isEmpty) {
@@ -612,6 +607,9 @@ class ShoppingListsStore extends ChangeNotifier {
             unitPrice: resolvedPrice,
             lastPurchasedAt: purchase.closedAt,
             occurrences: 1,
+            appearedInTargetMonth:
+                purchase.closedAt.year == targetMonth.year &&
+                purchase.closedAt.month == targetMonth.month,
             usageCount: catalogMatch?.usageCount ?? 0,
             barcode: item.barcode ?? catalogMatch?.barcode,
           );
@@ -624,11 +622,19 @@ class ShoppingListsStore extends ChangeNotifier {
               ? resolvedCategory
               : existing.category,
           quantity: existing.quantity + max(1, item.quantity),
-          unitPrice: resolvedPrice > 0 ? resolvedPrice : existing.unitPrice,
+          unitPrice:
+              purchase.closedAt.isAfter(existing.lastPurchasedAt) &&
+                  resolvedPrice > 0
+              ? resolvedPrice
+              : existing.unitPrice,
           lastPurchasedAt: purchase.closedAt.isAfter(existing.lastPurchasedAt)
               ? purchase.closedAt
               : existing.lastPurchasedAt,
           occurrences: existing.occurrences + 1,
+          appearedInTargetMonth:
+              existing.appearedInTargetMonth ||
+              (purchase.closedAt.year == targetMonth.year &&
+                  purchase.closedAt.month == targetMonth.month),
           usageCount: max(existing.usageCount, catalogMatch?.usageCount ?? 0),
           barcode: existing.barcode ?? item.barcode ?? catalogMatch?.barcode,
         );
@@ -638,21 +644,32 @@ class ShoppingListsStore extends ChangeNotifier {
     if (stats.isNotEmpty) {
       final suggestions =
           stats.values
+              .where(
+                (entry) => entry.occurrences > 1 || entry.appearedInTargetMonth,
+              )
               .map(
                 (entry) => ReplenishmentSuggestion(
                   name: entry.name,
                   category: entry.category,
-                  suggestedQuantity: entry.quantity,
+                  suggestedQuantity: entry.averageQuantity,
                   suggestedUnitPrice: entry.unitPrice,
                   lastPurchasedAt: entry.lastPurchasedAt,
                   occurrences: entry.occurrences,
                   usageCount: entry.usageCount,
-                  source: ReplenishmentSuggestionSource.lastMonth,
+                  source: entry.occurrences > 1
+                      ? ReplenishmentSuggestionSource.recurring
+                      : ReplenishmentSuggestionSource.lastMonth,
                   barcode: entry.barcode,
                 ),
               )
               .toList(growable: false)
             ..sort((a, b) {
+              final byRecurring = _sourcePriority(
+                a.source,
+              ).compareTo(_sourcePriority(b.source));
+              if (byRecurring != 0) {
+                return byRecurring;
+              }
               final byOccurrences = b.occurrences.compareTo(a.occurrences);
               if (byOccurrences != 0) {
                 return byOccurrences;
@@ -673,7 +690,11 @@ class ShoppingListsStore extends ChangeNotifier {
               }
               return a.name.toLowerCase().compareTo(b.name.toLowerCase());
             });
-      return List.unmodifiable(suggestions.take(limit).toList(growable: false));
+      if (suggestions.isNotEmpty) {
+        return List.unmodifiable(
+          suggestions.take(limit).toList(growable: false),
+        );
+      }
     }
 
     final fallback = _productCatalog.allProducts().toList(growable: false)
@@ -791,14 +812,14 @@ class ShoppingListsStore extends ChangeNotifier {
     required ShoppingItem item,
     required CatalogProduct? catalogMatch,
   }) {
-    final itemHistory = item.priceHistory;
-    if (itemHistory.isNotEmpty) {
-      return max(0, itemHistory.last.price);
-    }
     final catalogHistory =
         catalogMatch?.priceHistory ?? const <PriceHistoryEntry>[];
     if (catalogHistory.isNotEmpty) {
       return max(0, catalogHistory.last.price);
+    }
+    final itemHistory = item.priceHistory;
+    if (itemHistory.isNotEmpty) {
+      return max(0, itemHistory.last.price);
     }
     return max(
       0,
@@ -818,6 +839,17 @@ class ShoppingListsStore extends ChangeNotifier {
     return trimmedIncoming.length > trimmedCurrent.length
         ? trimmedIncoming
         : trimmedCurrent;
+  }
+
+  int _sourcePriority(ReplenishmentSuggestionSource source) {
+    switch (source) {
+      case ReplenishmentSuggestionSource.recurring:
+        return 0;
+      case ReplenishmentSuggestionSource.lastMonth:
+        return 1;
+      case ReplenishmentSuggestionSource.catalogFallback:
+        return 2;
+    }
   }
 
   List<ShoppingListModel> _decodeBackupLists(String rawPayload) {
@@ -1027,6 +1059,7 @@ class _ReplenishmentSuggestionStats {
     required this.unitPrice,
     required this.lastPurchasedAt,
     required this.occurrences,
+    required this.appearedInTargetMonth,
     required this.usageCount,
     this.barcode,
   });
@@ -1037,8 +1070,11 @@ class _ReplenishmentSuggestionStats {
   final double unitPrice;
   final DateTime lastPurchasedAt;
   final int occurrences;
+  final bool appearedInTargetMonth;
   final int usageCount;
   final String? barcode;
+
+  int get averageQuantity => max(1, (quantity / occurrences).round());
 
   _ReplenishmentSuggestionStats copyWith({
     String? name,
@@ -1047,6 +1083,7 @@ class _ReplenishmentSuggestionStats {
     double? unitPrice,
     DateTime? lastPurchasedAt,
     int? occurrences,
+    bool? appearedInTargetMonth,
     int? usageCount,
     String? barcode,
   }) {
@@ -1057,6 +1094,8 @@ class _ReplenishmentSuggestionStats {
       unitPrice: unitPrice ?? this.unitPrice,
       lastPurchasedAt: lastPurchasedAt ?? this.lastPurchasedAt,
       occurrences: occurrences ?? this.occurrences,
+      appearedInTargetMonth:
+          appearedInTargetMonth ?? this.appearedInTargetMonth,
       usageCount: usageCount ?? this.usageCount,
       barcode: barcode ?? this.barcode,
     );

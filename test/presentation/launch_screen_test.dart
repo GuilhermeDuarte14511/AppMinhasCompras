@@ -16,7 +16,7 @@ void main() {
     expect(find.byKey(const ValueKey('splash-checklist')), findsOneWidget);
     expect(find.text('Minha Lista de Compras'), findsOneWidget);
     expect(find.text('Organize suas compras de forma simples'), findsOneWidget);
-    expect(find.text('Abrindo seu painel...'), findsOneWidget);
+    expect(find.text('Abrindo painel'), findsOneWidget);
   });
 
   testWidgets('SplashPage updates copy while local data is syncing', (
@@ -26,7 +26,7 @@ void main() {
       const MaterialApp(home: SplashPage(showReadyHint: true)),
     );
 
-    expect(find.text('Sincronizando suas compras...'), findsOneWidget);
+    expect(find.text('Sincronizando compras'), findsOneWidget);
   });
 
   testWidgets(

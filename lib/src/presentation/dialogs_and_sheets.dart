@@ -14,6 +14,7 @@ import '../data/services/fiscal_receipt_parser.dart';
 import '../domain/classifications.dart';
 import '../domain/models_and_utils.dart';
 import '../domain/product_price_analysis.dart';
+import 'dialogs/widgets/item_editor_support_widgets.dart';
 import 'extensions/classification_ui_extensions.dart';
 import 'utils/item_price_insight.dart';
 import 'utils/app_modal.dart';
@@ -883,6 +884,8 @@ class _ReplenishmentSuggestionsSheetState
 
   String _sourceLabel(ReplenishmentSuggestion suggestion) {
     switch (suggestion.source) {
+      case ReplenishmentSuggestionSource.recurring:
+        return 'Compra recorrente';
       case ReplenishmentSuggestionSource.lastMonth:
         return 'Baseado no mês passado';
       case ReplenishmentSuggestionSource.catalogFallback:
@@ -1077,7 +1080,7 @@ class _SelectionInfoChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.72),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Padding(
@@ -1329,7 +1332,7 @@ class _FiscalReceiptImportSheetState extends State<_FiscalReceiptImportSheet> {
       }
       setState(() {
         _isExtractingFromImage = false;
-        _ocrFeedback = 'Falha ao executar OCR na imagem. [$error]';
+        _ocrFeedback = 'Não foi possível ler a imagem. Tente outra foto.';
       });
     }
   }
@@ -1461,9 +1464,7 @@ class _FiscalReceiptImportSheetState extends State<_FiscalReceiptImportSheet> {
                       padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primaryContainer.withValues(alpha: 0.45),
+                        color: Theme.of(context).colorScheme.primaryContainer,
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1472,15 +1473,15 @@ class _FiscalReceiptImportSheetState extends State<_FiscalReceiptImportSheet> {
                             spacing: 8,
                             runSpacing: 8,
                             children: [
-                              _ReceiptStatChip(
+                              ReceiptStatChip(
                                 icon: Icons.receipt_long_rounded,
                                 text: formatItemCount(_parsedItems.length),
                               ),
-                              _ReceiptStatChip(
+                              ReceiptStatChip(
                                 icon: Icons.confirmation_number_rounded,
                                 text: formatUnitCount(totalUnits),
                               ),
-                              _ReceiptStatChip(
+                              ReceiptStatChip(
                                 icon: Icons.attach_money_rounded,
                                 text: formatCurrency(totalValue),
                               ),
@@ -2098,7 +2099,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Digite parte do nome para buscar no catálogo, toque numa sugestão e ajuste o valor para comparar o preço na hora.',
+                'Busque no catálogo ou preencha manualmente.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -2212,7 +2213,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                 Column(
                   children: [
                     for (final suggestion in _matchingCatalogSuggestions)
-                      _CatalogSuggestionTile(
+                      CatalogSuggestionTile(
                         product: suggestion,
                         onTap: () => unawaited(_applySuggestion(suggestion)),
                       ),
@@ -2269,7 +2270,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                       value ?? '',
                     );
                     if (parsed == null || parsed <= 0) {
-                      return 'Inválido';
+                      return 'Informe um valor válido.';
                     }
                     return null;
                   },
@@ -2290,7 +2291,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                         validator: (value) {
                           final parsed = int.tryParse((value ?? '').trim());
                           if (parsed == null || parsed < 1) {
-                            return 'Inválida';
+                            return 'Informe uma quantidade válida.';
                           }
                           return null;
                         },
@@ -2317,7 +2318,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                             value ?? '',
                           );
                           if (parsed == null || parsed <= 0) {
-                            return 'Inválido';
+                            return 'Informe um valor válido.';
                           }
                           return null;
                         },
@@ -2338,24 +2339,24 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                   contentPadding: EdgeInsets.zero,
                   controlAffinity: ListTileControlAffinity.leading,
                   title: const Text('Já peguei este item'),
-                  subtitle: const Text('Ele entra na lista como comprado.'),
+                  subtitle: const Text('O item entra como comprado.'),
                 ),
               ],
               if (priceInsight != null) ...[
                 const SizedBox(height: 10),
-                _ItemPriceInsightBanner(insight: priceInsight),
+                ItemPriceInsightBanner(insight: priceInsight),
               ],
               if (priceAdvice != null) ...[
                 const SizedBox(height: 10),
-                _LocalPriceAdviceBanner(advice: priceAdvice),
+                LocalPriceAdviceBanner(advice: priceAdvice),
               ],
               if (_catalogMatch != null) ...[
                 const SizedBox(height: 10),
-                _CatalogPriceHint(product: _catalogMatch!),
+                CatalogPriceHint(product: _catalogMatch!),
               ],
               const SizedBox(height: 20),
               if (widget.allowMultiple && _pendingDrafts.isNotEmpty) ...[
-                _PendingDraftsPreview(drafts: _pendingDrafts),
+                PendingDraftsPreview(drafts: _pendingDrafts),
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(
@@ -2420,306 +2421,6 @@ bool _shouldShowPriceAdvice(ProductPriceAdvice advice) {
     ProductPriceAdviceType.learning ||
     ProductPriceAdviceType.normalPrice => false,
   };
-}
-
-class _ItemPriceInsightBanner extends StatelessWidget {
-  const _ItemPriceInsightBanner({required this.insight});
-
-  final ItemPriceInsight insight;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final (
-      backgroundColor,
-      foregroundColor,
-      icon,
-    ) = switch (insight.direction) {
-      PriceInsightDirection.down => (
-        colorScheme.primaryContainer.withValues(alpha: 0.78),
-        colorScheme.onPrimaryContainer,
-        Icons.south_rounded,
-      ),
-      PriceInsightDirection.same => (
-        colorScheme.secondaryContainer.withValues(alpha: 0.78),
-        colorScheme.onSecondaryContainer,
-        Icons.remove_rounded,
-      ),
-      PriceInsightDirection.up => (
-        colorScheme.errorContainer.withValues(alpha: 0.86),
-        colorScheme.onErrorContainer,
-        Icons.north_rounded,
-      ),
-    };
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            Icon(icon, size: 18, color: foregroundColor),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                insight.label,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: foregroundColor,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LocalPriceAdviceBanner extends StatelessWidget {
-  const _LocalPriceAdviceBanner({required this.advice});
-
-  final ProductPriceAdvice advice;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final (backgroundColor, foregroundColor, icon) = switch (advice.type) {
-      ProductPriceAdviceType.bestPrice || ProductPriceAdviceType.goodPrice => (
-        colorScheme.primaryContainer.withValues(alpha: 0.82),
-        colorScheme.onPrimaryContainer,
-        Icons.verified_rounded,
-      ),
-      ProductPriceAdviceType.highPrice || ProductPriceAdviceType.recordHigh => (
-        colorScheme.errorContainer.withValues(alpha: 0.88),
-        colorScheme.onErrorContainer,
-        Icons.report_gmailerrorred_rounded,
-      ),
-      ProductPriceAdviceType.normalPrice => (
-        colorScheme.surfaceContainerHighest.withValues(alpha: 0.78),
-        colorScheme.onSurfaceVariant,
-        Icons.balance_rounded,
-      ),
-      ProductPriceAdviceType.learning => (
-        colorScheme.tertiaryContainer.withValues(alpha: 0.78),
-        colorScheme.onTertiaryContainer,
-        Icons.school_rounded,
-      ),
-      ProductPriceAdviceType.noPrice => (
-        colorScheme.secondaryContainer.withValues(alpha: 0.78),
-        colorScheme.onSecondaryContainer,
-        Icons.lightbulb_rounded,
-      ),
-    };
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 20, color: foregroundColor),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Assistente de preço',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: foregroundColor,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    advice.title,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: foregroundColor,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    advice.message,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: foregroundColor.withValues(alpha: 0.86),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CatalogSuggestionTile extends StatelessWidget {
-  const _CatalogSuggestionTile({required this.product, required this.onTap});
-
-  final CatalogProduct product;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      dense: true,
-      contentPadding: EdgeInsets.zero,
-      leading: const Icon(Icons.inventory_2_rounded),
-      title: Text(product.name),
-      subtitle: Text(product.barcode ?? 'Sem código'),
-      onTap: onTap,
-    );
-  }
-}
-
-class _PendingDraftsPreview extends StatelessWidget {
-  const _PendingDraftsPreview({required this.drafts});
-
-  final List<ShoppingItemDraft> drafts;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final previewNames = drafts.take(3).map((draft) => draft.name).join(', ');
-    final remaining = drafts.length - min(drafts.length, 3);
-    final suffix = remaining > 0 ? ' +$remaining' : '';
-    final itemLabel = drafts.length == 1 ? 'item pronto' : 'itens prontos';
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withValues(alpha: 0.58),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            Icon(
-              Icons.playlist_add_check_rounded,
-              color: colorScheme.onPrimaryContainer,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                '${drafts.length} $itemLabel: $previewNames$suffix',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CatalogPriceHint extends StatelessWidget {
-  const _CatalogPriceHint({required this.product});
-
-  final CatalogProduct product;
-
-  @override
-  Widget build(BuildContext context) {
-    final history = product.priceHistory;
-    final latestPrice =
-        product.unitPrice ?? (history.isNotEmpty ? history.last.price : null);
-    if (latestPrice == null || latestPrice <= 0) {
-      return const SizedBox.shrink();
-    }
-
-    final previousPrice = history.length > 1
-        ? history[history.length - 2].price
-        : null;
-    final variation = previousPrice == null || previousPrice <= 0
-        ? null
-        : ((latestPrice - previousPrice) / previousPrice) * 100;
-    final variationText = variation == null
-        ? 'Primeiro preço salvo no catálogo.'
-        : variation > 0
-        ? 'Subiu ${variation.abs().toStringAsFixed(1)}% em relação ao registro anterior.'
-        : variation < 0
-        ? 'Caiu ${variation.abs().toStringAsFixed(1)}% em relação ao registro anterior.'
-        : 'Preço igual ao registro anterior.';
-
-    final latestDate = history.isNotEmpty
-        ? formatDateTime(history.last.recordedAt)
-        : formatDateTime(product.updatedAt);
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withValues(alpha: 0.34),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colorScheme.primary.withValues(alpha: 0.24)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Preço sugerido: ${formatCurrency(latestPrice)}',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '$variationText Histórico local: ${formatCountLabel(history.length, 'registro', 'registros')}. Última atualização: $latestDate.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ReceiptStatChip extends StatelessWidget {
-  const _ReceiptStatChip({required this.icon, required this.text});
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.75),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16),
-            const SizedBox(width: 6),
-            Text(
-              text,
-              style: Theme.of(
-                context,
-              ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class BrlCurrencyInputFormatter extends TextInputFormatter {

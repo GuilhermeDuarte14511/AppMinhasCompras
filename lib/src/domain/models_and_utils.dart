@@ -592,6 +592,7 @@ class ShoppingItemDraft {
 }
 
 enum ReplenishmentSuggestionSource {
+  recurring('recurring'),
   lastMonth('last_month'),
   catalogFallback('catalog_fallback');
 
@@ -622,6 +623,8 @@ class ReplenishmentSuggestion {
   final int usageCount;
   final ReplenishmentSuggestionSource source;
   final String? barcode;
+
+  double get estimatedTotal => suggestedQuantity * suggestedUnitPrice;
 
   ShoppingItemDraft toDraft() {
     return ShoppingItemDraft(

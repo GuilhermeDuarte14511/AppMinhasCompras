@@ -213,11 +213,11 @@ class _OnboardingPageState extends State<OnboardingPage>
                   const SizedBox(height: 8),
                   DecoratedBox(
                     decoration: BoxDecoration(
-                      color: colorScheme.surface.withValues(alpha: 0.92),
+                      color: colorScheme.surface,
                       borderRadius: BorderRadius.circular(AppTokens.radiusXl),
                       border: Border.all(
                         color: colorScheme.outlineVariant.withValues(
-                          alpha: 0.3,
+                          alpha: 0.54,
                         ),
                       ),
                     ),
@@ -353,23 +353,16 @@ class _OnboardingStepCard extends StatelessWidget {
     return AnimatedBuilder(
       animation: animation,
       builder: (context, child) {
-        final wave = math.sin(animation.value * math.pi * 2) * 5;
+        final wave = math.sin(animation.value * math.pi * 2) * 2;
         return Transform.translate(offset: Offset(0, wave), child: child);
       },
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: colorScheme.surface.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(AppTokens.radius2Xl),
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(AppTokens.radiusXl),
           border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+            color: colorScheme.outlineVariant.withValues(alpha: 0.54),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: colorScheme.shadow.withValues(alpha: 0.05),
-              blurRadius: 22,
-              offset: const Offset(0, 10),
-            ),
-          ],
         ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
@@ -382,16 +375,9 @@ class _OnboardingStepCard extends StatelessWidget {
                   height: 110,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        step.accent.withValues(alpha: 0.32),
-                        step.accent.withValues(alpha: 0.12),
-                      ],
-                    ),
+                    color: colorScheme.surfaceContainerHighest,
                     border: Border.all(
-                      color: step.accent.withValues(alpha: 0.45),
+                      color: step.accent.withValues(alpha: 0.5),
                       width: 1.2,
                     ),
                   ),

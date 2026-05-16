@@ -5,8 +5,6 @@ import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-
 import '../application/store_and_services.dart';
 import '../core/utils/format_utils.dart';
 import '../data/remote/shared_lists_repository.dart';
@@ -19,6 +17,7 @@ import 'launch.dart';
 import 'market_mode_page.dart';
 import 'purchase_history_page.dart';
 import 'shared_lists_pages.dart';
+import 'shopping_list_editor/widgets/editor_chrome_widgets.dart';
 import 'theme/app_tokens.dart';
 import 'utils/app_modal.dart';
 import 'utils/app_page_route.dart';
@@ -146,7 +145,7 @@ class _ListEditorActionsSheet extends StatelessWidget {
             label: 'Abrir modo compra',
             shortLabel: 'Modo compra',
             icon: Icons.shopping_cart_checkout_rounded,
-            color: const Color(0xFF00897B),
+            color: const Color(0xFFF97316),
           );
         case _ListEditorMenuAction.openCatalog:
           return _ListEditorActionMeta(
@@ -796,11 +795,17 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         });
       }
       if (showSnack) {
-        _showSnack('Listas compartilhadas sincronizadas.');
+        HapticFeedback.mediumImpact();
+        _showSnack(
+          'Listas compartilhadas sincronizadas.',
+          type: AppToastType.success,
+        );
       }
     } catch (error) {
       if (showSnack) {
-        _showSnack('Não foi possível sincronizar: $error');
+        _showSnack(
+          'Não foi possível sincronizar. Verifique sua conexão e tente novamente.',
+        );
       }
     }
   }
@@ -840,18 +845,28 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         });
       }
       if (showSnack) {
-        _showSnack('Listas compartilhadas sincronizadas.');
+        HapticFeedback.mediumImpact();
+        _showSnack(
+          'Listas compartilhadas sincronizadas.',
+          type: AppToastType.success,
+        );
       }
     } catch (error) {
       if (showSnack) {
-        _showSnack('Não foi possível sincronizar: $error');
+        _showSnack(
+          'Não foi possível sincronizar. Verifique sua conexão e tente novamente.',
+        );
       }
     } finally {
       _isSyncingToShared = false;
     }
   }
 
-  void _updateList(ShoppingListModel updated, {String? message}) {
+  void _updateList(
+    ShoppingListModel updated, {
+    String? message,
+    AppToastType messageType = AppToastType.success,
+  }) {
     final normalized = updated.copyWith(updatedAt: DateTime.now());
     setState(() {
       _list = normalized;
@@ -860,7 +875,8 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     unawaited(widget.store.upsertList(_list));
     unawaited(_syncLocalChangesToShared(normalized));
     if (message != null) {
-      _showSnack(message);
+      HapticFeedback.mediumImpact();
+      _showSnack(message, type: messageType);
     }
   }
 
@@ -1081,6 +1097,12 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     final items = [..._list.items];
     items[index] = item.copyWith(isPurchased: value ?? false);
     _updateList(_list.copyWith(items: items));
+    HapticFeedback.selectionClick();
+    _showSnack(
+      (value ?? false) ? 'Item comprado.' : 'Item pendente.',
+      type: AppToastType.success,
+      duration: const Duration(milliseconds: 900),
+    );
   }
 
   void _changeQuantity(ShoppingItem item, int delta) {
@@ -1243,9 +1265,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Limpar comprados?'),
-        content: const Text(
-          'Essa ação remove apenas os itens marcados como comprados.',
-        ),
+        content: const Text('Essa ação remove apenas os itens comprados.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -1275,13 +1295,12 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     );
   }
 
-  void _showSnack(String message) {
-    AppToast.show(
-      context,
-      message: message,
-      type: AppToastType.info,
-      duration: const Duration(seconds: 4),
-    );
+  void _showSnack(
+    String message, {
+    AppToastType type = AppToastType.info,
+    Duration duration = const Duration(seconds: 4),
+  }) {
+    AppToast.show(context, message: message, type: type, duration: duration);
   }
 
   void _logShare(String message) {
@@ -1496,13 +1515,21 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         return;
       }
       if (error is FirebaseException) {
-        _logShare(
-          'share error FirebaseException code=${error.code} message=${error.message}',
+        _logShare('share error FirebaseException');
+        developer.log(
+          'FirebaseException while sharing list.',
+          name: 'share_flow',
+          error: error,
         );
       } else {
-        _logShare('share error $error');
+        _logShare('share error');
+        developer.log(
+          'Unexpected error while sharing list.',
+          name: 'share_flow',
+          error: error,
+        );
       }
-      _showSnack('Não foi possível compartilhar a lista: $error');
+      _showSnack('Não foi possível compartilhar a lista. Tente novamente.');
     }
   }
 
@@ -1562,7 +1589,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         );
         await _syncLinkedSharedNow(showSnack: true);
       } catch (error) {
-        _showSnack('Não foi possível reabrir: $error');
+        _showSnack('Não foi possível reabrir a lista. Tente novamente.');
       }
       return;
     }
@@ -1621,7 +1648,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         await _syncLinkedSharedNow(showSnack: true);
         _showSnack('Compra fechada e salva no histórico compartilhado.');
       } catch (error) {
-        _showSnack('Não foi possível fechar: $error');
+        _showSnack('Não foi possível fechar a lista. Tente novamente.');
       }
       return;
     }
@@ -1803,7 +1830,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
                                       ),
                                 ),
                                 const SizedBox(height: 10),
-                                _SharedSyncStatusPill(
+                                EditorSyncStatusPill(
                                   isSyncing: _isSyncingToShared,
                                   lastSyncAt: _lastSharedSyncAt,
                                 ),
@@ -1882,7 +1909,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
                   _purchasedItemsCount > 0)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  child: _EditorInlineInfoBanner(
+                  child: EditorInlineInfoBanner(
                     icon: Icons.visibility_outlined,
                     message: _purchasedItemsCount == 1
                         ? '1 item comprado oculto para deixar a lista mais objetiva.'
@@ -1923,7 +1950,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
                               const SizedBox(height: 12),
                           itemBuilder: (context, index) {
                             final item = visibleItems[index];
-                            return _EditorEntryAnimation(
+                            return EditorEntryAnimation(
                               key: ValueKey(item.id),
                               delay: Duration(
                                 milliseconds: min(160, index * 24),
@@ -1949,7 +1976,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
                                   }
                                   return false;
                                 },
-                                background: _EditorMarketSwipeBackground(
+                                background: EditorMarketSwipeBackground(
                                   icon: item.isPurchased
                                       ? Icons.undo_rounded
                                       : Icons.check_rounded,
@@ -1959,7 +1986,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
                                   alignRight: false,
                                 ),
                                 secondaryBackground:
-                                    const _EditorMarketSwipeBackground(
+                                    const EditorMarketSwipeBackground(
                                       icon: Icons.bolt_rounded,
                                       label: 'Ações rápidas',
                                       alignRight: true,
@@ -1984,41 +2011,6 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _EditorMarketSwipeBackground extends StatelessWidget {
-  const _EditorMarketSwipeBackground({
-    required this.icon,
-    required this.label,
-    required this.alignRight,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool alignRight;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: colorScheme.primaryContainer.withValues(alpha: 0.75),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      alignment: alignRight ? Alignment.centerRight : Alignment.centerLeft,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (alignRight) Text(label),
-          if (alignRight) const SizedBox(width: 8),
-          Icon(icon),
-          if (!alignRight) const SizedBox(width: 8),
-          if (!alignRight) Text(label),
-        ],
       ),
     );
   }
@@ -2063,14 +2055,9 @@ class _ListSummaryPanel extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppTokens.radiusXl),
-        gradient: LinearGradient(
-          colors: [
-            colorScheme.primaryContainer.withValues(alpha: 0.9),
-            colorScheme.secondaryContainer.withValues(alpha: 0.84),
-          ],
-        ),
+        color: colorScheme.surface,
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.54),
           width: AppTokens.cardBorderWidth,
         ),
       ),
@@ -2107,16 +2094,14 @@ class _ListSummaryPanel extends StatelessWidget {
                             'Resumo da lista',
                             style: textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w800,
-                              color: colorScheme.onPrimaryContainer,
+                              color: colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             compactSummary,
                             style: textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onPrimaryContainer.withValues(
-                                alpha: 0.88,
-                              ),
+                              color: colorScheme.onSurface,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -2126,9 +2111,7 @@ class _ListSummaryPanel extends StatelessWidget {
                             maxLines: collapsed ? 1 : 2,
                             overflow: TextOverflow.ellipsis,
                             style: textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onPrimaryContainer.withValues(
-                                alpha: 0.76,
-                              ),
+                              color: colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],
@@ -2137,8 +2120,13 @@ class _ListSummaryPanel extends StatelessWidget {
                     const SizedBox(width: 12),
                     DecoratedBox(
                       decoration: BoxDecoration(
-                        color: colorScheme.surface.withValues(alpha: 0.32),
+                        color: colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: colorScheme.outlineVariant.withValues(
+                            alpha: 0.5,
+                          ),
+                        ),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
@@ -2151,7 +2139,7 @@ class _ListSummaryPanel extends StatelessWidget {
                             Text(
                               collapsed ? 'Abrir' : 'Fechar',
                               style: textTheme.labelMedium?.copyWith(
-                                color: colorScheme.onPrimaryContainer,
+                                color: colorScheme.onSurface,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -2164,7 +2152,7 @@ class _ListSummaryPanel extends StatelessWidget {
                               turns: collapsed ? 0 : 0.5,
                               child: Icon(
                                 Icons.keyboard_arrow_down_rounded,
-                                color: colorScheme.onPrimaryContainer,
+                                color: colorScheme.onSurface,
                               ),
                             ),
                           ],
@@ -2423,10 +2411,10 @@ class _EditorMetricTag extends StatelessWidget {
 
     final content = DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.72),
+        color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(AppTokens.radiusLg),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.36),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.52),
         ),
       ),
       child: Padding(
@@ -2532,7 +2520,7 @@ class _EditorQuickSummaryActionChip extends StatelessWidget {
             color: colorScheme.outlineVariant.withValues(alpha: 0.4),
           ),
         ),
-        backgroundColor: colorScheme.surface.withValues(alpha: 0.72),
+        backgroundColor: colorScheme.surfaceContainerHighest,
       ),
     );
   }
@@ -2676,10 +2664,10 @@ class _ItemsToolsBar extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.9),
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(AppTokens.radiusLg),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.34),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.54),
         ),
       ),
       child: Padding(
@@ -2775,10 +2763,8 @@ class _ItemsToolsBar extends StatelessWidget {
                 if (marketModeEnabled)
                   Chip(
                     avatar: const Icon(Icons.storefront_rounded, size: 18),
-                    label: const Text('Modo mercado ativo'),
-                    backgroundColor: colorScheme.primaryContainer.withValues(
-                      alpha: 0.85,
-                    ),
+                    label: const Text('Modo compra ativo'),
+                    backgroundColor: colorScheme.primaryContainer,
                   ),
               ],
             ),
@@ -2934,42 +2920,41 @@ class _ShoppingItemCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final isPurchased = item.isPurchased;
+    final statusLabel = isPurchased ? 'Comprado' : 'Pendente';
+    final barcodeLabel = item.barcode?.trim();
+    final metaLabel = '$statusLabel • ${item.category.label}';
 
     return Card(
       clipBehavior: Clip.antiAlias,
       child: AnimatedContainer(
         duration: _editorAdaptiveMotionDuration(context, AppTokens.motionFast),
         curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.fromLTRB(12, 11, 10, 11),
+        padding: const EdgeInsets.fromLTRB(10, 9, 8, 9),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isPurchased
-                ? [
-                    colorScheme.primaryContainer.withValues(alpha: 0.42),
-                    colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
-                  ]
-                : [
-                    colorScheme.surface,
-                    colorScheme.surfaceContainerLow.withValues(alpha: 0.5),
-                  ],
-          ),
+          color: isPurchased
+              ? colorScheme.surfaceContainerHighest
+              : colorScheme.surface,
           border: Border.all(
             color: isPurchased
-                ? colorScheme.primary.withValues(alpha: 0.35)
-                : colorScheme.outlineVariant.withValues(alpha: 0.3),
+                ? colorScheme.primary.withValues(alpha: 0.45)
+                : colorScheme.outlineVariant.withValues(alpha: 0.56),
           ),
           borderRadius: BorderRadius.circular(AppTokens.radiusLg),
         ),
         child: Column(
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                Checkbox(
+                  value: isPurchased,
+                  onChanged: readOnly ? null : onPurchasedChanged,
+                  visualDensity: VisualDensity.compact,
+                ),
+                const SizedBox(width: 4),
                 Expanded(
                   child: Opacity(
-                    opacity: isPurchased ? 0.86 : 1,
+                    opacity: isPurchased ? 0.7 : 1,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -2982,46 +2967,32 @@ class _ShoppingItemCard extends StatelessWidget {
                             decoration: isPurchased
                                 ? TextDecoration.lineThrough
                                 : null,
+                            decorationThickness: 1.6,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${item.quantity} x ${formatCurrency(item.unitPrice)}',
+                          '$metaLabel • ${item.quantity} x ${formatCurrency(item.unitPrice)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: textTheme.bodyMedium?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(height: 7),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: [
-                            Chip(
-                              avatar: Icon(item.category.icon, size: 15),
-                              visualDensity: VisualDensity.compact,
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                              label: Text(item.category.label),
-                              backgroundColor: colorScheme.surfaceContainerHigh
-                                  .withValues(alpha: 0.72),
+                        if (barcodeLabel != null &&
+                            barcodeLabel.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            barcodeLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w700,
                             ),
-                            if (item.barcode != null &&
-                                item.barcode!.isNotEmpty)
-                              Chip(
-                                avatar: const Icon(
-                                  Icons.qr_code_2_rounded,
-                                  size: 15,
-                                ),
-                                visualDensity: VisualDensity.compact,
-                                materialTapTargetSize:
-                                    MaterialTapTargetSize.shrinkWrap,
-                                label: Text(item.barcode!),
-                                backgroundColor:
-                                    colorScheme.surfaceContainerLow,
-                              ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -3049,16 +3020,17 @@ class _ShoppingItemCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 6),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHigh.withValues(
-                      alpha: 0.72,
-                    ),
+                    color: colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(AppTokens.radiusLg),
                     border: Border.all(
-                      color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.52),
                     ),
                   ),
                   child: Padding(
@@ -3095,34 +3067,23 @@ class _ShoppingItemCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Checkbox(
-                  value: isPurchased,
-                  onChanged: readOnly ? null : onPurchasedChanged,
-                  visualDensity: VisualDensity.compact,
+                Icon(
+                  isPurchased
+                      ? Icons.check_circle_rounded
+                      : Icons.radio_button_unchecked_rounded,
+                  size: 18,
+                  color: isPurchased
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant,
                 ),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
-                  child: isPurchased
-                      ? Chip(
-                          key: const ValueKey('purchased-chip'),
-                          avatar: const Icon(
-                            Icons.check_circle_rounded,
-                            size: 16,
-                          ),
-                          label: const Text('Comprado'),
-                          backgroundColor: colorScheme.primaryContainer,
-                          visualDensity: VisualDensity.compact,
-                        )
-                      : Chip(
-                          key: const ValueKey('pending-chip'),
-                          avatar: const Icon(Icons.timelapse_rounded, size: 16),
-                          label: const Text('Pendente'),
-                          backgroundColor: colorScheme.surfaceContainerHigh,
-                          visualDensity: VisualDensity.compact,
-                        ),
+                const SizedBox(width: 5),
+                Text(
+                  statusLabel,
+                  style: textTheme.labelMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-                const Spacer(),
                 if (!readOnly)
                   IconButton(
                     tooltip: 'Editar',
@@ -3181,7 +3142,7 @@ class _PriceHistorySheet extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(16, 8, 16, 20 + bottomInset),
       children: [
         Text(
-          'Histórico de Preço',
+          'Histórico de preços',
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
@@ -3209,7 +3170,7 @@ class _PriceHistorySheet extends StatelessWidget {
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: _EditorContentPanel(
+              child: EditorContentPanel(
                 child: Row(
                   children: [
                     const Icon(Icons.monetization_on_rounded),
@@ -3420,63 +3381,6 @@ class _EmptyItemsState extends StatelessWidget {
   }
 }
 
-class _SharedSyncStatusPill extends StatelessWidget {
-  const _SharedSyncStatusPill({
-    required this.isSyncing,
-    required this.lastSyncAt,
-  });
-
-  final bool isSyncing;
-  final DateTime? lastSyncAt;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final label = isSyncing
-        ? 'Sincronizando...'
-        : lastSyncAt == null
-        ? 'Sincronização pendente'
-        : 'Sincronizado às ${formatDateTime(lastSyncAt!)}';
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.35),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isSyncing)
-              const SizedBox(
-                width: 14,
-                height: 14,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            else
-              Icon(
-                Icons.sync_rounded,
-                size: 16,
-                color: colorScheme.onSurfaceVariant,
-              ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 Duration _editorAdaptiveMotionDuration(
   BuildContext context,
   Duration fallback,
@@ -3486,116 +3390,4 @@ Duration _editorAdaptiveMotionDuration(
     return Duration.zero;
   }
   return fallback;
-}
-
-class _EditorContentPanel extends StatelessWidget {
-  const _EditorContentPanel({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(AppTokens.radiusXl),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.32),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Padding(padding: const EdgeInsets.all(14), child: child),
-    );
-  }
-}
-
-class _EditorInlineInfoBanner extends StatelessWidget {
-  const _EditorInlineInfoBanner({
-    required this.icon,
-    required this.message,
-    this.actionLabel,
-    this.onAction,
-  });
-
-  final IconData icon;
-  final String message;
-  final String? actionLabel;
-  final VoidCallback? onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.secondaryContainer.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.26),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Icon(icon, color: colorScheme.onSecondaryContainer),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSecondaryContainer,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            if (actionLabel != null && onAction != null) ...[
-              const SizedBox(width: 12),
-              TextButton(onPressed: onAction, child: Text(actionLabel!)),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EditorEntryAnimation extends StatelessWidget {
-  const _EditorEntryAnimation({
-    super.key,
-    required this.child,
-    required this.delay,
-  });
-
-  final Widget child;
-  final Duration delay;
-
-  @override
-  Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.maybeOf(context);
-    if (mediaQuery?.disableAnimations ?? false) {
-      return child;
-    }
-    return child
-        .animate(delay: delay)
-        .fadeIn(duration: AppTokens.motionMedium, curve: Curves.easeOutCubic)
-        .slideY(
-          begin: 0.04,
-          end: 0,
-          duration: AppTokens.motionMedium,
-          curve: Curves.easeOutCubic,
-        )
-        .scaleXY(
-          begin: 0.985,
-          end: 1,
-          duration: AppTokens.motionMedium,
-          curve: Curves.easeOutBack,
-        );
-  }
 }

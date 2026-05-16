@@ -686,8 +686,9 @@ class _MyProfilePageState extends State<MyProfilePage> {
       await previousRef.delete();
     } catch (error) {
       developer.log(
-        'Falha ao remover foto antiga: $error',
+        'Não foi possível remover a foto antiga.',
         name: 'profile_photo_cleanup',
+        error: error,
       );
     }
   }
@@ -770,14 +771,11 @@ class _MyProfilePageState extends State<MyProfilePage> {
       }
 
       _showMessage('Foto enviada com sucesso.', type: AppToastType.success);
-    } on FirebaseException catch (error) {
+    } on FirebaseException {
       if (!mounted) return;
 
-      final details = (error.message ?? '').trim();
-      final suffix = details.isEmpty ? '' : ' - $details';
-
       _showMessage(
-        'Falha ao enviar foto (${error.code})$suffix',
+        'Não foi possível enviar a foto. Verifique sua conexão e tente novamente.',
         type: AppToastType.error,
         duration: const Duration(seconds: 6),
       );
@@ -785,7 +783,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
       if (!mounted) return;
 
       _showMessage(
-        'Falha ao enviar foto: $error',
+        'Não foi possível enviar a foto. Tente novamente.',
         type: AppToastType.error,
         duration: const Duration(seconds: 6),
       );
@@ -860,25 +858,21 @@ class _MyProfilePageState extends State<MyProfilePage> {
           photoUrl: refreshedUser.photoURL,
         ),
       );
-    } on FirebaseAuthException catch (error) {
+    } on FirebaseAuthException {
       if (!mounted) {
         return;
       }
-      final details = (error.message ?? '').trim();
-      final suffix = details.isEmpty ? '' : ' - $details';
       _showMessage(
-        'Falha ao salvar perfil (${error.code})$suffix',
+        'Não foi possível salvar o perfil. Verifique os dados e tente novamente.',
         type: AppToastType.error,
         duration: const Duration(seconds: 6),
       );
-    } on FirebaseException catch (error) {
+    } on FirebaseException {
       if (!mounted) {
         return;
       }
-      final details = (error.message ?? '').trim();
-      final suffix = details.isEmpty ? '' : ' - $details';
       _showMessage(
-        'Falha ao salvar dados no banco (${error.code})$suffix',
+        'Não foi possível salvar o perfil. Verifique sua conexão e tente novamente.',
         type: AppToastType.error,
         duration: const Duration(seconds: 6),
       );
@@ -887,7 +881,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
         return;
       }
       _showMessage(
-        'Falha ao salvar perfil: $error',
+        'Não foi possível salvar o perfil. Tente novamente.',
         type: AppToastType.error,
         duration: const Duration(seconds: 6),
       );
@@ -1141,17 +1135,9 @@ class _CloudSyncStatusCard extends StatelessWidget {
     final status = _resolveStatus(context, pending: safePending);
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
-    final backgroundGradient = LinearGradient(
-      colors: [
-        status.color.withValues(alpha: 0.2),
-        status.secondaryColor.withValues(alpha: 0.16),
-      ],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    );
     final lastSyncLabel = lastCloudSyncAt == null
         ? 'Nunca sincronizado'
-        : 'Última sinc.: ${DateFormat('dd/MM HH:mm').format(lastCloudSyncAt!.toLocal())}';
+        : 'Última sincronização: ${DateFormat('dd/MM HH:mm').format(lastCloudSyncAt!.toLocal())}';
 
     return Semantics(
       container: true,
@@ -1159,9 +1145,9 @@ class _CloudSyncStatusCard extends StatelessWidget {
           'Status da sincronização: ${status.title}. ${status.description}. $safeSynced de $safeTotal registros sincronizados.',
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: backgroundGradient,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: status.color.withValues(alpha: 0.35)),
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(AppTokens.radiusXl),
+          border: Border.all(color: status.color.withValues(alpha: 0.48)),
         ),
         child: Padding(
           padding: EdgeInsets.fromLTRB(
@@ -1184,9 +1170,7 @@ class _CloudSyncStatusCard extends StatelessWidget {
                         CircularProgressIndicator(
                           value: progress,
                           strokeWidth: compact ? 3.0 : 3.4,
-                          backgroundColor: colorScheme.surface.withValues(
-                            alpha: 0.45,
-                          ),
+                          backgroundColor: colorScheme.surfaceContainerHighest,
                           color: status.color,
                         ),
                         Icon(
@@ -1237,7 +1221,7 @@ class _CloudSyncStatusCard extends StatelessWidget {
               const SizedBox(height: 10),
               if (compact)
                 Text(
-                  '$lastSyncLabel • Listas: $listRecords • histórico: $historyRecords • catálogo: $catalogRecords',
+                  '$lastSyncLabel • Listas: $listRecords • Histórico: $historyRecords • Catálogo: $catalogRecords',
                   style: textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -1245,10 +1229,10 @@ class _CloudSyncStatusCard extends StatelessWidget {
               else
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    color: colorScheme.surface.withValues(alpha: 0.65),
-                    borderRadius: BorderRadius.circular(14),
+                    color: colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(AppTokens.radiusLg),
                     border: Border.all(
-                      color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.5),
                     ),
                   ),
                   child: Padding(
@@ -1266,13 +1250,13 @@ class _CloudSyncStatusCard extends StatelessWidget {
                         ),
                         Expanded(
                           child: Text(
-                            'histórico: $historyRecords',
+                            'Histórico: $historyRecords',
                             style: textTheme.bodySmall,
                           ),
                         ),
                         Expanded(
                           child: Text(
-                            'catálogo: $catalogRecords',
+                            'Catálogo: $catalogRecords',
                             style: textTheme.bodySmall,
                           ),
                         ),
@@ -1294,9 +1278,7 @@ class _CloudSyncStatusCard extends StatelessWidget {
                   child: LinearProgressIndicator(
                     minHeight: 6,
                     color: status.color,
-                    backgroundColor: colorScheme.surface.withValues(
-                      alpha: 0.45,
-                    ),
+                    backgroundColor: colorScheme.surfaceContainerHighest,
                   ),
                 ),
               ],
@@ -1405,10 +1387,10 @@ class _SyncMetricPill extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.75),
+        color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
         ),
       ),
       child: Padding(
@@ -1440,18 +1422,11 @@ class _AccountContentPanel extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.9),
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(AppTokens.radiusXl),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.32),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.54),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Padding(padding: const EdgeInsets.all(14), child: child),
     );
@@ -1469,10 +1444,10 @@ class _AccountInlineInfoBanner extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.secondaryContainer.withValues(alpha: 0.72),
+        color: colorScheme.secondaryContainer,
         borderRadius: BorderRadius.circular(AppTokens.radiusLg),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.26),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
         ),
       ),
       child: Padding(

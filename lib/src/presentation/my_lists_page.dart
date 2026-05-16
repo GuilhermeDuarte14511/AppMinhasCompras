@@ -32,14 +32,18 @@ String _myListsBuildReplenishmentListName(
   DateTime? now,
 }) {
   final reference = now ?? DateTime.now();
-  if (source == ReplenishmentSuggestionSource.lastMonth) {
-    final targetMonth = DateTime(reference.year, reference.month - 1);
-    final monthLabel = _myListsCapitalizeText(
-      DateFormat('MMMM yyyy', 'pt_BR').format(targetMonth),
-    );
-    return 'Reposição $monthLabel';
+  switch (source) {
+    case ReplenishmentSuggestionSource.recurring:
+      return 'Lista recorrente';
+    case ReplenishmentSuggestionSource.lastMonth:
+      final targetMonth = DateTime(reference.year, reference.month - 1);
+      final monthLabel = _myListsCapitalizeText(
+        DateFormat('MMMM yyyy', 'pt_BR').format(targetMonth),
+      );
+      return 'Reposição $monthLabel';
+    case ReplenishmentSuggestionSource.catalogFallback:
+      return 'Reposição inteligente';
   }
-  return 'Reposição inteligente';
 }
 
 Future<ShoppingListModel?> _runMyListsSmartReplenishmentFlow(
@@ -219,6 +223,8 @@ class _MyListsPageState extends State<MyListsPage> {
       _showSnack('Compartilhamento indisponível neste modo.');
       return;
     }
+    HapticFeedback.selectionClick();
+    _showSnack('Abrindo lista compartilhada.', type: AppToastType.success);
     await Navigator.push<void>(
       context,
       buildAppPageRoute(
@@ -248,6 +254,8 @@ class _MyListsPageState extends State<MyListsPage> {
     if (!mounted) {
       return;
     }
+    HapticFeedback.mediumImpact();
+    _showSnack('Lista criada.', type: AppToastType.success);
 
     await _openList(created);
   }
@@ -283,6 +291,8 @@ class _MyListsPageState extends State<MyListsPage> {
     if (!mounted) {
       return;
     }
+    HapticFeedback.mediumImpact();
+    _showSnack('Lista criada.', type: AppToastType.success);
 
     await _openList(created);
   }
@@ -295,6 +305,8 @@ class _MyListsPageState extends State<MyListsPage> {
     if (!mounted || created == null) {
       return;
     }
+    HapticFeedback.mediumImpact();
+    _showSnack('Lista criada por reposição.', type: AppToastType.success);
 
     await _openList(created);
   }
@@ -546,11 +558,11 @@ class _MyListsPageState extends State<MyListsPage> {
     }
   }
 
-  void _showSnack(String message) {
+  void _showSnack(String message, {AppToastType type = AppToastType.info}) {
     AppToast.show(
       context,
       message: message,
-      type: AppToastType.info,
+      type: type,
       duration: const Duration(seconds: 4),
     );
   }
@@ -843,17 +855,10 @@ class _MyListsOverviewCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            colorScheme.secondaryContainer.withValues(alpha: 0.78),
-            colorScheme.primaryContainer.withValues(alpha: 0.6),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(26),
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppTokens.radiusXl),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.56),
         ),
       ),
       child: Padding(
@@ -1039,8 +1044,8 @@ class _EmptyFilteredListsState extends StatelessWidget {
           children: [
             DecoratedBox(
               decoration: BoxDecoration(
-                color: colorScheme.secondaryContainer.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(18),
+                color: colorScheme.secondaryContainer,
+                borderRadius: BorderRadius.circular(AppTokens.radiusLg),
               ),
               child: const Padding(
                 padding: EdgeInsets.all(12),
@@ -1096,12 +1101,7 @@ class _EmptyListsState extends StatelessWidget {
             DecoratedBox(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    colorScheme.primary.withValues(alpha: 0.24),
-                    colorScheme.primary.withValues(alpha: 0.04),
-                  ],
-                ),
+                color: colorScheme.primaryContainer,
               ),
               child: Padding(
                 padding: const EdgeInsets.all(18),
@@ -1114,7 +1114,7 @@ class _EmptyListsState extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             Text(
-              'Você ainda Não tem listas',
+              'Crie sua primeira lista',
               style: Theme.of(
                 context,
               ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
@@ -1185,191 +1185,198 @@ class _MyListCard extends StatelessWidget {
     final sharedRoleIcon = isSharedOwner
         ? Icons.verified_user_rounded
         : Icons.people_alt_rounded;
-    final sharedLabelBg = colorScheme.tertiaryContainer.withValues(alpha: 0.72);
+    final sharedLabelBg = colorScheme.tertiaryContainer;
     final sharedLabelFg = colorScheme.onTertiaryContainer;
     final sharedMemberLabel =
         '${sharedSummary?.memberCount ?? 0} membro${(sharedSummary?.memberCount ?? 0) == 1 ? '' : 's'}';
     final isSelectedState = selectionMode && isSelected;
     final backgroundColor = isSelectedState
-        ? colorScheme.primaryContainer.withValues(alpha: 0.55)
+        ? colorScheme.primaryContainer
         : list.isClosed
-        ? colorScheme.surfaceContainerLow.withValues(alpha: 0.85)
+        ? colorScheme.surfaceContainerLow
         : isShared
-        ? Color.alphaBlend(
-            colorScheme.tertiaryContainer.withValues(alpha: 0.32),
-            colorScheme.surface,
-          )
+        ? colorScheme.tertiaryContainer
         : colorScheme.surface;
     final borderColor = isSelectedState
-        ? colorScheme.primary.withValues(alpha: 0.55)
+        ? colorScheme.primary
         : list.isClosed
-        ? colorScheme.outline.withValues(alpha: 0.3)
+        ? colorScheme.outline.withValues(alpha: 0.5)
         : isShared
-        ? colorScheme.tertiary.withValues(alpha: 0.42)
-        : colorScheme.outlineVariant.withValues(alpha: 0.24);
+        ? colorScheme.tertiary
+        : colorScheme.outlineVariant.withValues(alpha: 0.54);
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      color: Colors.transparent,
-      elevation: 0,
-      child: AnimatedContainer(
-        duration: _myListsAdaptiveMotionDuration(
-          context,
-          const Duration(milliseconds: 220),
-        ),
-        curve: Curves.easeOutCubic,
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: borderColor),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(22),
-          onTap: selectionMode ? onToggleSelection : onOpen,
-          onLongPress: onLongPress,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    if (selectionMode) ...[
-                      Checkbox(
-                        value: isSelected,
-                        onChanged: (_) => onToggleSelection(),
+    return Semantics(
+      container: true,
+      button: true,
+      label: selectionMode ? 'Selecionar ${list.name}' : 'Abrir ${list.name}',
+      value: list.isClosed ? 'Lista fechada' : 'Lista aberta',
+      hint: selectionMode
+          ? 'Toque para alternar a seleção.'
+          : 'Toque para abrir a lista.',
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        color: Colors.transparent,
+        elevation: 0,
+        child: AnimatedContainer(
+          duration: _myListsAdaptiveMotionDuration(
+            context,
+            const Duration(milliseconds: 220),
+          ),
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(AppTokens.radiusXl),
+            border: Border.all(color: borderColor),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppTokens.radiusXl),
+            onTap: selectionMode ? onToggleSelection : onOpen,
+            onLongPress: onLongPress,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      if (selectionMode) ...[
+                        Checkbox(
+                          value: isSelected,
+                          onChanged: (_) => onToggleSelection(),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      Expanded(
+                        child: Text(
+                          list.name,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
                       ),
-                      const SizedBox(width: 6),
+                      Text(
+                        formatShortDate(list.updatedAt),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: selectionMode
+                              ? colorScheme.primary
+                              : colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                     ],
-                    Expanded(
-                      child: Text(
-                        list.name,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    Text(
-                      formatShortDate(list.updatedAt),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: selectionMode
-                            ? colorScheme.primary
-                            : colorScheme.onSurfaceVariant,
-                      ),
+                  ),
+                  if (sharedSummary != null) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _MyListsPillLabel(
+                          icon: Icons.group_rounded,
+                          text: 'Compartilhada',
+                          backgroundColor: sharedLabelBg,
+                          foregroundColor: sharedLabelFg,
+                          onTap: onOpenShared,
+                          tooltip: 'Abrir compartilhamento',
+                        ),
+                        _MyListsPillLabel(
+                          icon: sharedRoleIcon,
+                          text: sharedRoleLabel,
+                          backgroundColor: sharedLabelBg,
+                          foregroundColor: sharedLabelFg,
+                          onTap: onOpenShared,
+                          tooltip: 'Abrir compartilhamento',
+                        ),
+                        _MyListsPillLabel(
+                          icon: Icons.group_add_rounded,
+                          text: sharedMemberLabel,
+                          backgroundColor: sharedLabelBg,
+                          foregroundColor: sharedLabelFg,
+                          onTap: onOpenShared,
+                          tooltip: 'Abrir compartilhamento',
+                        ),
+                      ],
                     ),
                   ],
-                ),
-                if (sharedSummary != null) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    lineItemsCount == 0
+                        ? 'Sem itens ainda. Abra a lista para começar.'
+                        : list.isClosed
+                        ? purchasedCount == 1
+                              ? 'Compra fechada com 1 item comprado.'
+                              : 'Compra fechada com $purchasedCount itens comprados.'
+                        : '$purchasedCount de ${formatItemCount(lineItemsCount)} comprados até agora.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 7,
+                      color: list.isClosed
+                          ? colorScheme.tertiary
+                          : colorScheme.primary,
+                      backgroundColor: colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.72),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
                     children: [
                       _MyListsPillLabel(
-                        icon: Icons.group_rounded,
-                        text: 'Compartilhada',
-                        backgroundColor: sharedLabelBg,
-                        foregroundColor: sharedLabelFg,
-                        onTap: onOpenShared,
-                        tooltip: 'Abrir compartilhamento',
+                        icon: Icons.shopping_basket_rounded,
+                        text: '${list.totalItems} itens',
                       ),
+                      const SizedBox(width: 8),
                       _MyListsPillLabel(
-                        icon: sharedRoleIcon,
-                        text: sharedRoleLabel,
-                        backgroundColor: sharedLabelBg,
-                        foregroundColor: sharedLabelFg,
-                        onTap: onOpenShared,
-                        tooltip: 'Abrir compartilhamento',
+                        icon: Icons.attach_money_rounded,
+                        text: formatCurrency(list.totalValue),
                       ),
+                      const SizedBox(width: 8),
                       _MyListsPillLabel(
-                        icon: Icons.group_add_rounded,
-                        text: sharedMemberLabel,
-                        backgroundColor: sharedLabelBg,
-                        foregroundColor: sharedLabelFg,
-                        onTap: onOpenShared,
-                        tooltip: 'Abrir compartilhamento',
+                        icon: Icons.check_circle_outline_rounded,
+                        text: '$purchasedCount/$lineItemsCount comprados',
                       ),
+                      if (list.isClosed) ...[
+                        const SizedBox(width: 8),
+                        const _MyListsPillLabel(
+                          icon: Icons.lock_rounded,
+                          text: 'Fechada',
+                        ),
+                      ],
+                      const Spacer(),
+                      if (!selectionMode) ...[
+                        if (list.isClosed)
+                          IconButton(
+                            tooltip: 'Reabrir lista',
+                            onPressed: onReopen,
+                            icon: const Icon(Icons.lock_open_rounded),
+                          ),
+                        IconButton(
+                          tooltip: 'Criar Baseada Nesta',
+                          onPressed: onCreateFromThis,
+                          icon: const Icon(Icons.copy_all_rounded),
+                        ),
+                        IconButton(
+                          tooltip: 'Excluir lista',
+                          onPressed: onDelete,
+                          icon: const Icon(Icons.delete_outline_rounded),
+                        ),
+                      ] else
+                        Text(
+                          isSelected ? 'Selecionada' : 'Toque para selecionar',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
                     ],
                   ),
                 ],
-                const SizedBox(height: 10),
-                Text(
-                  lineItemsCount == 0
-                      ? 'Sem itens ainda. Abra a lista para começar.'
-                      : list.isClosed
-                      ? purchasedCount == 1
-                            ? 'Compra fechada com 1 item marcado.'
-                            : 'Compra fechada com $purchasedCount itens marcados.'
-                      : '$purchasedCount de ${formatItemCount(lineItemsCount)} marcados até agora.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 7,
-                    color: list.isClosed
-                        ? colorScheme.tertiary
-                        : colorScheme.primary,
-                    backgroundColor: colorScheme.surfaceContainerHighest
-                        .withValues(alpha: 0.72),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    _MyListsPillLabel(
-                      icon: Icons.shopping_basket_rounded,
-                      text: '${list.totalItems} itens',
-                    ),
-                    const SizedBox(width: 8),
-                    _MyListsPillLabel(
-                      icon: Icons.attach_money_rounded,
-                      text: formatCurrency(list.totalValue),
-                    ),
-                    const SizedBox(width: 8),
-                    _MyListsPillLabel(
-                      icon: Icons.check_circle_outline_rounded,
-                      text: '$purchasedCount/$lineItemsCount marcados',
-                    ),
-                    if (list.isClosed) ...[
-                      const SizedBox(width: 8),
-                      const _MyListsPillLabel(
-                        icon: Icons.lock_rounded,
-                        text: 'Fechada',
-                      ),
-                    ],
-                    const Spacer(),
-                    if (!selectionMode) ...[
-                      if (list.isClosed)
-                        IconButton(
-                          tooltip: 'Reabrir lista',
-                          onPressed: onReopen,
-                          icon: const Icon(Icons.lock_open_rounded),
-                        ),
-                      IconButton(
-                        tooltip: 'Criar Baseada Nesta',
-                        onPressed: onCreateFromThis,
-                        icon: const Icon(Icons.copy_all_rounded),
-                      ),
-                      IconButton(
-                        tooltip: 'Excluir lista',
-                        onPressed: onDelete,
-                        icon: const Icon(Icons.delete_outline_rounded),
-                      ),
-                    ] else
-                      Text(
-                        isSelected ? 'Selecionada' : 'Toque para selecionar',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -1399,18 +1406,11 @@ class _MyListsContentPanel extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.9),
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(AppTokens.radiusXl),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.32),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.54),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Padding(padding: const EdgeInsets.all(14), child: child),
     );
@@ -1436,10 +1436,10 @@ class _MyListsSummaryPill extends StatelessWidget {
       readOnly: true,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: colorScheme.surface.withValues(alpha: 0.72),
+          color: colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(AppTokens.radiusLg),
           border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.32),
+            color: colorScheme.outlineVariant.withValues(alpha: 0.52),
           ),
         ),
         child: Padding(

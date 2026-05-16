@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../data/services/firebase_auth_service.dart';
 import 'launch.dart';
+import 'theme/app_tokens.dart';
 import 'utils/app_page_route.dart';
 import 'utils/app_toast.dart';
 
@@ -66,7 +67,7 @@ class _AuthPageState extends State<AuthPage> {
         return;
       }
       _showSnack(
-        'Não foi possível concluir o login agora. [$error]',
+        'Não foi possível entrar agora. Verifique sua conexão e tente novamente.',
         type: AppToastType.error,
       );
     } finally {
@@ -97,7 +98,7 @@ class _AuthPageState extends State<AuthPage> {
         return;
       }
       _showSnack(
-        'Falha ao entrar com Google. [$error]',
+        'Não foi possível entrar com Google. Tente novamente.',
         type: AppToastType.error,
       );
     } finally {
@@ -137,7 +138,7 @@ class _AuthPageState extends State<AuthPage> {
         return;
       }
       _showSnack(
-        'Não foi possível enviar o link agora. [$error]',
+        'Não foi possível enviar o link. Verifique sua conexão e tente novamente.',
         type: AppToastType.error,
       );
     }
@@ -160,12 +161,7 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   String _buildAuthErrorMessage(FirebaseAuthException error) {
-    final friendly = _authService.friendlyError(error);
-    final details = (error.message ?? '').trim();
-    if (details.isEmpty) {
-      return '$friendly [${error.code}]';
-    }
-    return '$friendly [${error.code}] - $details';
+    return _authService.friendlyError(error);
   }
 
   void _showSnack(String message, {AppToastType type = AppToastType.info}) {
@@ -452,7 +448,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
         return;
       }
       _showSnack(
-        'Não foi possível criar a conta agora. [$error]',
+        'Não foi possível criar a conta. Verifique sua conexão e tente novamente.',
         type: AppToastType.error,
       );
     } finally {
@@ -469,12 +465,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
   }
 
   String _buildAuthErrorMessage(FirebaseAuthException error) {
-    final friendly = widget.authService.friendlyError(error);
-    final details = (error.message ?? '').trim();
-    if (details.isEmpty) {
-      return '$friendly [${error.code}]';
-    }
-    return '$friendly [${error.code}] - $details';
+    return widget.authService.friendlyError(error);
   }
 
   void _showSnack(String message, {AppToastType type = AppToastType.info}) {
@@ -739,29 +730,15 @@ class _AuthSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(26),
-        color: colorScheme.surface.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(AppTokens.radiusXl),
+        color: colorScheme.surface,
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.56),
         ),
-        boxShadow: [
-          BoxShadow(
-            color:
-                (brightness == Brightness.dark
-                        ? Colors.black
-                        : colorScheme.primary)
-                    .withValues(
-                      alpha: brightness == Brightness.dark ? 0.3 : 0.08,
-                    ),
-            blurRadius: 36,
-            offset: const Offset(0, 16),
-          ),
-        ],
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
@@ -799,8 +776,8 @@ class _AuthHeader extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: colorScheme.primaryContainer.withValues(alpha: 0.8),
-              borderRadius: BorderRadius.circular(14),
+              color: colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(AppTokens.radiusLg),
             ),
             child: Icon(
               Icons.shopping_cart_checkout_rounded,
@@ -816,6 +793,9 @@ class _AuthHeader extends StatelessWidget {
               DecoratedBox(
                 decoration: BoxDecoration(
                   color: colorScheme.surface.withValues(alpha: 0.46),
+                  border: Border.all(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                  ),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Padding(
@@ -892,10 +872,10 @@ class _AuthFeatureChip extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.46),
+        color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.28),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
         ),
       ),
       child: Padding(
@@ -1016,51 +996,7 @@ class _AuthDecorativeBackground extends StatelessWidget {
   const _AuthDecorativeBackground();
 
   @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return IgnorePointer(
-      ignoring: true,
-      child: Stack(
-        children: [
-          Positioned(
-            top: -120,
-            right: -90,
-            child: _GlowOrb(
-              size: 220,
-              color: colorScheme.primary.withValues(alpha: 0.18),
-            ),
-          ),
-          Positioned(
-            left: -100,
-            bottom: -90,
-            child: _GlowOrb(
-              size: 200,
-              color: colorScheme.tertiary.withValues(alpha: 0.14),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GlowOrb extends StatelessWidget {
-  const _GlowOrb({required this.size, required this.color});
-
-  final double size;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(colors: [color, color.withValues(alpha: 0.0)]),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
 class _GoogleSignInButton extends StatelessWidget {

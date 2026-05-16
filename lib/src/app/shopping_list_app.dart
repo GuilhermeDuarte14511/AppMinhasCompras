@@ -30,6 +30,9 @@ import '../presentation/pages.dart';
 import '../presentation/theme/app_tokens.dart';
 import '../presentation/utils/app_toast.dart';
 
+const Color _actionColor = Color(0xFFF97316);
+const Color _actionForegroundColor = Color(0xFF111827);
+
 class ShoppingListApp extends StatefulWidget {
   const ShoppingListApp({
     super.key,
@@ -993,51 +996,51 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   }
 
   TextTheme _buildAppTextTheme(TextTheme baseTextTheme) {
-    final bodyTheme = GoogleFonts.manropeTextTheme(baseTextTheme);
+    final bodyTheme = GoogleFonts.nunitoSansTextTheme(baseTextTheme);
     return bodyTheme.copyWith(
-      displaySmall: GoogleFonts.spaceGrotesk(
+      displaySmall: GoogleFonts.rubik(
         textStyle: bodyTheme.displaySmall?.copyWith(
           fontWeight: FontWeight.w800,
-          letterSpacing: -0.45,
+          letterSpacing: 0,
         ),
       ),
-      headlineMedium: GoogleFonts.spaceGrotesk(
+      headlineMedium: GoogleFonts.rubik(
         textStyle: bodyTheme.headlineMedium?.copyWith(
           fontWeight: FontWeight.w800,
-          letterSpacing: -0.25,
+          letterSpacing: 0,
         ),
       ),
-      headlineSmall: GoogleFonts.spaceGrotesk(
+      headlineSmall: GoogleFonts.rubik(
         textStyle: bodyTheme.headlineSmall?.copyWith(
           fontWeight: FontWeight.w800,
-          letterSpacing: -0.2,
+          letterSpacing: 0,
         ),
       ),
-      titleLarge: GoogleFonts.spaceGrotesk(
+      titleLarge: GoogleFonts.rubik(
         textStyle: bodyTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.w800,
-          letterSpacing: -0.18,
+          letterSpacing: 0,
         ),
       ),
-      titleMedium: GoogleFonts.spaceGrotesk(
+      titleMedium: GoogleFonts.rubik(
         textStyle: bodyTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w700,
-          letterSpacing: -0.08,
+          letterSpacing: 0,
         ),
       ),
-      titleSmall: GoogleFonts.spaceGrotesk(
+      titleSmall: GoogleFonts.rubik(
         textStyle: bodyTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
       ),
       bodyLarge: bodyTheme.bodyLarge?.copyWith(height: 1.38),
       bodyMedium: bodyTheme.bodyMedium?.copyWith(height: 1.36),
       bodySmall: bodyTheme.bodySmall?.copyWith(height: 1.3),
-      labelLarge: GoogleFonts.manrope(
+      labelLarge: GoogleFonts.nunitoSans(
         textStyle: bodyTheme.labelLarge?.copyWith(
           fontWeight: FontWeight.w700,
-          letterSpacing: 0.14,
+          letterSpacing: 0,
         ),
       ),
-      labelMedium: GoogleFonts.manrope(
+      labelMedium: GoogleFonts.nunitoSans(
         textStyle: bodyTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
       ),
     );
@@ -1048,28 +1051,28 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       useMaterial3: true,
       visualDensity: VisualDensity.adaptivePlatformDensity,
       colors: const FlexSchemeColor(
-        primary: Color(0xFF008577),
-        primaryContainer: Color(0xFFB4E9DE),
-        secondary: Color(0xFF2F766C),
-        secondaryContainer: Color(0xFFCBEAE3),
-        tertiary: Color(0xFF2D6F89),
-        tertiaryContainer: Color(0xFFCDEAF8),
-        appBarColor: Color(0xFFF5FAF8),
+        primary: Color(0xFF0D9488),
+        primaryContainer: Color(0xFFCCFBF1),
+        secondary: Color(0xFF0F766E),
+        secondaryContainer: Color(0xFFD1FAE5),
+        tertiary: _actionColor,
+        tertiaryContainer: Color(0xFFFFEDD5),
+        appBarColor: Color(0xFFF8FAFC),
         error: Color(0xFFB3261E),
       ),
       surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
-      blendLevel: 10,
-      scaffoldBackground: const Color(0xFFF5FAF8),
+      blendLevel: 4,
+      scaffoldBackground: const Color(0xFFF8FAFC),
       subThemesData: const FlexSubThemesData(
         interactionEffects: true,
-        blendOnLevel: 10,
+        blendOnLevel: 4,
       ),
     );
     final scheme = base.colorScheme;
     final textTheme = _buildAppTextTheme(base.textTheme);
     return base.copyWith(
       materialTapTargetSize: MaterialTapTargetSize.padded,
-      scaffoldBackgroundColor: const Color(0xFFF5FAF8),
+      scaffoldBackgroundColor: const Color(0xFFF8FAFC),
       textTheme: textTheme,
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: scheme.primary,
@@ -1087,14 +1090,12 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         clipBehavior: Clip.antiAlias,
         color: scheme.surface,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(AppTokens.radius2Xl)),
-          side: BorderSide(
-            color: scheme.outlineVariant.withValues(alpha: 0.36),
-          ),
+          borderRadius: BorderRadius.all(Radius.circular(AppTokens.radiusXl)),
+          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
         ),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: const Color(0xFFF5FAF8),
+        backgroundColor: const Color(0xFFF8FAFC),
         foregroundColor: scheme.onSurface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -1106,6 +1107,8 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
+          backgroundColor: _actionColor,
+          foregroundColor: _actionForegroundColor,
           minimumSize: const Size(0, AppTokens.controlHeightLg),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           textStyle: textTheme.labelLarge,
@@ -1151,8 +1154,8 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: scheme.primary,
-        foregroundColor: scheme.onPrimary,
+        backgroundColor: _actionColor,
+        foregroundColor: _actionForegroundColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTokens.radiusLg),
         ),
@@ -1198,8 +1201,8 @@ class _ShoppingListAppState extends State<ShoppingListApp>
             color: scheme.outlineVariant.withValues(alpha: 0.34),
           ),
         ),
-        backgroundColor: scheme.surface.withValues(alpha: 0.72),
-        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.34)),
+        backgroundColor: scheme.surfaceContainerHighest,
+        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.62)),
         labelStyle: textTheme.labelMedium?.copyWith(
           color: scheme.onSurfaceVariant,
           fontWeight: FontWeight.w700,
@@ -1269,7 +1272,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       ),
       inputDecorationTheme: base.inputDecorationTheme.copyWith(
         filled: true,
-        fillColor: const Color(0xFFF0F6F4),
+        fillColor: const Color(0xFFFFFFFF),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 14,
@@ -1305,17 +1308,17 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         primaryContainer: Color(0xFF005C52),
         secondary: Color(0xFF8ECFC6),
         secondaryContainer: Color(0xFF24453F),
-        tertiary: Color(0xFF6FA5FF),
-        tertiaryContainer: Color(0xFF163E72),
+        tertiary: _actionColor,
+        tertiaryContainer: Color(0xFF7C2D12),
         appBarColor: Color(0xFF0F161A),
         error: Color(0xFFF2A29D),
       ),
       surfaceMode: FlexSurfaceMode.highScaffoldLowSurface,
-      blendLevel: 14,
+      blendLevel: 8,
       scaffoldBackground: const Color(0xFF0F161A),
       subThemesData: const FlexSubThemesData(
         interactionEffects: true,
-        blendOnLevel: 16,
+        blendOnLevel: 8,
       ),
     );
     final scheme = base.colorScheme;
@@ -1340,9 +1343,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         clipBehavior: Clip.antiAlias,
         color: const Color(0xFF1A252A),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(AppTokens.radius2Xl)),
+          borderRadius: BorderRadius.all(Radius.circular(AppTokens.radiusXl)),
           side: BorderSide(
-            color: scheme.outlineVariant.withValues(alpha: 0.34),
+            color: scheme.outlineVariant.withValues(alpha: 0.48),
           ),
         ),
       ),
@@ -1384,6 +1387,8 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
+          backgroundColor: _actionColor,
+          foregroundColor: _actionForegroundColor,
           minimumSize: const Size(0, AppTokens.controlHeightLg),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           textStyle: textTheme.labelLarge,
@@ -1429,8 +1434,8 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: scheme.primary,
-        foregroundColor: scheme.onPrimary,
+        backgroundColor: _actionColor,
+        foregroundColor: _actionForegroundColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTokens.radiusLg),
         ),
@@ -1474,8 +1479,8 @@ class _ShoppingListAppState extends State<ShoppingListApp>
           borderRadius: BorderRadius.circular(AppTokens.radiusLg),
           side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.4)),
         ),
-        backgroundColor: scheme.surface.withValues(alpha: 0.75),
-        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.4)),
+        backgroundColor: scheme.surfaceContainerHighest,
+        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.48)),
         labelStyle: textTheme.labelMedium?.copyWith(
           color: scheme.onSurfaceVariant,
           fontWeight: FontWeight.w700,

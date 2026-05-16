@@ -1,17 +1,17 @@
-import 'package:flutter/material.dart';
+ import 'package:flutter/material.dart';
 
 @immutable
 final class AppTokens {
   const AppTokens._();
 
-  static const double radiusXs = 10;
-  static const double radiusSm = 12;
-  static const double radiusMd = 14;
-  static const double radiusLg = 18;
-  static const double radiusXl = 22;
-  static const double radius2Xl = 26;
+  static const double radiusXs = 6;
+  static const double radiusSm = 8;
+  static const double radiusMd = 10;
+  static const double radiusLg = 12;
+  static const double radiusXl = 16;
+  static const double radius2Xl = 20;
 
-  static const double cardElevation = 0.6;
+  static const double cardElevation = 0;
   static const double cardBorderWidth = 1;
 
   static const double spaceXs = 4;

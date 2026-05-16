@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 
@@ -43,14 +44,18 @@ String _buildReplenishmentListName(
   DateTime? now,
 }) {
   final reference = now ?? DateTime.now();
-  if (source == ReplenishmentSuggestionSource.lastMonth) {
-    final targetMonth = DateTime(reference.year, reference.month - 1);
-    final monthLabel = _capitalizeText(
-      DateFormat('MMMM yyyy', 'pt_BR').format(targetMonth),
-    );
-    return 'Reposição $monthLabel';
+  switch (source) {
+    case ReplenishmentSuggestionSource.recurring:
+      return 'Reposição inteligente';
+    case ReplenishmentSuggestionSource.lastMonth:
+      final targetMonth = DateTime(reference.year, reference.month - 1);
+      final monthLabel = _capitalizeText(
+        DateFormat('MMMM yyyy', 'pt_BR').format(targetMonth),
+      );
+      return 'Reposição $monthLabel';
+    case ReplenishmentSuggestionSource.catalogFallback:
+      return 'Reposição inteligente';
   }
-  return 'Reposição inteligente';
 }
 
 Future<ShoppingListModel?> _runSmartReplenishmentFlow(
@@ -277,6 +282,8 @@ class _DashboardPageState extends State<DashboardPage> {
     if (!mounted) {
       return;
     }
+    HapticFeedback.mediumImpact();
+    _showSnack('Lista criada.', type: AppToastType.success);
 
     await Navigator.push<void>(
       context,
@@ -298,6 +305,8 @@ class _DashboardPageState extends State<DashboardPage> {
     if (!mounted || created == null) {
       return;
     }
+    HapticFeedback.mediumImpact();
+    _showSnack('Lista criada por reposição.', type: AppToastType.success);
 
     await Navigator.push<void>(
       context,
@@ -400,7 +409,11 @@ class _DashboardPageState extends State<DashboardPage> {
       if (!mounted) {
         return;
       }
-      _showSnack('Entrada confirmada. Abrindo lista compartilhada...');
+      HapticFeedback.mediumImpact();
+      _showSnack(
+        'Entrada confirmada. Abrindo lista compartilhada.',
+        type: AppToastType.success,
+      );
       await _openSharedListEditor(listId);
     } catch (error) {
       if (!mounted) {
@@ -415,7 +428,9 @@ class _DashboardPageState extends State<DashboardPage> {
           );
           return;
         }
-        _showSnack('Não foi possível entrar: ${error.message ?? code}');
+        _showSnack(
+          'Não foi possível entrar. Verifique se o código ainda está ativo.',
+        );
         return;
       }
       if (error is StateError) {
@@ -426,11 +441,11 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
-  void _showSnack(String message) {
+  void _showSnack(String message, {AppToastType type = AppToastType.info}) {
     AppToast.show(
       context,
       message: message,
-      type: AppToastType.info,
+      type: type,
       duration: const Duration(seconds: 4),
     );
   }
@@ -438,14 +453,9 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     final lists = widget.store.lists;
-    final isCompactViewport = MediaQuery.sizeOf(context).height < 700;
     final totalCatalogProducts = widget.store.catalogProducts.length;
     final openListsCount = lists.where((list) => !list.isClosed).length;
     final closedListsCount = lists.where((list) => list.isClosed).length;
-    final totalValue = lists.fold<double>(
-      0,
-      (total, list) => total + list.totalValue,
-    );
     final pendingValue = lists.fold<double>(
       0,
       (total, list) => total + list.pendingValue,
@@ -455,6 +465,52 @@ class _DashboardPageState extends State<DashboardPage> {
         ? null
         : FirebaseAuth.instance.currentUser;
     final canUseSharing = sharedRepository != null;
+    final smartSuggestions = widget.store.suggestReplenishmentItems(limit: 5);
+    final quickActions = <_DashboardQuickAction>[
+      _DashboardQuickAction(
+        key: const ValueKey('dash_action_new'),
+        title: 'Nova lista',
+        subtitle: 'Comece do zero.',
+        icon: Icons.playlist_add_rounded,
+        onTap: _createNewList,
+      ),
+      _DashboardQuickAction(
+        key: const ValueKey('dash_action_lists'),
+        title: 'Listas',
+        subtitle: 'Abra e edite.',
+        icon: Icons.inventory_2_rounded,
+        onTap: _openMyLists,
+      ),
+      if (canUseSharing)
+        _DashboardQuickAction(
+          key: const ValueKey('dash_action_join_code'),
+          title: 'Entrar com código',
+          subtitle: 'Acesse uma lista.',
+          icon: Icons.group_add_rounded,
+          onTap: _joinSharedListByCode,
+        ),
+      _DashboardQuickAction(
+        key: const ValueKey('dash_action_history'),
+        title: 'Histórico',
+        subtitle: 'Veja gastos.',
+        icon: Icons.event_note_rounded,
+        onTap: _openPurchaseHistory,
+      ),
+      _DashboardQuickAction(
+        key: const ValueKey('dash_action_template'),
+        title: 'Catálogo',
+        subtitle: 'Produtos salvos.',
+        icon: Icons.local_offer_rounded,
+        onTap: _openCatalog,
+      ),
+      _DashboardQuickAction(
+        key: const ValueKey('dash_action_based'),
+        title: 'Usar modelo',
+        subtitle: 'Copie uma lista.',
+        icon: Icons.copy_all_rounded,
+        onTap: _createBasedOnOld,
+      ),
+    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -505,7 +561,6 @@ class _DashboardPageState extends State<DashboardPage> {
                   child: _HomeSummaryCard(
                     totalLists: lists.length,
                     totalCatalogProducts: totalCatalogProducts,
-                    totalValue: totalValue,
                     openListsCount: openListsCount,
                     closedListsCount: closedListsCount,
                     pendingValue: pendingValue,
@@ -515,92 +570,21 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                if (!isCompactViewport) ...[
+                if (smartSuggestions.isNotEmpty) ...[
                   _EntryAnimation(
-                    key: const ValueKey('dash_actions_title'),
+                    key: const ValueKey('dash_smart_replenishment_card'),
                     delay: const Duration(milliseconds: 20),
-                    child: const _SectionHeader(
-                      title: 'Acesso rápido',
-                      subtitle:
-                          'As ações mais usadas para montar e revisar compras.',
+                    child: _SmartReplenishmentCard(
+                      suggestions: smartSuggestions,
+                      onTap: _createSmartReplenishmentList,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 14),
                 ],
                 _EntryAnimation(
-                  key: const ValueKey('dash_action_new'),
+                  key: const ValueKey('dash_actions_grid'),
                   delay: const Duration(milliseconds: 40),
-                  child: _ActionTile(
-                    title: 'Começar nova lista de compras',
-                    subtitle: 'Crie uma lista do zero e adicione os produtos.',
-                    icon: Icons.playlist_add_rounded,
-                    tag: 'Mais usado',
-                    onTap: _createNewList,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                _EntryAnimation(
-                  key: const ValueKey('dash_action_lists'),
-                  delay: const Duration(milliseconds: 70),
-                  child: _ActionTile(
-                    title: 'Minhas listas de compras',
-                    subtitle: 'Abra, edite e exclua suas listas salvas.',
-                    icon: Icons.inventory_2_rounded,
-                    tag: 'Organização',
-                    onTap: _openMyLists,
-                  ),
-                ),
-                if (canUseSharing) ...[
-                  const SizedBox(height: 10),
-                  _EntryAnimation(
-                    key: const ValueKey('dash_action_join_code'),
-                    delay: const Duration(milliseconds: 84),
-                    child: _ActionTile(
-                      title: 'Entrar na lista com código',
-                      subtitle:
-                          'Digite o código compartilhado para entrar em uma lista.',
-                      icon: Icons.group_add_rounded,
-                      tag: 'Compartilhar',
-                      onTap: _joinSharedListByCode,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 10),
-                _EntryAnimation(
-                  key: const ValueKey('dash_action_history'),
-                  delay: const Duration(milliseconds: 100),
-                  child: _ActionTile(
-                    title: 'Histórico mensal',
-                    subtitle: 'Revise fechamentos e totais por mês.',
-                    icon: Icons.event_note_rounded,
-                    tag: 'Analise',
-                    onTap: _openPurchaseHistory,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                _EntryAnimation(
-                  key: const ValueKey('dash_action_template'),
-                  delay: const Duration(milliseconds: 130),
-                  child: _ActionTile(
-                    title: 'Catálogo de produtos',
-                    subtitle:
-                        'Gerencie produtos salvos localmente e/ou sincronizados.',
-                    icon: Icons.local_offer_rounded,
-                    tag: 'Base',
-                    onTap: _openCatalog,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                _EntryAnimation(
-                  key: const ValueKey('dash_action_based'),
-                  delay: const Duration(milliseconds: 160),
-                  child: _ActionTile(
-                    title: 'Nova lista baseada em antiga',
-                    subtitle: 'Use outra lista como modelo e acelere a compra.',
-                    icon: Icons.copy_all_rounded,
-                    tag: 'Atalho',
-                    onTap: _createBasedOnOld,
-                  ),
+                  child: _QuickActionsGrid(actions: quickActions),
                 ),
                 const SizedBox(height: 20),
                 _EntryAnimation(
@@ -652,19 +636,6 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                     );
                   }),
-                const SizedBox(height: 14),
-                _EntryAnimation(
-                  key: const ValueKey('dash_action_replenishment'),
-                  delay: const Duration(milliseconds: 215),
-                  child: _ActionTile(
-                    title: 'Reposição inteligente',
-                    subtitle:
-                        'Monte uma nova lista com base no histórico recente.',
-                    icon: Icons.auto_awesome_rounded,
-                    tag: 'Sugestao',
-                    onTap: _createSmartReplenishmentList,
-                  ),
-                ),
                 if (canUseSharing) ...[
                   const SizedBox(height: 14),
                   _EntryAnimation(
@@ -716,7 +687,9 @@ class _DashboardPageState extends State<DashboardPage> {
                               elevation: 0,
                               child: ListTile(
                                 leading: const Icon(Icons.sync_problem_rounded),
-                                title: const Text('Falha ao validar login'),
+                                title: const Text(
+                                  'Não foi possível validar o login',
+                                ),
                                 subtitle: const Text(
                                   'Tente sair e entrar novamente para atualizar o token.',
                                 ),
@@ -763,7 +736,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                         Icons.sync_problem_rounded,
                                       ),
                                       title: const Text(
-                                        'Falha ao carregar listas compartilhadas',
+                                        'Não foi possível carregar listas compartilhadas',
                                       ),
                                       subtitle: const Text(
                                         'Verifique permissões ou conexão e tente novamente.',
@@ -852,7 +825,6 @@ class _HomeSummaryCard extends StatelessWidget {
   const _HomeSummaryCard({
     required this.totalLists,
     required this.totalCatalogProducts,
-    required this.totalValue,
     required this.openListsCount,
     required this.closedListsCount,
     required this.pendingValue,
@@ -863,7 +835,6 @@ class _HomeSummaryCard extends StatelessWidget {
 
   final int totalLists;
   final int totalCatalogProducts;
-  final double totalValue;
   final int openListsCount;
   final int closedListsCount;
   final double pendingValue;
@@ -875,89 +846,79 @@ class _HomeSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final isCompactHeight = MediaQuery.sizeOf(context).height < 700;
 
     return Semantics(
       container: true,
       label:
-          'Centro de controle. $totalLists listas no total, $totalCatalogProducts produtos no catálogo e ${formatCurrency(pendingValue)} pendente.',
+          'Resumo das compras. $openListsCount listas abertas e ${formatCurrency(pendingValue)} pendente.',
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              colorScheme.primaryContainer,
-              colorScheme.secondaryContainer,
-            ],
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(AppTokens.radiusXl),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.6),
           ),
-          borderRadius: BorderRadius.circular(26),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Centro de controle',
-                style: textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.2,
-                  color: colorScheme.onPrimaryContainer,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Gerencie listas, acompanhe valores e reutilize compras antigas.',
-                style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 10),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: colorScheme.surface.withValues(alpha: 0.36),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: colorScheme.onPrimaryContainer.withValues(
-                      alpha: 0.1,
-                    ),
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.insights_rounded,
-                        size: 18,
-                        color: colorScheme.onPrimaryContainer,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          totalLists == 0
-                              ? 'Crie a primeira lista para começar a acompanhar valores.'
-                              : '${formatCountLabel(openListsCount, 'aberta', 'abertas')}, ${formatCountLabel(closedListsCount, 'fechada', 'fechadas')} e ${formatCurrency(pendingValue)} ainda pendente.',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onPrimaryContainer.withValues(
-                              alpha: 0.9,
-                            ),
-                            fontWeight: FontWeight.w700,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Resumo das compras',
+                          style: textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            color: colorScheme.onSurface,
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        Text(
+                          totalLists == 0
+                              ? 'Crie uma lista para acompanhar itens e valores.'
+                              : 'Veja o que falta comprar e abra suas listas rápido.',
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  FilledButton.icon(
+                    onPressed: onCreateList,
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('Nova lista'),
+                  ),
+                ],
               ),
               const SizedBox(height: 14),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: [
+                  _SummaryPill(
+                    icon: Icons.pending_actions_rounded,
+                    label: 'Pendente',
+                    value: formatCurrency(pendingValue),
+                  ),
+                  _SummaryPill(
+                    icon: Icons.radio_button_checked_rounded,
+                    label: 'Abertas',
+                    value: '$openListsCount',
+                  ),
+                  _SummaryPill(
+                    icon: Icons.lock_rounded,
+                    label: 'Fechadas',
+                    value: '$closedListsCount',
+                  ),
                   _SummaryPill(
                     icon: Icons.list_alt_rounded,
                     label: 'Listas',
@@ -968,38 +929,165 @@ class _HomeSummaryCard extends StatelessWidget {
                     label: 'Produtos',
                     value: '$totalCatalogProducts',
                   ),
-                  _SummaryPill(
-                    icon: Icons.attach_money_rounded,
-                    label: 'Valor total',
-                    value: formatCurrency(totalValue),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _QuickSummaryActionChip(
+                    icon: Icons.inventory_2_rounded,
+                    label: 'Ver listas',
+                    onTap: onOpenLists,
+                  ),
+                  _QuickSummaryActionChip(
+                    icon: Icons.event_note_rounded,
+                    label: 'Histórico',
+                    onTap: onOpenHistory,
                   ),
                 ],
               ),
-              if (!isCompactHeight) ...[
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SmartReplenishmentCard extends StatelessWidget {
+  const _SmartReplenishmentCard({
+    required this.suggestions,
+    required this.onTap,
+  });
+
+  final List<ReplenishmentSuggestion> suggestions;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final estimatedTotal = suggestions.fold<double>(
+      0,
+      (sum, suggestion) => sum + suggestion.estimatedTotal,
+    );
+    final recurringCount = suggestions
+        .where(
+          (suggestion) =>
+              suggestion.source == ReplenishmentSuggestionSource.recurring,
+        )
+        .length;
+
+    return Semantics(
+      container: true,
+      button: true,
+      label: 'Criar lista por reposição inteligente',
+      value: 'Previsto: ${formatCurrency(estimatedTotal)}',
+      hint: 'Toque para revisar os itens sugeridos.',
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppTokens.radiusXl),
+          onTap: () {
+            Feedback.forTap(context);
+            onTap();
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _QuickSummaryActionChip(
-                      icon: Icons.add_rounded,
-                      label: 'Nova lista',
-                      onTap: onCreateList,
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+                      ),
+                      child: const Padding(
+                        padding: EdgeInsets.all(11),
+                        child: Icon(Icons.auto_awesome_rounded),
+                      ),
                     ),
-                    _QuickSummaryActionChip(
-                      icon: Icons.inventory_2_rounded,
-                      label: 'Ver listas',
-                      onTap: onOpenLists,
-                    ),
-                    _QuickSummaryActionChip(
-                      icon: Icons.event_note_rounded,
-                      label: 'Histórico',
-                      onTap: onOpenHistory,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Próxima compra sugerida',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            recurringCount > 0
+                                ? 'Baseada nos itens que você repete.'
+                                : 'Comece com produtos do seu catálogo.',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: colorScheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: suggestions
+                          .take(3)
+                          .map(
+                            (suggestion) => _PillLabel(
+                              icon:
+                                  suggestion.source ==
+                                      ReplenishmentSuggestionSource.recurring
+                                  ? Icons.repeat_rounded
+                                  : Icons.shopping_bag_rounded,
+                              text: suggestion.name,
+                              maxWidth: constraints.maxWidth,
+                            ),
+                          )
+                          .toList(growable: false),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Previsto: ${formatCurrency(estimatedTotal)}',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    FilledButton.icon(
+                      onPressed: onTap,
+                      icon: const Icon(Icons.playlist_add_check_rounded),
+                      label: const Text('Criar lista'),
+                    ),
+                  ],
+                ),
+                if (suggestions.length > 3) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '+${suggestions.length - 3} itens sugeridos',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -1026,10 +1114,10 @@ class _SummaryPill extends StatelessWidget {
       readOnly: true,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: colorScheme.surface.withValues(alpha: 0.72),
+          color: colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(AppTokens.radiusLg),
           border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.32),
+            color: colorScheme.outlineVariant.withValues(alpha: 0.52),
           ),
         ),
         child: Padding(
@@ -1112,7 +1200,7 @@ class _QuickSummaryActionChip extends StatelessWidget {
             color: colorScheme.outlineVariant.withValues(alpha: 0.4),
           ),
         ),
-        backgroundColor: colorScheme.surface.withValues(alpha: 0.72),
+        backgroundColor: colorScheme.surface,
       ),
     );
   }
@@ -1169,119 +1257,123 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _ActionTile extends StatelessWidget {
-  const _ActionTile({
+class _DashboardQuickAction {
+  const _DashboardQuickAction({
+    required this.key,
     required this.title,
     required this.subtitle,
     required this.icon,
     required this.onTap,
-    this.tag,
+  });
+
+  final Key key;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+}
+
+class _QuickActionsGrid extends StatelessWidget {
+  const _QuickActionsGrid({required this.actions});
+
+  final List<_DashboardQuickAction> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 560 ? 3 : 2;
+        const spacing = 10.0;
+        final itemWidth =
+            (constraints.maxWidth - (spacing * (columns - 1))) / columns;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final action in actions)
+              SizedBox(
+                width: itemWidth,
+                child: _QuickActionTile(
+                  key: action.key,
+                  title: action.title,
+                  subtitle: action.subtitle,
+                  icon: action.icon,
+                  onTap: action.onTap,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _QuickActionTile extends StatelessWidget {
+  const _QuickActionTile({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.onTap,
   });
 
   final String title;
   final String subtitle;
   final IconData icon;
   final VoidCallback onTap;
-  final String? tag;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isCompactHeight = MediaQuery.sizeOf(context).height < 700;
+    final textTheme = Theme.of(context).textTheme;
 
     return Semantics(
       button: true,
       label: title,
       hint: subtitle,
       child: Card(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.28),
-            ),
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(22),
-            onTap: () {
-              Feedback.forTap(context);
-              onTap();
-            },
+        elevation: 0,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            Feedback.forTap(context);
+            onTap();
+          },
+          child: SizedBox(
+            height: 106,
             child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
+              padding: const EdgeInsets.all(12),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   DecoratedBox(
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          colorScheme.primaryContainer.withValues(alpha: 0.95),
-                          colorScheme.secondaryContainer.withValues(
-                            alpha: 0.72,
-                          ),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(16),
+                      color: colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(AppTokens.radiusLg),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(11),
-                      child: Icon(icon),
+                      padding: const EdgeInsets.all(9),
+                      child: Icon(icon, size: 20),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (tag != null && !isCompactHeight) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: colorScheme.surfaceContainerHighest
-                                  .withValues(alpha: 0.76),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              tag!,
-                              style: Theme.of(context).textTheme.labelSmall
-                                  ?.copyWith(fontWeight: FontWeight.w800),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                        ],
-                        Text(
-                          title,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          subtitle,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: colorScheme.onSurfaceVariant),
-                        ),
-                      ],
+                  const Spacer(),
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest.withValues(
-                        alpha: 0.72,
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: Icon(
-                        Icons.arrow_forward_rounded,
-                        size: 18,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -1309,11 +1401,11 @@ class _RecentListCard extends StatelessWidget {
         ? 0.0
         : purchasedCount / lineItemsCount;
     final backgroundColor = list.isClosed
-        ? colorScheme.surfaceContainerLow.withValues(alpha: 0.84)
+        ? colorScheme.surfaceContainerLow
         : colorScheme.surface;
     final borderColor = list.isClosed
-        ? colorScheme.outline.withValues(alpha: 0.3)
-        : colorScheme.outlineVariant.withValues(alpha: 0.24);
+        ? colorScheme.outline.withValues(alpha: 0.5)
+        : colorScheme.outlineVariant.withValues(alpha: 0.54);
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -1327,11 +1419,11 @@ class _RecentListCard extends StatelessWidget {
         curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
           color: backgroundColor,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(AppTokens.radiusXl),
           border: Border.all(color: borderColor),
         ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(AppTokens.radiusXl),
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(14),
@@ -1357,9 +1449,7 @@ class _RecentListCard extends StatelessWidget {
                           text: list.isClosed ? 'Fechada' : 'Ativa',
                           backgroundColor: list.isClosed
                               ? colorScheme.surfaceContainerHighest
-                              : colorScheme.primaryContainer.withValues(
-                                  alpha: 0.72,
-                                ),
+                              : colorScheme.primaryContainer,
                         ),
                         const SizedBox(height: 6),
                         Text(
@@ -1377,9 +1467,9 @@ class _RecentListCard extends StatelessWidget {
                       ? 'Sem itens adicionados ainda.'
                       : list.isClosed
                       ? purchasedCount == 1
-                            ? 'Compra finalizada com 1 item marcado.'
-                            : 'Compra finalizada com $purchasedCount itens marcados.'
-                      : '$purchasedCount de ${formatItemCount(lineItemsCount)} já foram marcados.',
+                            ? 'Compra finalizada com 1 item comprado.'
+                            : 'Compra finalizada com $purchasedCount itens comprados.'
+                      : '$purchasedCount de ${formatItemCount(lineItemsCount)} já foram comprados.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w600,
@@ -1394,8 +1484,7 @@ class _RecentListCard extends StatelessWidget {
                     color: list.isClosed
                         ? colorScheme.tertiary
                         : colorScheme.primary,
-                    backgroundColor: colorScheme.surfaceContainerHighest
-                        .withValues(alpha: 0.75),
+                    backgroundColor: colorScheme.surfaceContainerHighest,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -1409,7 +1498,7 @@ class _RecentListCard extends StatelessWidget {
                     ),
                     _PillLabel(
                       icon: Icons.check_circle_outline_rounded,
-                      text: '$purchasedCount/$lineItemsCount marcados',
+                      text: '$purchasedCount/$lineItemsCount comprados',
                     ),
                     _PillLabel(
                       icon: Icons.attach_money_rounded,
@@ -1431,43 +1520,70 @@ class _PillLabel extends StatelessWidget {
     required this.icon,
     required this.text,
     this.backgroundColor,
+    this.maxWidth,
   });
 
   final IconData icon;
   final String text;
   final Color? backgroundColor;
+  final double? maxWidth;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final bg =
-        backgroundColor ??
-        colorScheme.surfaceContainerHighest.withValues(alpha: 0.7);
+    final bg = backgroundColor ?? colorScheme.surfaceContainerHighest;
     final fg = colorScheme.onSurface;
-    final label = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: fg),
-          const SizedBox(width: 5),
-          Text(
-            text,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: fg,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
+    final textStyle = Theme.of(
+      context,
+    ).textTheme.labelMedium?.copyWith(color: fg, fontWeight: FontWeight.w700);
+    final label = Semantics(
+      label: text,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Row(
+          mainAxisSize: maxWidth == null ? MainAxisSize.min : MainAxisSize.max,
+          children: [
+            Icon(icon, size: 16, color: fg),
+            const SizedBox(width: 5),
+            if (maxWidth == null)
+              Text(
+                text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textStyle,
+              )
+            else
+              Expanded(
+                child: Text(
+                  text,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textStyle,
+                ),
+              ),
+          ],
+        ),
       ),
     );
-
-    return DecoratedBox(
+    final pill = DecoratedBox(
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(14),
       ),
       child: label,
+    );
+
+    if (maxWidth == null) {
+      return pill;
+    }
+
+    return SizedBox(
+      width: maxWidth,
+      child: Tooltip(
+        message: text,
+        waitDuration: const Duration(milliseconds: 450),
+        child: pill,
+      ),
     );
   }
 }
@@ -1486,8 +1602,8 @@ class _EmptyRecentListsCard extends StatelessWidget {
           children: [
             DecoratedBox(
               decoration: BoxDecoration(
-                color: colorScheme.primaryContainer.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(12),
+                color: colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(AppTokens.radiusLg),
               ),
               child: const Padding(
                 padding: EdgeInsets.all(10),

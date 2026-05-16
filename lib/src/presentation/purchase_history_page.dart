@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../application/store_and_services.dart';
 import '../core/utils/format_utils.dart';
 import '../domain/classifications.dart';
 import '../domain/models_and_utils.dart';
+import 'dialogs_and_sheets.dart';
 import 'launch.dart';
+import 'shopping_list_editor_page.dart';
 import 'theme/app_tokens.dart';
 import 'utils/app_modal.dart';
+import 'utils/app_page_route.dart';
 import 'utils/app_toast.dart';
 
 class PurchaseHistoryPage extends StatefulWidget {
@@ -160,6 +164,37 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
     );
   }
 
+  Future<void> _createListFromEmptyState() async {
+    final name = await showListNameDialog(
+      context,
+      title: 'Nova lista de compras',
+      confirmLabel: 'Criar lista',
+    );
+    if (!mounted || name == null) {
+      return;
+    }
+
+    final created = await widget.store.createList(name: name);
+    if (!mounted) {
+      return;
+    }
+
+    HapticFeedback.mediumImpact();
+    AppToast.show(
+      context,
+      message: 'Lista criada.',
+      type: AppToastType.success,
+      duration: const Duration(seconds: 4),
+    );
+    await Navigator.push<void>(
+      context,
+      buildAppPageRoute(
+        builder: (_) =>
+            ShoppingListEditorPage(store: widget.store, listId: created.id),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -232,6 +267,7 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
                         ? _EmptyPurchaseHistoryState(
                             hasQuery: _searchQuery.isNotEmpty,
                             onClearSearch: _searchController.clear,
+                            onCreateList: _createListFromEmptyState,
                           )
                         : ListView(
                             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -460,10 +496,12 @@ class _EmptyPurchaseHistoryState extends StatelessWidget {
   const _EmptyPurchaseHistoryState({
     required this.hasQuery,
     required this.onClearSearch,
+    required this.onCreateList,
   });
 
   final bool hasQuery;
   final VoidCallback onClearSearch;
+  final VoidCallback onCreateList;
 
   @override
   Widget build(BuildContext context) {
@@ -472,7 +510,7 @@ class _EmptyPurchaseHistoryState extends StatelessWidget {
         : 'Sem histórico de compras';
     final description = hasQuery
         ? 'Tente outro termo para lista ou produto.'
-        : 'Feche uma compra para gerar relatórios mensais.';
+        : 'Feche uma compra para ver gastos por mês.';
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -504,10 +542,17 @@ class _EmptyPurchaseHistoryState extends StatelessWidget {
             ),
             if (hasQuery) ...[
               const SizedBox(height: 14),
-              FilledButton.icon(
+              FilledButton.tonalIcon(
                 onPressed: onClearSearch,
                 icon: const Icon(Icons.close_rounded),
                 label: const Text('Limpar busca'),
+              ),
+            ] else ...[
+              const SizedBox(height: 14),
+              FilledButton.icon(
+                onPressed: onCreateList,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Criar lista'),
               ),
             ],
           ],
@@ -799,10 +844,10 @@ class _HistorySummaryPill extends StatelessWidget {
       readOnly: true,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: colorScheme.surface.withValues(alpha: 0.72),
+          color: colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(AppTokens.radiusLg),
           border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.32),
+            color: colorScheme.outlineVariant.withValues(alpha: 0.52),
           ),
         ),
         child: Padding(
@@ -864,18 +909,11 @@ class _HistoryContentPanel extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.9),
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(AppTokens.radiusXl),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.32),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.54),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Padding(padding: const EdgeInsets.all(14), child: child),
     );
@@ -894,7 +932,7 @@ class _HistoryPillLabel extends StatelessWidget {
     final foregroundColor = colorScheme.onSurface;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
+        color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Padding(

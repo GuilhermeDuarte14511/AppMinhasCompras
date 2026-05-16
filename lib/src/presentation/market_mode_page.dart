@@ -9,6 +9,7 @@ import '../domain/classifications.dart';
 import '../domain/models_and_utils.dart';
 import 'launch.dart';
 import 'theme/app_tokens.dart';
+import 'utils/app_toast.dart';
 
 class ShoppingMarketModePage extends StatefulWidget {
   const ShoppingMarketModePage({super.key, required this.initialList});
@@ -95,6 +96,13 @@ class _ShoppingMarketModePageState extends State<ShoppingMarketModePage> {
     setState(() {
       _list = _list.copyWith(items: updatedItems);
     });
+    HapticFeedback.selectionClick();
+    AppToast.show(
+      context,
+      message: isPurchased ? 'Item pego.' : 'Item pendente.',
+      type: AppToastType.success,
+      duration: const Duration(milliseconds: 900),
+    );
   }
 
   void _changeQuantity(ShoppingItem item, int delta) {
@@ -111,6 +119,7 @@ class _ShoppingMarketModePageState extends State<ShoppingMarketModePage> {
   }
 
   void _finishAndReturn() {
+    HapticFeedback.mediumImpact();
     Navigator.pop(context, _list.copyWith(updatedAt: DateTime.now()));
   }
 
@@ -162,7 +171,7 @@ class _ShoppingMarketModePageState extends State<ShoppingMarketModePage> {
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
                   child: _MarketModeSummaryCard(
                     completion: _completion,
                     pendingProductsCount: _pendingProductsCount,
@@ -172,7 +181,7 @@ class _ShoppingMarketModePageState extends State<ShoppingMarketModePage> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                   child: _MarketModeContentPanel(
                     child: TextField(
                       controller: _searchController,
@@ -196,8 +205,8 @@ class _ShoppingMarketModePageState extends State<ShoppingMarketModePage> {
                     child: _MarketModeInlineInfoBanner(
                       icon: Icons.visibility_outlined,
                       message: _purchasedProductsCount == 1
-                          ? '1 item comprado está oculto para facilitar a compra.'
-                          : '$_purchasedProductsCount itens comprados estão ocultos para facilitar a compra.',
+                          ? '1 item pego está oculto para facilitar a compra.'
+                          : '$_purchasedProductsCount itens pegos estão ocultos para facilitar a compra.',
                       actionLabel: 'Mostrar',
                       onAction: () {
                         HapticFeedback.selectionClick();
@@ -224,7 +233,7 @@ class _ShoppingMarketModePageState extends State<ShoppingMarketModePage> {
                           padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
                           itemCount: visibleItems.length,
                           separatorBuilder: (context, index) =>
-                              const SizedBox(height: 10),
+                              const SizedBox(height: 6),
                           itemBuilder: (context, index) {
                             final item = visibleItems[index];
                             return _MarketModeEntryAnimation(
@@ -245,7 +254,7 @@ class _ShoppingMarketModePageState extends State<ShoppingMarketModePage> {
                                       : Icons.check_rounded,
                                   label: item.isPurchased
                                       ? 'Marcar pendente'
-                                      : 'Marcar comprado',
+                                      : 'Marcar como pego',
                                   alignRight: false,
                                 ),
                                 secondaryBackground: _MarketModeSwipeBackground(
@@ -254,7 +263,7 @@ class _ShoppingMarketModePageState extends State<ShoppingMarketModePage> {
                                       : Icons.check_rounded,
                                   label: item.isPurchased
                                       ? 'Marcar pendente'
-                                      : 'Marcar comprado',
+                                      : 'Marcar como pego',
                                   alignRight: true,
                                 ),
                                 child: _MarketModeItemCard(
@@ -300,49 +309,50 @@ class _MarketModeSummaryCard extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: Color.alphaBlend(
-          colorScheme.primaryContainer.withValues(alpha: 0.66),
-          colorScheme.surface,
-        ),
+        borderRadius: BorderRadius.circular(AppTokens.radiusXl),
+        color: colorScheme.surface,
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.56),
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Text(
-                  'Roteiro do mercado',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: colorScheme.onPrimaryContainer,
+                Expanded(
+                  child: Text(
+                    pendingProductsCount == 0
+                        ? 'Compra concluída'
+                        : pendingProductsCount == 1
+                        ? 'Falta 1 item'
+                        : 'Faltam $pendingProductsCount itens',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
-                const Spacer(),
                 Text(
                   '$percent%',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: colorScheme.onPrimaryContainer,
+                    color: colorScheme.primary,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 7),
             ClipRRect(
               borderRadius: BorderRadius.circular(999),
               child: LinearProgressIndicator(
                 minHeight: 8,
                 value: completion,
-                backgroundColor: colorScheme.surface.withValues(alpha: 0.5),
+                backgroundColor: colorScheme.surfaceContainerHighest,
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -353,7 +363,7 @@ class _MarketModeSummaryCard extends StatelessWidget {
                 ),
                 _MarketModePillLabel(
                   icon: Icons.check_circle_rounded,
-                  text: '$purchasedProductsCount comprados',
+                  text: '$purchasedProductsCount pegos',
                 ),
                 _MarketModePillLabel(
                   icon: Icons.confirmation_number_rounded,
@@ -389,89 +399,92 @@ class _MarketModeItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return _MarketModeContentPanel(
-      child: AnimatedOpacity(
-        duration: _marketModeAdaptiveMotionDuration(
-          context,
-          const Duration(milliseconds: 180),
-        ),
-        opacity: item.isPurchased ? 0.62 : 1,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(22),
-          onTap: onTogglePurchased,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: colorScheme.primaryContainer,
-                  child: Text(
-                    '${item.quantity}',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
+    return Semantics(
+      container: true,
+      button: true,
+      label: item.name,
+      value: item.isPurchased ? 'Pego' : 'Pendente',
+      hint: 'Toque para alternar o status do item.',
+      child: _MarketModeContentPanel(
+        padding: EdgeInsets.zero,
+        child: AnimatedOpacity(
+          duration: _marketModeAdaptiveMotionDuration(
+            context,
+            const Duration(milliseconds: 180),
+          ),
+          opacity: item.isPurchased ? 0.58 : 1,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+            onTap: onTogglePurchased,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+              child: Row(
+                children: [
+                  IconButton.filledTonal(
+                    tooltip: item.isPurchased
+                        ? 'Marcar como pendente'
+                        : 'Marcar como pego',
+                    onPressed: onTogglePurchased,
+                    icon: Icon(
+                      item.isPurchased
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked_rounded,
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                decoration: item.isPurchased
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                              ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${item.quantity} un. • ${item.category.label} • ${formatCurrency(item.unitPrice)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: colorScheme.onSurfaceVariant),
+                        ),
+                        Text(
+                          formatCurrency(item.subtotal),
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        item.name,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              decoration: item.isPurchased
-                                  ? TextDecoration.lineThrough
-                                  : null,
-                            ),
+                      IconButton.filledTonal(
+                        tooltip: 'Diminuir quantidade',
+                        onPressed: item.quantity > 1 ? onDecrement : null,
+                        icon: const Icon(Icons.remove_rounded),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${item.category.label} • ${formatCurrency(item.unitPrice)}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Subtotal: ${formatCurrency(item.subtotal)}',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      IconButton.filledTonal(
+                        tooltip: 'Aumentar quantidade',
+                        onPressed: onIncrement,
+                        icon: const Icon(Icons.add_rounded),
                       ),
                     ],
                   ),
-                ),
-                Column(
-                  children: [
-                    IconButton.filledTonal(
-                      onPressed: onIncrement,
-                      icon: const Icon(Icons.add_rounded),
-                    ),
-                    const SizedBox(height: 6),
-                    IconButton.filledTonal(
-                      onPressed: item.quantity > 1 ? onDecrement : null,
-                      icon: const Icon(Icons.remove_rounded),
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 4),
-                IconButton(
-                  onPressed: onTogglePurchased,
-                  icon: Icon(
-                    item.isPurchased
-                        ? Icons.check_circle_rounded
-                        : Icons.radio_button_unchecked_rounded,
-                    color: item.isPurchased
-                        ? colorScheme.primary
-                        : colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -499,12 +512,12 @@ class _EmptyMarketModeState extends StatelessWidget {
     final title = hasQuery
         ? 'Nenhum item encontrado'
         : showOnlyPending
-        ? 'Tudo comprado'
-        : 'Sem itens para mostrar';
+        ? 'Tudo pego'
+        : 'Nenhum item para mostrar';
     final description = hasQuery
         ? 'Ajuste sua busca para localizar produtos.'
         : showOnlyPending
-        ? 'Parabéns. Todos os itens estão marcados como comprados.'
+        ? 'Todos os itens foram pegos.'
         : 'Sua lista está vazia.';
 
     return Center(
@@ -566,29 +579,26 @@ Duration _marketModeAdaptiveMotionDuration(
 }
 
 class _MarketModeContentPanel extends StatelessWidget {
-  const _MarketModeContentPanel({required this.child});
+  const _MarketModeContentPanel({
+    required this.child,
+    this.padding = const EdgeInsets.all(10),
+  });
 
   final Widget child;
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(AppTokens.radiusXl),
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.32),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.54),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
-      child: Padding(padding: const EdgeInsets.all(14), child: child),
+      child: Padding(padding: padding, child: child),
     );
   }
 }
@@ -605,7 +615,7 @@ class _MarketModePillLabel extends StatelessWidget {
     final foregroundColor = colorScheme.onSurface;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
+        color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Padding(
@@ -645,8 +655,8 @@ class _MarketModeSwipeBackground extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: colorScheme.primaryContainer.withValues(alpha: 0.75),
+        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+        color: colorScheme.primaryContainer,
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16),
       alignment: alignRight ? Alignment.centerRight : Alignment.centerLeft,
@@ -682,10 +692,10 @@ class _MarketModeInlineInfoBanner extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.secondaryContainer.withValues(alpha: 0.72),
+        color: colorScheme.secondaryContainer,
         borderRadius: BorderRadius.circular(AppTokens.radiusLg),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.26),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
         ),
       ),
       child: Padding(
