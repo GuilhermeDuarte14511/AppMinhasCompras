@@ -4,6 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/utils/text_utils.dart';
+import '../../utils/app_modal.dart';
+
+Future<String?> showBarcodeScannerSheet(BuildContext context) {
+  return showAppModalBottomSheet<String>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    showDragHandle: true,
+    builder: (context) => const BarcodeScannerSheet(),
+  );
+}
 
 class BarcodeScannerSheet extends StatefulWidget {
   const BarcodeScannerSheet({super.key});
