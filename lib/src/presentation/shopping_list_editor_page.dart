@@ -1009,7 +1009,11 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       return;
     }
 
-    final drafts = await showFiscalReceiptImportSheet(context);
+    final drafts = await showFiscalReceiptImportSheet(
+      context,
+      currentItems: _list.items,
+      catalogProducts: widget.store.catalogProducts,
+    );
     if (!mounted || drafts == null || drafts.isEmpty) {
       return;
     }

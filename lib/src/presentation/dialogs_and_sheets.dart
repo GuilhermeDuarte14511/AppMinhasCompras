@@ -857,13 +857,18 @@ Future<List<ReplenishmentSuggestion>?> showReplenishmentSuggestionsSheet(
 }
 
 Future<List<ShoppingItemDraft>?> showFiscalReceiptImportSheet(
-  BuildContext context,
-) {
+  BuildContext context, {
+  List<ShoppingItem> currentItems = const <ShoppingItem>[],
+  List<CatalogProduct> catalogProducts = const <CatalogProduct>[],
+}) {
   return showAppModalBottomSheet<List<ShoppingItemDraft>>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
-    builder: (context) => const FiscalReceiptImportSheet(),
+    builder: (context) => FiscalReceiptImportSheet(
+      currentItems: currentItems,
+      catalogProducts: catalogProducts,
+    ),
   );
 }

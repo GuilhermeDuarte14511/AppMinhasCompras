@@ -9,10 +9,18 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/utils/format_utils.dart';
 import '../../../data/services/fiscal_receipt_parser.dart';
 import '../../../domain/models_and_utils.dart';
+import '../../../domain/receipt_item_matcher.dart';
 import '../widgets/item_editor_support_widgets.dart';
 
 class FiscalReceiptImportSheet extends StatefulWidget {
-  const FiscalReceiptImportSheet({super.key});
+  const FiscalReceiptImportSheet({
+    super.key,
+    this.currentItems = const <ShoppingItem>[],
+    this.catalogProducts = const <CatalogProduct>[],
+  });
+
+  final List<ShoppingItem> currentItems;
+  final List<CatalogProduct> catalogProducts;
 
   @override
   State<FiscalReceiptImportSheet> createState() =>
@@ -21,12 +29,14 @@ class FiscalReceiptImportSheet extends StatefulWidget {
 
 class _FiscalReceiptImportSheetState extends State<FiscalReceiptImportSheet> {
   final FiscalReceiptParser _parser = const FiscalReceiptParser();
+  final ReceiptItemMatcher _matcher = const ReceiptItemMatcher();
   final TextEditingController _rawTextController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
   final TextRecognizer _textRecognizer = TextRecognizer(
     script: TextRecognitionScript.latin,
   );
   List<ShoppingItemDraft> _parsedItems = const <ShoppingItemDraft>[];
+  List<ReceiptItemMatchResult> _matchResults = const <ReceiptItemMatchResult>[];
   bool _isExtractingFromImage = false;
   String? _ocrFeedback;
 
@@ -46,12 +56,31 @@ class _FiscalReceiptImportSheetState extends State<FiscalReceiptImportSheet> {
 
   void _onTextChanged() {
     final parsed = _parser.parse(_rawTextController.text);
+    final matches = _matcher.matchAll(
+      parsed,
+      currentItems: widget.currentItems,
+      catalogProducts: widget.catalogProducts,
+    );
     if (!mounted) {
       return;
     }
     setState(() {
-      _parsedItems = parsed;
+      _matchResults = matches;
+      _parsedItems = matches
+          .map((result) => result.resolvedDraft)
+          .toList(growable: false);
     });
+  }
+
+  String _matchLabel(ReceiptItemMatchResult result) {
+    final candidate = result.candidate;
+    if (candidate == null) {
+      return 'Sem de/para confiável';
+    }
+    final source = candidate.source == ReceiptItemMatchSource.currentList
+        ? 'Lista atual'
+        : 'Catálogo';
+    return '$source - ${result.matchPercent}%';
   }
 
   Future<void> _pasteFromClipboard() async {
@@ -293,12 +322,38 @@ class _FiscalReceiptImportSheetState extends State<FiscalReceiptImportSheet> {
                               separatorBuilder: (context, index) =>
                                   const SizedBox(height: 4),
                               itemBuilder: (context, index) {
-                                final item = _parsedItems[index];
-                                return Text(
-                                  '${item.name} - ${item.quantity} x ${formatCurrency(item.unitPrice)}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.bodySmall,
+                                final match = _matchResults[index];
+                                final item = match.resolvedDraft;
+                                final hasDePara =
+                                    match.hasAppliedMatch &&
+                                    match.originalDraft.name != item.name;
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${item.name} - ${item.quantity} x ${formatCurrency(item.unitPrice)}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall,
+                                    ),
+                                    if (hasDePara)
+                                      Text(
+                                        '${match.originalDraft.name} -> ${_matchLabel(match)}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall
+                                            ?.copyWith(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onPrimaryContainer
+                                                  .withValues(alpha: 0.78),
+                                            ),
+                                      ),
+                                  ],
                                 );
                               },
                             ),
