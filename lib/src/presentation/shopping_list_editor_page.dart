@@ -1038,6 +1038,8 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
             name: draft.name,
             quantity: draft.quantity,
             unitPrice: draft.unitPrice,
+            barcode: draft.barcode,
+            isPurchased: draft.isPurchased,
             category: draft.category,
             priceHistory: [
               PriceHistoryEntry(
@@ -1070,6 +1072,8 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         items[index] = existing.copyWith(
           quantity: existing.quantity + draft.quantity,
           unitPrice: draft.unitPrice,
+          barcode: existing.barcode ?? draft.barcode,
+          isPurchased: existing.isPurchased || draft.isPurchased,
           category: draft.category,
           priceHistory: history,
         );

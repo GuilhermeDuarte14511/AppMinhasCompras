@@ -1,5 +1,6 @@
 import '../../domain/classifications.dart';
 import '../../domain/models_and_utils.dart';
+import '../../domain/receipt_aliases.dart';
 
 class FiscalReceiptParser {
   const FiscalReceiptParser();
@@ -11,7 +12,26 @@ class FiscalReceiptParser {
   static final RegExp _quantityTimesUnitPattern = RegExp(
     r'(\d+(?:[.,]\d+)?)\s*[xX*]\s*(?:R\$\s*)?(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})',
   );
-  static final RegExp _leadingCodePattern = RegExp(r'^\s*\d{1,5}[\s\-.)]+');
+  static final RegExp _leadingCodePattern = RegExp(
+    r'^\s*(?:[A-Z]{1,4}\d{2,}|\d{1,5})[\s\-.)]+',
+    caseSensitive: false,
+  );
+  static final RegExp _unitColumnPattern = RegExp(
+    r'\b(\d{1,4})\s*(?:UN\w*|UND\w*|DPL\w*|BDJ\w*|FR\w*|CX\w*|PC\w*)\b',
+    caseSensitive: false,
+  );
+  static final RegExp _packagePattern = RegExp(
+    r'\b\d+(?:[,.]\d+)?\s*[xX]\s*\d+(?:[,.]\d+)?(?:\s*[xX]\s*\d+(?:[,.]\d+)?)?\s*(?:KG|G|ML|L|LT|UN|UND|KIT)\b',
+    caseSensitive: false,
+  );
+  static final RegExp _compactPackagePattern = RegExp(
+    r'\b\d+\s*[xX]\s*[A-Z0-9,]+(?:ML|G|KG|L|LT|M|UN|UND|KIT)\b',
+    caseSensitive: false,
+  );
+  static final RegExp _productCodePattern = RegExp(
+    r'^\s*(?:[A-Z]{1,4}\d{2,}|\d{2,5})(?:[\s\-.)]+|$)',
+    caseSensitive: false,
+  );
   static final RegExp _separatorSpacesPattern = RegExp(r'\s+');
   static final RegExp _onlySymbolsPattern = RegExp(r'[^A-Za-z0-9]+');
 
@@ -47,6 +67,9 @@ class FiscalReceiptParser {
     'TEF',
     'VIA',
     'CONSUMIDOR',
+    'CODIGO',
+    'DESCRICAO',
+    'QTDE',
   };
 
   List<ShoppingItemDraft> parse(String rawText) {
@@ -59,8 +82,23 @@ class FiscalReceiptParser {
     final merged = <String, _MergeAccumulator>{};
     final order = <String>[];
     String? pendingName;
+    var skipPossibleDiscountValue = false;
 
     for (final line in lines) {
+      if (_isReceiptFooterStart(line)) {
+        break;
+      }
+      if (_isIgnoredLine(line)) {
+        pendingName = null;
+        skipPossibleDiscountValue = line.toUpperCase().contains('DESCONTO');
+        continue;
+      }
+      if (skipPossibleDiscountValue && _looksLikeDiscountValueLine(line)) {
+        skipPossibleDiscountValue = false;
+        continue;
+      }
+      skipPossibleDiscountValue = false;
+
       final prices = _pricePattern.allMatches(line).toList(growable: false);
       if (prices.isEmpty) {
         if (_looksLikeNameLine(line)) {
@@ -127,15 +165,9 @@ class FiscalReceiptParser {
     String? pendingName,
   }) {
     final upper = line.toUpperCase();
-    if (_ignoredTokens.any(upper.contains)) {
-      final hasExplicitName =
-          pendingName != null && pendingName.trim().isNotEmpty;
-      if (!hasExplicitName) {
-        final itemWord = upper.contains('ITEM');
-        if (!itemWord) {
-          return null;
-        }
-      }
+    if (_ignoredTokens.any(upper.contains) &&
+        !_productCodePattern.hasMatch(line)) {
+      return null;
     }
 
     final quantityMatch = _quantityTimesUnitPattern.firstMatch(line);
@@ -145,6 +177,11 @@ class FiscalReceiptParser {
       final parsedQty = _parseQuantity(rawQty);
       if (parsedQty > 0) {
         quantity = parsedQty;
+      }
+    } else {
+      final unitColumnQuantity = _parseUnitColumnQuantity(line, prices);
+      if (unitColumnQuantity > 0) {
+        quantity = unitColumnQuantity;
       }
     }
 
@@ -192,6 +229,27 @@ class FiscalReceiptParser {
 
   String _cleanupName(String raw) {
     var value = raw.replaceAll(_leadingCodePattern, '').trim();
+    value = value.replaceAll(RegExp(r'[./]+'), ' ');
+    value = value.replaceAll(
+      RegExp(
+        r'\b\d{1,4}\s*(?:UN\w*|UND\w*|DPL\w*|BDJ\w*|FR\w*|CX\w*|PC\w*)\b.*$',
+        caseSensitive: false,
+      ),
+      ' ',
+    );
+    value = value.replaceAll(_packagePattern, ' ');
+    value = value.replaceAll(_compactPackagePattern, ' ');
+    value = value.replaceAll(
+      RegExp(
+        r'\b\d+\s*[xX]\s*\d+(?:\s*[xX]\s*\d+)?\s*(?:KG|G|ML|L|LT|UN|UND)\b',
+        caseSensitive: false,
+      ),
+      ' ',
+    );
+    value = value.replaceAll(
+      RegExp(r'\b\d+\s*[xX]\s*(?:KG|G|ML|L|LT|UN|UND)\b', caseSensitive: false),
+      ' ',
+    );
     value = value.replaceAll(
       RegExp(
         r'\b(?:UN|UND|UNID|KG|G|GR|L|LT|ML|PC|PCT|PAC|CX|FD)\b\.?$',
@@ -212,6 +270,63 @@ class FiscalReceiptParser {
       return '';
     }
     return value;
+  }
+
+  bool _isReceiptFooterStart(String line) {
+    final value = normalizeQuery(line);
+    return value.startsWith('qtd total') ||
+        value.startsWith('qtde total') ||
+        value.startsWith('valor total') ||
+        value.startsWith('valor a pagar') ||
+        value.startsWith('forma de pagamento') ||
+        value.startsWith('consulte pela chave') ||
+        value.startsWith('nfc e no') ||
+        value.startsWith('protocolo de autorizacao') ||
+        value.startsWith('data de autorizacao') ||
+        value.startsWith('tributos') ||
+        value.startsWith('cielo') ||
+        value.startsWith('valor pago');
+  }
+
+  bool _isIgnoredLine(String line) {
+    final upper = line.toUpperCase();
+    if (upper.contains('DESCONTO')) {
+      return true;
+    }
+    if (_productCodePattern.hasMatch(line)) {
+      return false;
+    }
+    return _ignoredTokens.any(upper.contains);
+  }
+
+  bool _looksLikeDiscountValueLine(String line) {
+    if (_productCodePattern.hasMatch(line)) {
+      return false;
+    }
+    final letters = RegExp(r'[A-Za-z]').allMatches(line).length;
+    if (letters > 3) {
+      return false;
+    }
+    return _pricePattern.hasMatch(line) || RegExp(r'\d').hasMatch(line);
+  }
+
+  int _parseUnitColumnQuantity(String line, List<RegExpMatch> prices) {
+    if (prices.isEmpty) {
+      return 1;
+    }
+    final beforeFirstPrice = line.substring(0, prices.first.start);
+    final matches = _unitColumnPattern
+        .allMatches(beforeFirstPrice)
+        .toList(growable: false);
+    if (matches.isEmpty) {
+      return 1;
+    }
+    final raw = matches.last.group(1);
+    final parsed = int.tryParse(raw ?? '');
+    if (parsed == null || parsed <= 0) {
+      return 1;
+    }
+    return parsed.clamp(1, 9999);
   }
 
   bool _looksLikeNameLine(String line) {
@@ -251,13 +366,21 @@ class FiscalReceiptParser {
   }
 
   ShoppingCategory _inferCategory(String name) {
-    final value = normalizeQuery(name);
+    final value = expandReceiptAliases(name);
     if (_containsAny(value, <String>[
       'leite',
       'queijo',
       'iogurte',
       'manteiga',
       'requeij',
+      'qjo',
+      'lactea',
+      'lacteo',
+      'marg',
+      'margarina',
+      'iog',
+      'l cond',
+      'condensado',
     ])) {
       return ShoppingCategory.dairy;
     }
@@ -273,6 +396,7 @@ class FiscalReceiptParser {
       'acucar',
       'sal',
       'grao',
+      'mac',
     ])) {
       return ShoppingCategory.grainsAndPasta;
     }
@@ -281,29 +405,60 @@ class FiscalReceiptParser {
       'suco',
       'agua',
       'cha',
+      'chai',
       'cafe',
       'cerveja',
       'bebida',
+      'refr',
+      'ref',
+      'rf',
+      'refri',
+      'pepsi',
+      'coca cola',
+      'fanta',
+      'tubaina',
+      'guara',
+      'tang',
+      'mupy',
+      'alim soja',
     ])) {
       return ShoppingCategory.beverages;
     }
     if (_containsAny(value, <String>[
       'detergente',
+      'det liq',
       'desinfetante',
+      'desinf',
       'sabao',
       'amaciante',
       'limpeza',
       'lava',
+      'limp',
+      'esponja',
+      'harpic',
+      'pato germ',
+      'pinho',
+      'toalha papel',
     ])) {
       return ShoppingCategory.cleaning;
     }
     if (_containsAny(value, <String>[
       'shampoo',
+      'shamp',
+      'shampcond',
       'sabonete',
+      'sab',
+      'dove',
+      'desod',
+      'abs',
+      'absorvente',
       'creme dental',
+      'cr d',
       'pasta dental',
       'escova',
+      'hastes',
       'higiene',
+      'papel hig',
     ])) {
       return ShoppingCategory.personalCare;
     }
@@ -313,6 +468,10 @@ class FiscalReceiptParser {
       'bovino',
       'suino',
       'linguica',
+      'ling',
+      'calab',
+      'bacon',
+      'salsicha',
     ])) {
       return ShoppingCategory.meat;
     }
@@ -323,10 +482,17 @@ class FiscalReceiptParser {
       'pao',
       'bolo',
       'biscoito',
+      'bisc',
       'torrada',
       'padaria',
     ])) {
       return ShoppingCategory.bakery;
+    }
+    if (_containsAny(value, <String>['salg', 'chips', 'batata palha'])) {
+      return ShoppingCategory.snacks;
+    }
+    if (_containsAny(value, <String>['polpa', 'congelado', 'congelada'])) {
+      return ShoppingCategory.frozen;
     }
     if (_containsAny(value, <String>[
       'banana',
@@ -338,6 +504,7 @@ class FiscalReceiptParser {
       'fruta',
       'verdura',
       'legume',
+      'cheiro verde',
     ])) {
       return ShoppingCategory.produce;
     }
@@ -347,8 +514,14 @@ class FiscalReceiptParser {
       'sobremesa',
       'bala',
       'bombom',
+      'pacoca',
+      'choc',
+      'chocolate po',
     ])) {
       return ShoppingCategory.sweets;
+    }
+    if (_containsAny(value, <String>['azeite', 'louro', 'folha louro'])) {
+      return ShoppingCategory.condiments;
     }
     if (_containsAny(value, <String>['racao', 'pet'])) {
       return ShoppingCategory.pet;
@@ -365,6 +538,18 @@ class FiscalReceiptParser {
 
   bool _containsAny(String value, List<String> tokens) {
     for (final token in tokens) {
+      if (token.contains(' ')) {
+        if (value.contains(token)) {
+          return true;
+        }
+        continue;
+      }
+      if (token.length <= 3) {
+        if (RegExp('(?:^| )${RegExp.escape(token)}(?: |\$)').hasMatch(value)) {
+          return true;
+        }
+        continue;
+      }
       if (value.contains(token)) {
         return true;
       }

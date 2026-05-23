@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'classifications.dart';
 import 'models_and_utils.dart';
+import 'receipt_aliases.dart';
 
 enum ReceiptItemMatchSource { currentList, catalog }
 
@@ -330,77 +331,14 @@ class _ReceiptTextProfile {
   final String normalized;
 
   static List<String> _tokensFor(String raw) {
-    final expanded = _stripDiacritics(raw.toLowerCase())
-        .replaceAllMapped(
-          RegExp(r'([a-z])(\d)'),
-          (match) => '${match[1]} ${match[2]}',
-        )
-        .replaceAllMapped(
-          RegExp(r'(\d)([a-z])'),
-          (match) => '${match[1]} ${match[2]}',
-        )
-        .replaceAll(RegExp(r'[^a-z0-9]+'), ' ');
+    final expanded = expandReceiptAliases(raw);
 
     return expanded
         .split(RegExp(r'\s+'))
-        .map(_expandToken)
         .where((token) => token.length >= 2 || RegExp(r'\d').hasMatch(token))
         .where((token) => !_ignoredTokens.contains(token))
         .toList(growable: false);
   }
-
-  static String _expandToken(String token) {
-    return _tokenAliases[token] ?? token;
-  }
-
-  static String _stripDiacritics(String input) {
-    const replacements = <String, String>{
-      'á': 'a',
-      'à': 'a',
-      'â': 'a',
-      'ã': 'a',
-      'ä': 'a',
-      'é': 'e',
-      'è': 'e',
-      'ê': 'e',
-      'ë': 'e',
-      'í': 'i',
-      'ì': 'i',
-      'î': 'i',
-      'ï': 'i',
-      'ó': 'o',
-      'ò': 'o',
-      'ô': 'o',
-      'õ': 'o',
-      'ö': 'o',
-      'ú': 'u',
-      'ù': 'u',
-      'û': 'u',
-      'ü': 'u',
-      'ç': 'c',
-    };
-    final buffer = StringBuffer();
-    for (final codeUnit in input.runes) {
-      final char = String.fromCharCode(codeUnit);
-      buffer.write(replacements[char] ?? char);
-    }
-    return buffer.toString();
-  }
-
-  static const Map<String, String> _tokenAliases = <String, String>{
-    'arr': 'arroz',
-    'arz': 'arroz',
-    'int': 'integral',
-    'integ': 'integral',
-    'integr': 'integral',
-    'tp': 'tipo',
-    'tpo': 'tipo',
-    'pct': 'pacote',
-    'pc': 'pacote',
-    'und': 'unidade',
-    'unid': 'unidade',
-    'lt': 'litro',
-  };
 
   static const Set<String> _ignoredTokens = <String>{
     'un',

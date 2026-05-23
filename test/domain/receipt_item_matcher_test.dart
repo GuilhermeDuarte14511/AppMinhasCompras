@@ -115,6 +115,204 @@ void main() {
     expect(result.resolvedDraft.name, 'Café Torrado 500g');
     expect(result.resolvedDraft.unitPrice, 8.75);
   });
+
+  test('matches WMS receipt abbreviations to catalog names', () {
+    final results = matcher.matchAll(
+      const [
+        ShoppingItemDraft(
+          name: 'BEB LACTEA TODDYNHO',
+          quantity: 5,
+          unitPrice: 2.99,
+          category: ShoppingCategory.dairy,
+        ),
+        ShoppingItemDraft(
+          name: 'MARG QUALY C S',
+          quantity: 1,
+          unitPrice: 9.45,
+          category: ShoppingCategory.dairy,
+        ),
+        ShoppingItemDraft(
+          name: 'REFR PEPSI COLA',
+          quantity: 12,
+          unitPrice: 1.79,
+          category: ShoppingCategory.beverages,
+        ),
+      ],
+      currentItems: const <ShoppingItem>[],
+      catalogProducts: [
+        _catalogProduct(
+          name: 'Bebida Láctea Toddynho',
+          category: ShoppingCategory.dairy,
+          unitPrice: 2.99,
+        ),
+        _catalogProduct(
+          name: 'Margarina Qualy com Sal',
+          category: ShoppingCategory.dairy,
+          unitPrice: 9.45,
+        ),
+        _catalogProduct(
+          name: 'Refrigerante Pepsi Cola',
+          category: ShoppingCategory.beverages,
+          unitPrice: 1.79,
+        ),
+      ],
+    );
+
+    expect(
+      results.map((result) => result.confidence),
+      everyElement(ReceiptItemMatchConfidence.high),
+    );
+    expect(results.map((result) => result.resolvedDraft.name), [
+      'Bebida Láctea Toddynho',
+      'Margarina Qualy com Sal',
+      'Refrigerante Pepsi Cola',
+    ]);
+  });
+
+  test(
+    'matches WMS personal care and cleaning abbreviations to catalog names',
+    () {
+      final results = matcher.matchAll(
+        const [
+          ShoppingItemDraft(
+            name: 'CR D COLGATE T 12',
+            quantity: 1,
+            unitPrice: 9.8,
+            category: ShoppingCategory.personalCare,
+          ),
+          ShoppingItemDraft(
+            name: 'DET LIQ MINUANO',
+            quantity: 3,
+            unitPrice: 2.35,
+            category: ShoppingCategory.cleaning,
+          ),
+          ShoppingItemDraft(
+            name: 'LIMP PERF CONC COALA',
+            quantity: 2,
+            unitPrice: 14.5,
+            category: ShoppingCategory.cleaning,
+          ),
+          ShoppingItemDraft(
+            name: 'SHAMP CLEAR',
+            quantity: 1,
+            unitPrice: 29.98,
+            category: ShoppingCategory.personalCare,
+          ),
+          ShoppingItemDraft(
+            name: 'KIT DOVE SHAMPCOND',
+            quantity: 1,
+            unitPrice: 29.9,
+            category: ShoppingCategory.personalCare,
+          ),
+        ],
+        currentItems: const <ShoppingItem>[],
+        catalogProducts: [
+          _catalogProduct(
+            name: 'Creme Dental Colgate Total 12',
+            category: ShoppingCategory.personalCare,
+            unitPrice: 9.8,
+          ),
+          _catalogProduct(
+            name: 'Detergente Liquido Minuano',
+            category: ShoppingCategory.cleaning,
+            unitPrice: 2.35,
+          ),
+          _catalogProduct(
+            name: 'Limpador Perfumado Concentrado Coala',
+            category: ShoppingCategory.cleaning,
+            unitPrice: 14.5,
+          ),
+          _catalogProduct(
+            name: 'Shampoo Clear',
+            category: ShoppingCategory.personalCare,
+            unitPrice: 29.98,
+          ),
+          _catalogProduct(
+            name: 'Kit Dove Shampoo Condicionador',
+            category: ShoppingCategory.personalCare,
+            unitPrice: 29.9,
+          ),
+        ],
+      );
+
+      expect(
+        results.map((result) => result.confidence),
+        everyElement(ReceiptItemMatchConfidence.high),
+      );
+      expect(results.map((result) => result.resolvedDraft.name), [
+        'Creme Dental Colgate Total 12',
+        'Detergente Liquido Minuano',
+        'Limpador Perfumado Concentrado Coala',
+        'Shampoo Clear',
+        'Kit Dove Shampoo Condicionador',
+      ]);
+    },
+  );
+
+  test('matches aliases found in public NFC-e supermarket descriptions', () {
+    final results = matcher.matchAll(
+      const [
+        ShoppingItemDraft(
+          name: 'ACHOC PO TODDY',
+          quantity: 1,
+          unitPrice: 5.25,
+          category: ShoppingCategory.sweets,
+        ),
+        ShoppingItemDraft(
+          name: 'PAPEL HIG COTTON',
+          quantity: 1,
+          unitPrice: 33.9,
+          category: ShoppingCategory.personalCare,
+        ),
+        ShoppingItemDraft(
+          name: 'SHHEAD SHOULD ANT COCEIRA',
+          quantity: 1,
+          unitPrice: 26.9,
+          category: ShoppingCategory.personalCare,
+        ),
+        ShoppingItemDraft(
+          name: 'LOGURTE NESTLE NATUR',
+          quantity: 1,
+          unitPrice: 4.29,
+          category: ShoppingCategory.dairy,
+        ),
+      ],
+      currentItems: const <ShoppingItem>[],
+      catalogProducts: [
+        _catalogProduct(
+          name: 'Achocolatado em Pó Toddy',
+          category: ShoppingCategory.sweets,
+          unitPrice: 5.25,
+        ),
+        _catalogProduct(
+          name: 'Papel Higienico Cotton',
+          category: ShoppingCategory.personalCare,
+          unitPrice: 33.9,
+        ),
+        _catalogProduct(
+          name: 'Shampoo Head Shoulders Anticoceira',
+          category: ShoppingCategory.personalCare,
+          unitPrice: 26.9,
+        ),
+        _catalogProduct(
+          name: 'Iogurte Nestle Natural',
+          category: ShoppingCategory.dairy,
+          unitPrice: 4.29,
+        ),
+      ],
+    );
+
+    expect(
+      results.map((result) => result.confidence),
+      everyElement(ReceiptItemMatchConfidence.high),
+    );
+    expect(results.map((result) => result.resolvedDraft.name), [
+      'Achocolatado em Pó Toddy',
+      'Papel Higienico Cotton',
+      'Shampoo Head Shoulders Anticoceira',
+      'Iogurte Nestle Natural',
+    ]);
+  });
 }
 
 CatalogProduct _catalogProduct({
