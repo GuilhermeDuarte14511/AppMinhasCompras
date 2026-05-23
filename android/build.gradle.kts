@@ -3,6 +3,15 @@ allprojects {
         google()
         mavenCentral()
     }
+
+    configurations.configureEach {
+        resolutionStrategy.eachDependency {
+            if (requested.group == "androidx.glance") {
+                useVersion("1.1.1")
+                because("home_widget uses a dynamic Glance version; 1.3.0-alpha01 requires Android SDK 37 and AGP 9.1+.")
+            }
+        }
+    }
 }
 
 val newBuildDir: Directory =
