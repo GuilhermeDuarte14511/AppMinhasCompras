@@ -132,6 +132,39 @@ AR087134 SALSICHA PERDIGAO 1,646kg x 17,90 R\$/kg
     ]);
   });
 
+  test('merges OCR rows when product name and kilo prices are split', () {
+    const rawText = '''
+Codigo Descricao Qtde UN Vl Unit Vl Total
+AR085684 LING.T.CALAB.SADIA Codiga Descricos
+0,426 K89 29,90 12,74
+AR014692 CEROLA ATACADAU
+0,335 KG9 6,49 2,17
+AR087134 SALSICHA PERDIGAO
+1,646 KG9 X17,90 29,46
+AR00724\$ PAO FORMA PANCO 1X500G 1 PCT9 7,29 7,29
+AR06086i PACOCA S HELENA1
+ND9 25,98 25,98
+''';
+
+    final items = parser.parse(rawText);
+
+    expect(items.map((item) => item.name), [
+      'LING T CALAB SADIA',
+      'CEROLA ATACADAU',
+      'SALSICHA PERDIGAO',
+      'PAO FORMA PANCO',
+      'PACOCA S HELENA',
+    ]);
+    expect(items.map((item) => item.quantity), [1, 1, 1, 1, 1]);
+    expect(items.map((item) => item.unitPrice), [
+      closeTo(12.74, 0.001),
+      closeTo(2.17, 0.001),
+      closeTo(29.46, 0.001),
+      closeTo(7.29, 0.001),
+      closeTo(25.98, 0.001),
+    ]);
+  });
+
   test(
     'parses detailed WMS receipt slices without duplicated numeric items',
     () {

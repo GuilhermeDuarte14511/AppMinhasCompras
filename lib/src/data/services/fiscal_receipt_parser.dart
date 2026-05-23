@@ -6,7 +6,7 @@ class FiscalReceiptParser {
   const FiscalReceiptParser();
 
   static final RegExp _pricePattern = RegExp(
-    r'(?:R\$\s*)?\d{1,3}(?:\.\d{3})*,\d{2}|(?:R\$\s*)?\d+,\d{2}',
+    r'(?:R\$\s*)?\d{1,3}(?:\.\d{3})*,\d{2}(?!\d)|(?:R\$\s*)?\d+,\d{2}(?!\d)',
     caseSensitive: false,
   );
   static final RegExp _quantityTimesUnitPattern = RegExp(
@@ -14,7 +14,7 @@ class FiscalReceiptParser {
     caseSensitive: false,
   );
   static final RegExp _leadingCodePattern = RegExp(
-    r'^\s*(?:[A-Z]{1,4}\d{2,}|\d{1,5})[\s\-.)]+',
+    r'^\s*(?:[A-Z]{1,4}(?=[A-Z0-9$]*\d)[A-Z0-9$]{2,}|\d{1,5})[\s\-.)]+',
     caseSensitive: false,
   );
   static final RegExp _unitColumnPattern = RegExp(
@@ -30,7 +30,7 @@ class FiscalReceiptParser {
     caseSensitive: false,
   );
   static final RegExp _productCodePattern = RegExp(
-    r'^\s*(?:[A-Z]{1,4}\d{2,}|\d{2,5})(?:[\s\-.)]+|$)',
+    r'^\s*(?:[A-Z]{1,4}(?=[A-Z0-9$]*\d)[A-Z0-9$]{2,}|\d{2,5})(?:[\s\-.)]+|$)',
     caseSensitive: false,
   );
   static final RegExp _structuredProductPattern = RegExp(
@@ -232,9 +232,19 @@ class FiscalReceiptParser {
         continue;
       }
       final line = lines[i];
-      if (_isSplitKiloContinuationLine(line) ||
+      if (_isDetachedPriceDetailLine(line) ||
+          _isSplitKiloContinuationLine(line) ||
           _isStandalonePriceLine(line) ||
           _isDiscountNoiseLine(line)) {
+        continue;
+      }
+
+      if (!_pricePattern.hasMatch(line) && _looksLikeProductNameLine(line)) {
+        final mergedLine = _mergeWithDetachedPriceDetail(lines, i);
+        if (mergedLine != null) {
+          prepared.add(mergedLine.line);
+          consumedIndexes.add(mergedLine.consumedIndex);
+        }
         continue;
       }
 
@@ -242,6 +252,11 @@ class FiscalReceiptParser {
         var mergedLine = line;
         for (var j = i + 1; j < lines.length && j <= i + 3; j++) {
           final candidate = lines[j];
+          if (_isDetachedPriceDetailLine(candidate)) {
+            mergedLine = '$line $candidate';
+            consumedIndexes.add(j);
+            break;
+          }
           if (_isSplitKiloContinuationLine(candidate)) {
             consumedIndexes.add(j);
             continue;
@@ -260,6 +275,19 @@ class FiscalReceiptParser {
     }
 
     return prepared;
+  }
+
+  _MergedOcrLine? _mergeWithDetachedPriceDetail(List<String> lines, int index) {
+    for (var j = index + 1; j < lines.length && j <= index + 2; j++) {
+      final candidate = lines[j];
+      if (_isIgnoredLine(candidate)) {
+        continue;
+      }
+      if (_isDetachedPriceDetailLine(candidate)) {
+        return _MergedOcrLine('${lines[index]} $candidate', j);
+      }
+    }
+    return null;
   }
 
   _ParsedReceiptItem? _parseLineWithPrice(
@@ -344,6 +372,18 @@ class FiscalReceiptParser {
   String _cleanupName(String raw) {
     var value = raw.replaceAll(_leadingCodePattern, '').trim();
     value = value.replaceAll(RegExp(r'[./]+'), ' ');
+    value = value.replaceAllMapped(
+      RegExp(r'([A-Za-z])\d\b'),
+      (match) => match.group(1) ?? '',
+    );
+    value = value.replaceAll(
+      RegExp(r'\bCODIG\w*\s+DESCR\w*.*$', caseSensitive: false),
+      ' ',
+    );
+    value = value.replaceAll(
+      RegExp(r'\b\d+[,.]\d+\s*K\w*\b.*$', caseSensitive: false),
+      ' ',
+    );
     value = value.replaceAll(
       RegExp(
         r'\b\d{1,4}\s*(?:UN\w*|UND\w*|DPL\w*|BDJ\w*|FR\w*|CX\w*|PC\w*)\b.*$',
@@ -366,7 +406,7 @@ class FiscalReceiptParser {
     );
     value = value.replaceAll(
       RegExp(
-        r'\b(?:UN|UND|UNID|KG|G|GR|L|LT|ML|PC|PCT|PAC|CX|FD)\b\.?$',
+        r'\b(?:UN|UND|UNID|ND|KG|G|GR|L|LT|ML|PC|PCT|PAC|CX|FD)\d?\b\.?$',
         caseSensitive: false,
       ),
       '',
@@ -436,6 +476,47 @@ class FiscalReceiptParser {
         RegExp(r'^\s*\d+[,.]\d+\s*[xX]\w*\s*[xX]?\s*$').hasMatch(line);
   }
 
+  bool _looksLikeProductNameLine(String line) {
+    final upper = line.toUpperCase();
+    if (_ignoredTokens.any(upper.contains)) {
+      return false;
+    }
+    if (_isDetachedPriceDetailLine(line)) {
+      return false;
+    }
+    final letters = RegExp(r'[A-Za-z]').allMatches(line).length;
+    if (letters < 3) {
+      return false;
+    }
+    return _productCodePattern.hasMatch(line) || letters >= 6;
+  }
+
+  bool _isDetachedPriceDetailLine(String line) {
+    if (_productCodePattern.hasMatch(line) && !_startsWithUnitToken(line)) {
+      return false;
+    }
+    final prices = _pricePattern.allMatches(line).toList(growable: false);
+    if (prices.length < 2) {
+      return false;
+    }
+    final normalized = line.trim().toUpperCase();
+    return RegExp(
+          r'^\d+(?:[,.]\d+)?\s*K\w*\s*(?:[xX]\s*)?\d+(?:[,.]\d+)?\s+\d+(?:[,.]\d{2})$',
+          caseSensitive: false,
+        ).hasMatch(normalized) ||
+        RegExp(
+          r'^(?:\d+\s*)?(?:UN\w*|UND\w*|ND\w*|DPL\w*|BDJ\w*|FR\w*|CX\w*|PC\w*|PCT\w*)\s+\d+(?:[,.]\d{2})\s+\d+(?:[,.]\d{2})$',
+          caseSensitive: false,
+        ).hasMatch(normalized);
+  }
+
+  bool _startsWithUnitToken(String line) {
+    return RegExp(
+      r'^\s*(?:UN\w*|UND\w*|ND\w*|DPL\w*|BDJ\w*|FR\w*|CX\w*|PC\w*|PCT\w*)\b',
+      caseSensitive: false,
+    ).hasMatch(line);
+  }
+
   bool _isProductWeightLineMissingTotal(String line) {
     if (!_productCodePattern.hasMatch(line)) {
       return false;
@@ -444,7 +525,7 @@ class FiscalReceiptParser {
     if (!upper.contains('KG') || !upper.contains('X')) {
       return false;
     }
-    return _pricePattern.allMatches(line).length <= 2;
+    return _pricePattern.allMatches(line).length < 2;
   }
 
   bool _isSplitKiloContinuationLine(String line) {
@@ -738,6 +819,13 @@ class _ParsedReceiptItem {
   final int quantity;
   final double unitPrice;
   final ShoppingCategory category;
+}
+
+class _MergedOcrLine {
+  const _MergedOcrLine(this.line, this.consumedIndex);
+
+  final String line;
+  final int consumedIndex;
 }
 
 class _MergeAccumulator {
