@@ -10,7 +10,8 @@ class FiscalReceiptParser {
     caseSensitive: false,
   );
   static final RegExp _quantityTimesUnitPattern = RegExp(
-    r'(\d+(?:[.,]\d+)?)\s*[xX*]\s*(?:R\$\s*)?(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})',
+    r'(\d+(?:[.,]\d+)?)\s*(?:K[GR]?\d?|KG|G)?\s*[xX*]\s*(?:R\$\s*)?(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})',
+    caseSensitive: false,
   );
   static final RegExp _leadingCodePattern = RegExp(
     r'^\s*(?:[A-Z]{1,4}\d{2,}|\d{1,5})[\s\-.)]+',
@@ -30,6 +31,18 @@ class FiscalReceiptParser {
   );
   static final RegExp _productCodePattern = RegExp(
     r'^\s*(?:[A-Z]{1,4}\d{2,}|\d{2,5})(?:[\s\-.)]+|$)',
+    caseSensitive: false,
+  );
+  static final RegExp _structuredProductPattern = RegExp(
+    r'^\s*(.+?)\s*\(Código:\s*([A-Z]{1,4}\d+)\s*\)',
+    caseSensitive: false,
+  );
+  static final RegExp _structuredQuantityPattern = RegExp(
+    r'Qtde\.:\s*([\d,.]+).*?Vl\. Unit\.:\s*([\d,.]+)',
+    caseSensitive: false,
+  );
+  static final RegExp _splitKiloContinuationPattern = RegExp(
+    r'^\s*\d+[,.]\d+\s*K[GR]?\d?\s*[xX]\s*\d+(?:[,.]\d+)?\s*$',
     caseSensitive: false,
   );
   static final RegExp _separatorSpacesPattern = RegExp(r'\s+');
@@ -73,50 +86,49 @@ class FiscalReceiptParser {
   };
 
   List<ShoppingItemDraft> parse(String rawText) {
-    final lines = rawText
+    final sourceLines = rawText
         .split(RegExp(r'\r?\n'))
         .map(_normalizeLine)
         .where((line) => line.isNotEmpty)
         .toList(growable: false);
 
-    final merged = <String, _MergeAccumulator>{};
-    final order = <String>[];
-    String? pendingName;
-    var skipPossibleDiscountValue = false;
+    final structuredItems = _parseStructuredNfceItems(sourceLines);
+    if (structuredItems.isNotEmpty) {
+      return _draftsFromParsedItems(structuredItems);
+    }
+
+    final lines = _prepareOcrLines(sourceLines);
+    final parsedItems = <_ParsedReceiptItem>[];
 
     for (final line in lines) {
       if (_isReceiptFooterStart(line)) {
         break;
       }
       if (_isIgnoredLine(line)) {
-        pendingName = null;
-        skipPossibleDiscountValue = line.toUpperCase().contains('DESCONTO');
         continue;
       }
-      if (skipPossibleDiscountValue && _looksLikeDiscountValueLine(line)) {
-        skipPossibleDiscountValue = false;
-        continue;
-      }
-      skipPossibleDiscountValue = false;
 
       final prices = _pricePattern.allMatches(line).toList(growable: false);
       if (prices.isEmpty) {
-        if (_looksLikeNameLine(line)) {
-          pendingName = line;
-        }
         continue;
       }
 
-      final parsed = _parseLineWithPrice(
-        line,
-        prices,
-        pendingName: pendingName,
-      );
-      pendingName = null;
-      if (parsed == null) {
-        continue;
+      final parsed = _parseLineWithPrice(line, prices);
+      if (parsed != null) {
+        parsedItems.add(parsed);
       }
+    }
 
+    return _draftsFromParsedItems(parsedItems);
+  }
+
+  List<ShoppingItemDraft> _draftsFromParsedItems(
+    List<_ParsedReceiptItem> parsedItems,
+  ) {
+    final merged = <String, _MergeAccumulator>{};
+    final order = <String>[];
+
+    for (final parsed in parsedItems) {
       final key = normalizeQuery(parsed.name);
       if (key.isEmpty) {
         continue;
@@ -159,6 +171,97 @@ class FiscalReceiptParser {
     return List.unmodifiable(drafts);
   }
 
+  List<_ParsedReceiptItem> _parseStructuredNfceItems(List<String> lines) {
+    final parsedItems = <_ParsedReceiptItem>[];
+
+    for (var i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      if (_isReceiptFooterStart(line)) {
+        break;
+      }
+      final productMatch = _structuredProductPattern.firstMatch(line);
+      if (productMatch == null || i + 1 >= lines.length) {
+        continue;
+      }
+
+      final quantityLine = lines[i + 1];
+      final quantityMatch = _structuredQuantityPattern.firstMatch(quantityLine);
+      if (quantityMatch == null) {
+        continue;
+      }
+
+      final rawQuantity = quantityMatch.group(1) ?? '1';
+      final rawUnitPrice = quantityMatch.group(2);
+      final quantityValue = _parseBrlNumber(rawQuantity) ?? 1;
+      final unitPriceValue = _parseBrlNumber(rawUnitPrice) ?? 0;
+      var totalValue = quantityValue * unitPriceValue;
+      if (i + 2 < lines.length && _isStandalonePriceLine(lines[i + 2])) {
+        totalValue = _parseBrlNumber(lines[i + 2]) ?? totalValue;
+        i += 2;
+      } else {
+        i += 1;
+      }
+
+      final quantity = _isWeightedSaleLine(quantityLine)
+          ? 1
+          : _quantityForReceipt(quantityValue);
+      final finalName = _cleanupName(productMatch.group(1) ?? '');
+      if (finalName.isEmpty || totalValue <= 0) {
+        continue;
+      }
+
+      parsedItems.add(
+        _ParsedReceiptItem(
+          name: finalName,
+          quantity: quantity,
+          unitPrice: totalValue / quantity,
+          category: _inferCategory(finalName),
+        ),
+      );
+    }
+
+    return parsedItems;
+  }
+
+  List<String> _prepareOcrLines(List<String> lines) {
+    final prepared = <String>[];
+    final consumedIndexes = <int>{};
+
+    for (var i = 0; i < lines.length; i++) {
+      if (consumedIndexes.contains(i)) {
+        continue;
+      }
+      final line = lines[i];
+      if (_isSplitKiloContinuationLine(line) ||
+          _isStandalonePriceLine(line) ||
+          _isDiscountNoiseLine(line)) {
+        continue;
+      }
+
+      if (_isProductWeightLineMissingTotal(line)) {
+        var mergedLine = line;
+        for (var j = i + 1; j < lines.length && j <= i + 3; j++) {
+          final candidate = lines[j];
+          if (_isSplitKiloContinuationLine(candidate)) {
+            consumedIndexes.add(j);
+            continue;
+          }
+          if (_isStandalonePriceLine(candidate)) {
+            mergedLine = '$line $candidate';
+            consumedIndexes.add(j);
+            break;
+          }
+        }
+        prepared.add(mergedLine);
+        continue;
+      }
+
+      prepared.add(line);
+    }
+
+    return prepared;
+  }
+
   _ParsedReceiptItem? _parseLineWithPrice(
     String line,
     List<RegExpMatch> prices, {
@@ -172,11 +275,15 @@ class FiscalReceiptParser {
 
     final quantityMatch = _quantityTimesUnitPattern.firstMatch(line);
     var quantity = 1;
+    double? rawQuantityValue;
     if (quantityMatch != null) {
       final rawQty = quantityMatch.group(1) ?? '1';
-      final parsedQty = _parseQuantity(rawQty);
-      if (parsedQty > 0) {
-        quantity = parsedQty;
+      rawQuantityValue = _parseBrlNumber(rawQty);
+      if (!_isWeightedSaleLine(line)) {
+        final parsedQty = _parseQuantity(rawQty);
+        if (parsedQty > 0) {
+          quantity = parsedQty;
+        }
       }
     } else {
       final unitColumnQuantity = _parseUnitColumnQuantity(line, prices);
@@ -186,7 +293,14 @@ class FiscalReceiptParser {
     }
 
     final lastPriceToken = prices.last.group(0);
-    final totalValue = _parseBrlNumber(lastPriceToken);
+    var totalValue = _parseBrlNumber(lastPriceToken);
+    if (_isKiloPriceWithoutTotal(line, prices, quantityMatch)) {
+      final quantityValue = rawQuantityValue ?? 1;
+      final unitValue = _parseBrlNumber(quantityMatch?.group(2));
+      if (unitValue != null && unitValue > 0) {
+        totalValue = quantityValue * unitValue;
+      }
+    }
     if (totalValue == null || totalValue <= 0) {
       return null;
     }
@@ -289,6 +403,20 @@ class FiscalReceiptParser {
   }
 
   bool _isIgnoredLine(String line) {
+    final normalized = normalizeQuery(line);
+    if (normalized.startsWith('cnpj') ||
+        normalized.startsWith('cnp j') ||
+        normalized.startsWith('wms supermercados') ||
+        normalized.startsWith('est estrada') ||
+        normalized.startsWith('documento auxiliar') ||
+        normalized.startsWith('tocunento auxiliar') ||
+        normalized.startsWith('mao e docunento') ||
+        normalized.startsWith('nao e documento') ||
+        normalized.startsWith('filtrar itens') ||
+        normalized.startsWith('codigo descricao') ||
+        normalized.startsWith('codigt')) {
+      return true;
+    }
     final upper = line.toUpperCase();
     if (upper.contains('DESCONTO')) {
       return true;
@@ -299,15 +427,61 @@ class FiscalReceiptParser {
     return _ignoredTokens.any(upper.contains);
   }
 
-  bool _looksLikeDiscountValueLine(String line) {
+  bool _isDiscountNoiseLine(String line) {
     if (_productCodePattern.hasMatch(line)) {
       return false;
     }
     final letters = RegExp(r'[A-Za-z]').allMatches(line).length;
-    if (letters > 3) {
+    return letters <= 3 &&
+        RegExp(r'^\s*\d+[,.]\d+\s*[xX]\w*\s*[xX]?\s*$').hasMatch(line);
+  }
+
+  bool _isProductWeightLineMissingTotal(String line) {
+    if (!_productCodePattern.hasMatch(line)) {
       return false;
     }
-    return _pricePattern.hasMatch(line) || RegExp(r'\d').hasMatch(line);
+    final upper = line.toUpperCase();
+    if (!upper.contains('KG') || !upper.contains('X')) {
+      return false;
+    }
+    return _pricePattern.allMatches(line).length <= 2;
+  }
+
+  bool _isSplitKiloContinuationLine(String line) {
+    return _splitKiloContinuationPattern.hasMatch(line);
+  }
+
+  bool _isKiloPriceWithoutTotal(
+    String line,
+    List<RegExpMatch> prices,
+    RegExpMatch? quantityMatch,
+  ) {
+    if (quantityMatch == null) {
+      return false;
+    }
+    final upper = line.toUpperCase();
+    if (!upper.contains('KG') || !upper.contains('R\$')) {
+      return false;
+    }
+    final afterUnitPrice = line.substring(quantityMatch.end);
+    return !_pricePattern.hasMatch(afterUnitPrice);
+  }
+
+  bool _isWeightedSaleLine(String line) {
+    final upper = line.toUpperCase();
+    return RegExp(
+          r'\bUN:\s*K[GR]?\d?\b',
+          caseSensitive: false,
+        ).hasMatch(line) ||
+        RegExp(
+          r'\d+(?:[,.]\d+)?\s*K[GR]?\d?\s*[xX]',
+          caseSensitive: false,
+        ).hasMatch(line) ||
+        upper.contains('R\$/KG');
+  }
+
+  bool _isStandalonePriceLine(String line) {
+    return RegExp(r'^\s*\d{1,3}(?:[.,]\d{1,2})?\s*$').hasMatch(line);
   }
 
   int _parseUnitColumnQuantity(String line, List<RegExpMatch> prices) {
@@ -329,26 +503,20 @@ class FiscalReceiptParser {
     return parsed.clamp(1, 9999);
   }
 
-  bool _looksLikeNameLine(String line) {
-    final upper = line.toUpperCase();
-    if (_ignoredTokens.any(upper.contains)) {
-      return false;
-    }
-    final hasDigits = RegExp(r'\d').hasMatch(line);
-    final letters = RegExp(r'[A-Za-z]').allMatches(line).length;
-    if (letters < 3) {
-      return false;
-    }
-    if (hasDigits && letters < 6) {
-      return false;
-    }
-    return true;
-  }
-
   int _parseQuantity(String raw) {
     final normalized = raw.replaceAll('.', '').replaceAll(',', '.');
     final parsed = double.tryParse(normalized);
     if (parsed == null || parsed <= 0) {
+      return 1;
+    }
+    return _quantityForReceipt(parsed);
+  }
+
+  int _quantityForReceipt(double parsed) {
+    if (parsed <= 0) {
+      return 1;
+    }
+    if (parsed < 1) {
       return 1;
     }
     return parsed.round().clamp(1, 9999);

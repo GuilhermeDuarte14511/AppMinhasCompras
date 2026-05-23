@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/utils/format_utils.dart';
 import '../../../data/services/fiscal_receipt_parser.dart';
+import '../../../data/services/receipt_ocr_text_normalizer.dart';
 import '../../../domain/models_and_utils.dart';
 import '../../../domain/receipt_item_matcher.dart';
 import '../widgets/item_editor_support_widgets.dart';
@@ -30,6 +31,8 @@ class FiscalReceiptImportSheet extends StatefulWidget {
 class _FiscalReceiptImportSheetState extends State<FiscalReceiptImportSheet> {
   final FiscalReceiptParser _parser = const FiscalReceiptParser();
   final ReceiptItemMatcher _matcher = const ReceiptItemMatcher();
+  final ReceiptOcrTextNormalizer _ocrTextNormalizer =
+      const ReceiptOcrTextNormalizer();
   final TextEditingController _rawTextController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
   final TextRecognizer _textRecognizer = TextRecognizer(
@@ -94,14 +97,6 @@ class _FiscalReceiptImportSheetState extends State<FiscalReceiptImportSheet> {
       ..selection = TextSelection.collapsed(offset: text.length);
   }
 
-  String _normalizeOcrText(String raw) {
-    return raw
-        .replaceAll('\r', '\n')
-        .replaceAll(RegExp(r'[ \t]+'), ' ')
-        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
-        .trim();
-  }
-
   Future<void> _importFromImage(ImageSource source) async {
     if (_isExtractingFromImage) {
       return;
@@ -132,7 +127,7 @@ class _FiscalReceiptImportSheetState extends State<FiscalReceiptImportSheet> {
       if (!mounted) {
         return;
       }
-      final extractedText = _normalizeOcrText(recognizedText.text);
+      final extractedText = _ocrTextNormalizer.normalize(recognizedText);
       if (extractedText.isEmpty) {
         setState(() {
           _isExtractingFromImage = false;

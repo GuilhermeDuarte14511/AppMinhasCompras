@@ -41,6 +41,155 @@ AR035266 MARG.QUALY C/S 1X500G 1 UND9 9,45 9,45
     },
   );
 
+  test(
+    'parses Fazenda NFC-e WMS product blocks without reading CNPJ as item',
+    () {
+      const rawText = '''
+NFC-e
+DOCUMENTO AUXILIAR DA NOTA FISCAL DE CONSUMIDOR ELETRÔNICA
+WMS SUPERMERCADOS DO BRASIL LTDA
+CNPJ: 93.209.765/0654-05
+LING.T.CALAB.SADIA (Código: AR085684 )
+Qtde.:0,426   UN: KG9   Vl. Unit.:   29,9 	Vl. Total
+12,74
+CEBOLA ATACADAO (Código: AR014692 )
+Qtde.:0,335   UN: KG9   Vl. Unit.:   6,49 	Vl. Total
+2,17
+BEB.LACTEA TODDYNHO (Código: AR014595 )
+Qtde.:5   UN: UND9   Vl. Unit.:   2,99 	Vl. Total
+14,95
+Qtd. total de itens:64
+Valor total R\$:954,79
+''';
+
+      final items = parser.parse(rawText);
+
+      expect(items.map((item) => item.name), [
+        'LING T CALAB SADIA',
+        'CEBOLA ATACADAO',
+        'BEB LACTEA TODDYNHO',
+      ]);
+      expect(items.map((item) => item.quantity), [1, 1, 5]);
+      expect(items.map((item) => item.unitPrice), [
+        closeTo(12.74, 0.001),
+        closeTo(2.17, 0.001),
+        closeTo(2.99, 0.001),
+      ]);
+    },
+  );
+
+  test('ignores OCR header and split kilo continuation rows', () {
+    const rawText = '''
+CNP J: 93,209.765/0654-05 UMS SUPERMERCADOS DO BRASIL LTDA
+EST ESTRADA DA GABIROBA, 750, JD. GUAPIUVA, CARAPICUIBA,SP
+tocunento Auxiliar da Note Fiscal de Carsunidor Eletronica
+MAO E DOCUNENTO FISCAL
+Codigt DeseriCOD
+AR085684 LING.T.CALAB.SADIA 0,426kg x 29,90 R\$/kg
+0,426 KG9 X 29,90
+12,74
+AR014692 CEBOLA ATACADAO 0,335kg x 6,49 R\$/kg
+0,335 KG9 X 6,49
+2,17
+AR087134 SALSICHA PERDIGAO 1,646kg x 17,90 R\$/kg
+1,646 KR9 X 17,90
+29,46
+''';
+
+    final items = parser.parse(rawText);
+
+    expect(items.map((item) => item.name), [
+      'LING T CALAB SADIA',
+      'CEBOLA ATACADAO',
+      'SALSICHA PERDIGAO',
+    ]);
+    expect(items.map((item) => item.quantity), [1, 1, 1]);
+    expect(items.map((item) => item.unitPrice), [
+      closeTo(12.74, 0.001),
+      closeTo(2.17, 0.001),
+      closeTo(29.46, 0.001),
+    ]);
+  });
+
+  test('calculates kilo item total when OCR image cuts off total column', () {
+    const rawText = '''
+AR005144 BACON PDC SEARA 0,252kg x 46,80 R\$/kg
+AR001805 LIMAO TAITI TROPICAL 0,370kg x 3,99 R\$/kg
+AR087134 SALSICHA PERDIGAO 1,646kg x 17,90 R\$/kg
+''';
+
+    final items = parser.parse(rawText);
+
+    expect(items.map((item) => item.name), [
+      'BACON PDC SEARA',
+      'LIMAO TAITI TROPICAL',
+      'SALSICHA PERDIGAO',
+    ]);
+    expect(items.map((item) => item.unitPrice), [
+      closeTo(11.79, 0.01),
+      closeTo(1.48, 0.01),
+      closeTo(29.46, 0.01),
+    ]);
+  });
+
+  test(
+    'parses detailed WMS receipt slices without duplicated numeric items',
+    () {
+      const rawText = '''
+AR086392 LEITE FERM.YAKULT 1X6X80ML 2 UND9 9,97 19,94
+AR001805 LIMAO TAITI TROPICAL 0,370kg x 3,99 R\$/kg 1,48
+0,370 KG9 X 3,99
+desconto sobre item
+0,37
+AR007454 LAVA ROUPA LIQ.OMO 1X1,4L 1 UND9 26,90 26,90
+AR056943 PAPEL HIG.NEVE 1X12IR30M 1 UND9 51,91 51,91
+AR059557 REF.COCA-COLA ZERO 12X200ML 2 BDJ1 25,08 50,16
+AR072085 REF.PEPSI COLA 1X200ML 12 UND9 1,79 21,48
+AR007386 REF.TISS TUBAINA 1X200ML 12 UND9 1,49 17,88
+AR064206 REF.ANTARCTICA GUARA 1X200ML 12 UND9 1,79 21,48
+AR060076 RF.FANTA LARANJA PET 12X200ML 1 BDJ1 20,28 20,28
+Qtd. total de itens
+Valor total R\$
+''';
+
+      final items = parser.parse(rawText);
+
+      expect(items.map((item) => item.name), [
+        'LEITE FERM YAKULT',
+        'LIMAO TAITI TROPICAL',
+        'LAVA ROUPA LIQ OMO',
+        'PAPEL HIG NEVE',
+        'REF COCA-COLA ZERO',
+        'REF PEPSI COLA',
+        'REF TISS TUBAINA',
+        'REF ANTARCTICA GUARA',
+        'RF FANTA LARANJA PET',
+      ]);
+      expect(items.map((item) => item.quantity), [
+        2,
+        1,
+        1,
+        1,
+        2,
+        12,
+        12,
+        12,
+        1,
+      ]);
+      expect(items.map((item) => item.unitPrice), [
+        closeTo(9.97, 0.001),
+        closeTo(1.48, 0.001),
+        closeTo(26.90, 0.001),
+        closeTo(51.91, 0.001),
+        closeTo(25.08, 0.001),
+        closeTo(1.79, 0.001),
+        closeTo(1.49, 0.001),
+        closeTo(1.79, 0.001),
+        closeTo(20.28, 0.001),
+      ]);
+    },
+  );
+
   test('ignores WMS discount and totals rows', () {
     const rawText = '''
 AR052734 BACON PDC SEARA 0,252kg x 46,80 R\$/kg 11,79
