@@ -321,15 +321,13 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _createBasedOnOld() async {
-    if (widget.store.lists.isEmpty) {
+    final lists = widget.store.listsByCreatedAt;
+    if (lists.isEmpty) {
       _showSnack('Você ainda Não tem listas para usar como base.');
       return;
     }
 
-    final source = await showTemplatePickerSheet(
-      context,
-      lists: widget.store.lists,
-    );
+    final source = await showTemplatePickerSheet(context, lists: lists);
 
     if (!mounted || source == null) {
       return;
@@ -452,7 +450,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    final lists = widget.store.lists;
+    final lists = widget.store.listsByCreatedAt;
     final totalCatalogProducts = widget.store.catalogProducts.length;
     final openListsCount = lists.where((list) => !list.isClosed).length;
     final closedListsCount = lists.where((list) => list.isClosed).length;

@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../application/shared_list_sync_policy.dart';
 import '../application/store_and_services.dart';
 import '../core/utils/format_utils.dart';
 import '../data/remote/shared_lists_repository.dart';
@@ -647,14 +648,14 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       return;
     }
     final sourceLocalId = summary.sourceLocalListId?.trim() ?? '';
-    if (sourceLocalId.isNotEmpty && sourceLocalId != _list.id) {
-      return;
-    }
-    if (_isSyncingToShared) {
-      return;
-    }
-    if (_list.updatedAt.isAfter(summary.updatedAt)) {
-      unawaited(_syncLocalChangesToShared(_list));
+    final mirrorAction = resolveLinkedSharedSnapshotAction(
+      sourceMatchesLocalList:
+          sourceLocalId.isEmpty || sourceLocalId == _list.id,
+      isSyncingToShared: _isSyncingToShared,
+      localUpdatedAt: _list.updatedAt,
+      sharedUpdatedAt: summary.updatedAt,
+    );
+    if (mirrorAction == SharedListMirrorAction.skip) {
       return;
     }
     final updated = ShoppingListModel(

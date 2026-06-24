@@ -220,10 +220,26 @@
       function validSettingsDoc(docId) {
         let d = request.resource.data;
         return docId == 'app' &&
-          d.keys().hasOnly(['themeMode', 'updatedAt']) &&
+          d.keys().hasOnly([
+            'themeMode',
+            'updatedAt',
+            'autoImportSharedCatalogs',
+            'sharedCatalogImportListIds'
+          ]) &&
           d.keys().hasAll(['themeMode', 'updatedAt']) &&
           validTheme(d.themeMode) &&
-          isDateLike(d.updatedAt);
+          isDateLike(d.updatedAt) &&
+          (
+            !d.keys().hasAny(['autoImportSharedCatalogs']) ||
+            d.autoImportSharedCatalogs is bool
+          ) &&
+          (
+            !d.keys().hasAny(['sharedCatalogImportListIds']) ||
+            (
+              d.sharedCatalogImportListIds is list &&
+              d.sharedCatalogImportListIds.size() <= 200
+            )
+          );
       }
 
       function isSharedListMemberFromData(data) {

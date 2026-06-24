@@ -46,6 +46,79 @@ class SharedPrefsShoppingListsStorage implements ShoppingListsStorage {
   }
 }
 
+class SharedPrefsSharedCatalogImportPreferences
+    implements SharedCatalogImportPreferences {
+  static const String _autoImportAllKey =
+      'shared_catalog_import_auto_import_all';
+  static const String _enabledListIdsKey =
+      'shared_catalog_import_enabled_list_ids';
+
+  const SharedPrefsSharedCatalogImportPreferences();
+
+  @override
+  Future<bool> loadAutoImportAllSharedLists() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_autoImportAllKey) ?? false;
+  }
+
+  @override
+  Future<Set<String>> loadEnabledSharedListIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getStringList(_enabledListIdsKey) ?? const <String>[])
+        .map((entry) => entry.trim())
+        .where((entry) => entry.isNotEmpty)
+        .toSet();
+  }
+
+  @override
+  Future<void> saveAutoImportAllSharedLists(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_autoImportAllKey, enabled);
+  }
+
+  @override
+  Future<void> saveEnabledSharedListIds(Set<String> listIds) async {
+    final prefs = await SharedPreferences.getInstance();
+    final normalized =
+        listIds
+            .map((entry) => entry.trim())
+            .where((entry) => entry.isNotEmpty)
+            .toList(growable: false)
+          ..sort();
+    await prefs.setStringList(_enabledListIdsKey, normalized);
+  }
+}
+
+class InMemorySharedCatalogImportPreferences
+    implements SharedCatalogImportPreferences {
+  bool _autoImportAll = false;
+  final Set<String> _enabledListIds = <String>{};
+
+  @override
+  Future<bool> loadAutoImportAllSharedLists() async {
+    return _autoImportAll;
+  }
+
+  @override
+  Future<Set<String>> loadEnabledSharedListIds() async {
+    return {..._enabledListIds};
+  }
+
+  @override
+  Future<void> saveAutoImportAllSharedLists(bool enabled) async {
+    _autoImportAll = enabled;
+  }
+
+  @override
+  Future<void> saveEnabledSharedListIds(Set<String> listIds) async {
+    _enabledListIds
+      ..clear()
+      ..addAll(
+        listIds.map((entry) => entry.trim()).where((entry) => entry.isNotEmpty),
+      );
+  }
+}
+
 class SharedPrefsProductCatalogStorage implements ProductCatalogStorage {
   static const String _storageKey = 'shopping_product_catalog_v2';
 

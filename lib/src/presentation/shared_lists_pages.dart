@@ -584,6 +584,16 @@ class SharedListEditorPage extends StatefulWidget {
 
 enum _SharedHeaderSection { summary, budget, balances, reminder }
 
+class _SharedCatalogImportPromptResult {
+  const _SharedCatalogImportPromptResult({
+    required this.enableImport,
+    required this.enableForFutureLists,
+  });
+
+  final bool enableImport;
+  final bool enableForFutureLists;
+}
+
 class _SharedListEditorPageState extends State<SharedListEditorPage> {
   late final TextEditingController _searchController;
   bool _busy = false;
@@ -592,6 +602,8 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
   bool _didShowBudgetNearLimitWarning = false;
   String? _lastReminderFingerprint;
   String? _lastLocalMirrorFingerprint;
+  final Set<String> _catalogImportPromptedListIds = <String>{};
+  final Map<String, String> _catalogImportFingerprints = <String, String>{};
   _SharedHeaderSection? _expandedHeaderSection;
   SharedItemsFilter _itemsFilter = SharedItemsFilter.pending;
 
@@ -626,6 +638,185 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
     Duration duration = const Duration(seconds: 4),
   }) {
     AppToast.show(context, message: message, type: type, duration: duration);
+  }
+
+  String _sharedCatalogImportFingerprint(
+    SharedShoppingListSummary list,
+    List<SharedShoppingItem> items,
+  ) {
+    final itemParts =
+        items
+            .map(
+              (item) => '${item.id}:${item.updatedAt.millisecondsSinceEpoch}',
+            )
+            .toList(growable: false)
+          ..sort();
+    return [
+      list.id,
+      list.updatedAt.millisecondsSinceEpoch,
+      items.length,
+      ...itemParts,
+    ].join('|');
+  }
+
+  String _buildCatalogImportMessage(SharedCatalogImportResult report) {
+    if (report.changedCount == 0) {
+      return 'Seu catálogo já está atualizado com esta lista.';
+    }
+    if (report.createdCount > 0 && report.mergedCount > 0) {
+      return 'Catálogo atualizado: ${report.createdCount} novos e ${report.mergedCount} mesclados.';
+    }
+    if (report.createdCount > 0) {
+      return 'Catálogo atualizado: ${report.createdCount} novos produtos.';
+    }
+    return 'Catálogo atualizado: ${report.mergedCount} produtos mesclados.';
+  }
+
+  Future<void> _importSharedItemsToCatalog(
+    SharedShoppingListSummary list,
+    ShoppingListModel listModel, {
+    required bool showSnack,
+    bool force = false,
+  }) async {
+    if (listModel.items.isEmpty) {
+      if (showSnack) {
+        _showSnack('Esta lista ainda não tem produtos para importar.');
+      }
+      return;
+    }
+    final fingerprint = [
+      list.updatedAt.millisecondsSinceEpoch,
+      listModel.items.length,
+      listModel.totalValue.toStringAsFixed(2),
+      listModel.items
+          .map((item) => '${item.id}:${item.name}:${item.barcode ?? ''}')
+          .join('|'),
+    ].join('|');
+    if (!force && _catalogImportFingerprints[list.id] == fingerprint) {
+      return;
+    }
+    _catalogImportFingerprints[list.id] = fingerprint;
+    final report = await widget.store.importSharedListItemsToCatalog(listModel);
+    if (!mounted || !showSnack) {
+      return;
+    }
+    _showSnack(
+      _buildCatalogImportMessage(report),
+      type: report.changedCount > 0 ? AppToastType.success : AppToastType.info,
+    );
+  }
+
+  Future<_SharedCatalogImportPromptResult?> _showCatalogImportPrompt(
+    SharedShoppingListSummary list,
+  ) {
+    var enableForFutureLists = widget.store.autoImportAllSharedCatalogs;
+    return showAppDialog<_SharedCatalogImportPromptResult>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Adicionar produtos ao seu catálogo?'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Os produtos de "${list.name}" entram nas suas sugestões, no scanner e nas próximas compras. Duplicados serão mesclados por código de barras e nome.',
+                  ),
+                  const SizedBox(height: 12),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: enableForFutureLists,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        enableForFutureLists = value ?? false;
+                      });
+                    },
+                    title: const Text(
+                      'Fazer isso automaticamente para novas listas compartilhadas',
+                    ),
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(
+                    context,
+                    const _SharedCatalogImportPromptResult(
+                      enableImport: false,
+                      enableForFutureLists: false,
+                    ),
+                  ),
+                  child: const Text('Agora não'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(
+                    context,
+                    _SharedCatalogImportPromptResult(
+                      enableImport: true,
+                      enableForFutureLists: enableForFutureLists,
+                    ),
+                  ),
+                  child: const Text('Adicionar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _enableSharedCatalogImport(
+    SharedShoppingListSummary list,
+    ShoppingListModel listModel, {
+    bool askForFutureLists = true,
+  }) async {
+    final result = askForFutureLists
+        ? await _showCatalogImportPrompt(list)
+        : const _SharedCatalogImportPromptResult(
+            enableImport: true,
+            enableForFutureLists: false,
+          );
+    if (!mounted || result == null || !result.enableImport) {
+      return;
+    }
+    await widget.store.setSharedCatalogImportEnabled(
+      list.id,
+      enabled: true,
+      enableForFutureLists: result.enableForFutureLists,
+    );
+    await _importSharedItemsToCatalog(
+      list,
+      listModel,
+      showSnack: true,
+      force: true,
+    );
+  }
+
+  void _maybeHandleSharedCatalogImport(
+    SharedShoppingListSummary list,
+    ShoppingListModel listModel,
+    List<SharedShoppingItem> items,
+  ) {
+    if (_currentUid.isEmpty || items.isEmpty) {
+      return;
+    }
+    if (widget.store.isSharedCatalogImportEnabled(list.id)) {
+      unawaited(_importSharedItemsToCatalog(list, listModel, showSnack: false));
+      return;
+    }
+    if (list.isOwner(_currentUid)) {
+      return;
+    }
+    final fingerprint = _sharedCatalogImportFingerprint(list, items);
+    if (_catalogImportPromptedListIds.contains('${list.id}|$fingerprint')) {
+      return;
+    }
+    _catalogImportPromptedListIds.add('${list.id}|$fingerprint');
+    unawaited(_enableSharedCatalogImport(list, listModel));
   }
 
   bool _ensureEditable(SharedShoppingListSummary list) {
@@ -1666,6 +1857,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
               _maybeWarnBudget(listModel);
               _syncReminderIfNeeded(listModel);
               _mirrorToLocalIfNeeded(list, listModel);
+              _maybeHandleSharedCatalogImport(list, listModel, allItems);
             });
 
             return Scaffold(
@@ -1685,6 +1877,14 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
                         _openSharedHistory(list);
                         return;
                       }
+                      if (value == 'catalog_import') {
+                        _enableSharedCatalogImport(
+                          list,
+                          listModel,
+                          askForFutureLists: true,
+                        );
+                        return;
+                      }
                       if (value == 'close') {
                         _finalizeSharedList(list, allItems);
                         return;
@@ -1698,6 +1898,14 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
                       const PopupMenuItem(
                         value: 'history',
                         child: Text('Histórico compartilhado'),
+                      ),
+                      PopupMenuItem(
+                        value: 'catalog_import',
+                        child: Text(
+                          widget.store.isSharedCatalogImportEnabled(list.id)
+                              ? 'Atualizar meu catálogo'
+                              : 'Adicionar produtos ao catálogo',
+                        ),
                       ),
                       if (!list.isClosed)
                         const PopupMenuItem(

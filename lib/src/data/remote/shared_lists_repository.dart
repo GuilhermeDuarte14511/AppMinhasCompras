@@ -295,6 +295,20 @@ class SharedListsRepository {
   static const String _historySubCollection = 'history';
   static const String _inviteAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   final FirebaseFirestore _firestore;
+
+  static List<SharedShoppingListSummary> sortSummariesByCreatedAt(
+    Iterable<SharedShoppingListSummary> summaries,
+  ) {
+    final sorted = summaries.toList(growable: false);
+    sorted.sort((a, b) {
+      final createdComparison = b.createdAt.compareTo(a.createdAt);
+      if (createdComparison != 0) {
+        return createdComparison;
+      }
+      return b.updatedAt.compareTo(a.updatedAt);
+    });
+    return List.unmodifiable(sorted);
+  }
   final Random _random = Random.secure();
 
   static FirebaseFirestore _buildPreferredFirestore() {
@@ -349,11 +363,9 @@ class SharedListsRepository {
           );
         })
         .map((snapshot) {
-          final lists = snapshot.docs
-              .map(SharedShoppingListSummary.fromFirestoreDoc)
-              .toList(growable: false);
-          lists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-          return List.unmodifiable(lists);
+          return sortSummariesByCreatedAt(
+            snapshot.docs.map(SharedShoppingListSummary.fromFirestoreDoc),
+          );
         });
   }
 
@@ -367,11 +379,9 @@ class SharedListsRepository {
     final snapshot = await _sharedListsRef
         .where('ownerUid', isEqualTo: trimmedUid)
         .get();
-    final lists = snapshot.docs
-        .map(SharedShoppingListSummary.fromFirestoreDoc)
-        .toList(growable: false);
-    lists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-    return List.unmodifiable(lists);
+    return sortSummariesByCreatedAt(
+      snapshot.docs.map(SharedShoppingListSummary.fromFirestoreDoc),
+    );
   }
 
   Future<List<SharedShoppingItem>> fetchListItems(String listId) async {
@@ -481,11 +491,9 @@ class SharedListsRepository {
         .where('ownerUid', isEqualTo: trimmedUid)
         .snapshots()
         .map((snapshot) {
-          final lists = snapshot.docs
-              .map(SharedShoppingListSummary.fromFirestoreDoc)
-              .toList(growable: false);
-          lists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-          return List.unmodifiable(lists);
+          return sortSummariesByCreatedAt(
+            snapshot.docs.map(SharedShoppingListSummary.fromFirestoreDoc),
+          );
         });
   }
 

@@ -19,6 +19,16 @@ abstract class PurchaseHistoryStorage {
   Future<void> saveHistory(List<CompletedPurchase> history);
 }
 
+abstract class SharedCatalogImportPreferences {
+  Future<bool> loadAutoImportAllSharedLists();
+
+  Future<void> saveAutoImportAllSharedLists(bool enabled);
+
+  Future<Set<String>> loadEnabledSharedListIds();
+
+  Future<void> saveEnabledSharedListIds(Set<String> listIds);
+}
+
 abstract class ProductCatalogGateway {
   Future<void> load();
 

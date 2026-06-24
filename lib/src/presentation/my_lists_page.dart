@@ -261,7 +261,7 @@ class _MyListsPageState extends State<MyListsPage> {
   }
 
   Future<void> _createFromPicker() async {
-    final lists = widget.store.lists;
+    final lists = widget.store.listsByCreatedAt;
     if (lists.isEmpty) {
       _showSnack('Não há listas antigas para copiar.');
       return;
@@ -599,7 +599,7 @@ class _MyListsPageState extends State<MyListsPage> {
     return AnimatedBuilder(
       animation: widget.store,
       builder: (context, _) {
-        final lists = widget.store.lists;
+        final lists = widget.store.listsByCreatedAt;
         final visibleLists = _filterMyLists(
           lists,
           searchQuery: _searchQuery,

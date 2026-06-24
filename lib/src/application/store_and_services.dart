@@ -15,11 +15,15 @@ class ShoppingListsStore extends ChangeNotifier {
     required PurchaseHistoryStorage historyStorage,
     required ProductLookupService lookupService,
     required ShoppingHomeWidgetService homeWidgetService,
+    SharedCatalogImportPreferences? sharedCatalogImportPreferences,
   }) : _reminderService = reminderService,
        _productCatalog = productCatalog,
        _historyStorage = historyStorage,
        _lookupService = lookupService,
-       _homeWidgetService = homeWidgetService;
+       _homeWidgetService = homeWidgetService,
+       _sharedCatalogImportPreferences =
+           sharedCatalogImportPreferences ??
+           _InMemorySharedCatalogImportPreferences();
 
   final ShoppingListsStorage _storage;
   final ShoppingReminderService _reminderService;
@@ -27,17 +31,26 @@ class ShoppingListsStore extends ChangeNotifier {
   final PurchaseHistoryStorage _historyStorage;
   final ProductLookupService _lookupService;
   final ShoppingHomeWidgetService _homeWidgetService;
+  final SharedCatalogImportPreferences _sharedCatalogImportPreferences;
 
   final List<ShoppingListModel> _lists = <ShoppingListModel>[];
   final List<CompletedPurchase> _history = <CompletedPurchase>[];
+  final Set<String> _sharedCatalogImportListIds = <String>{};
   bool _isLoading = true;
   bool _loaded = false;
+  bool _autoImportAllSharedCatalogs = false;
   bool _listSuggestionsDirty = true;
   List<String> _cachedListSuggestions = const <String>[];
 
   bool get isLoading => _isLoading;
 
   List<ShoppingListModel> get lists => List.unmodifiable(_lists);
+  List<ShoppingListModel> get listsByCreatedAt {
+    return List<ShoppingListModel>.unmodifiable(
+      List<ShoppingListModel>.of(_lists)..sort(_compareListsByCreatedAtDesc),
+    );
+  }
+
   List<CompletedPurchase> get purchaseHistory => List.unmodifiable(_history);
   List<CatalogProduct> get catalogProducts => _productCatalog.allProducts();
 
@@ -78,6 +91,13 @@ class ShoppingListsStore extends ChangeNotifier {
       _sortListsByUpdatedAt();
       _sortHistoryByClosedAt();
       await _productCatalog.load();
+      _autoImportAllSharedCatalogs = await _sharedCatalogImportPreferences
+          .loadAutoImportAllSharedLists();
+      _sharedCatalogImportListIds
+        ..clear()
+        ..addAll(
+          await _sharedCatalogImportPreferences.loadEnabledSharedListIds(),
+        );
       await _productCatalog.ingestFromLists(_lists);
       await _reminderService.syncFromLists(_lists, reset: true);
       await _homeWidgetService.updateFromLists(_lists);
@@ -561,6 +581,115 @@ class ShoppingListsStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool get autoImportAllSharedCatalogs => _autoImportAllSharedCatalogs;
+  Set<String> get sharedCatalogImportListIds =>
+      Set.unmodifiable(_sharedCatalogImportListIds);
+
+  bool isSharedCatalogImportEnabled(String sharedListId) {
+    final trimmedId = sharedListId.trim();
+    if (trimmedId.isEmpty) {
+      return false;
+    }
+    return _autoImportAllSharedCatalogs ||
+        _sharedCatalogImportListIds.contains(trimmedId);
+  }
+
+  Future<void> setSharedCatalogImportEnabled(
+    String sharedListId, {
+    required bool enabled,
+    bool enableForFutureLists = false,
+  }) async {
+    final trimmedId = sharedListId.trim();
+    if (trimmedId.isEmpty) {
+      return;
+    }
+    if (enabled) {
+      _sharedCatalogImportListIds.add(trimmedId);
+    } else {
+      _sharedCatalogImportListIds.remove(trimmedId);
+    }
+    if (enableForFutureLists) {
+      _autoImportAllSharedCatalogs = enabled;
+      await _sharedCatalogImportPreferences.saveAutoImportAllSharedLists(
+        enabled,
+      );
+    }
+    await _sharedCatalogImportPreferences.saveEnabledSharedListIds(
+      _sharedCatalogImportListIds,
+    );
+    notifyListeners();
+  }
+
+  Future<void> applySharedCatalogImportSettings({
+    required bool autoImportAllSharedCatalogs,
+    required Set<String> enabledSharedListIds,
+  }) async {
+    _autoImportAllSharedCatalogs = autoImportAllSharedCatalogs;
+    _sharedCatalogImportListIds
+      ..clear()
+      ..addAll(
+        enabledSharedListIds
+            .map((entry) => entry.trim())
+            .where((entry) => entry.isNotEmpty),
+      );
+    await _sharedCatalogImportPreferences.saveAutoImportAllSharedLists(
+      _autoImportAllSharedCatalogs,
+    );
+    await _sharedCatalogImportPreferences.saveEnabledSharedListIds(
+      _sharedCatalogImportListIds,
+    );
+    notifyListeners();
+  }
+
+  Future<SharedCatalogImportResult> importSharedListItemsToCatalog(
+    ShoppingListModel list,
+  ) async {
+    final seenNames = _productCatalog
+        .allProducts()
+        .map((product) => normalizeQuery(product.name))
+        .where((name) => name.isNotEmpty)
+        .toSet();
+    final seenBarcodes = _productCatalog
+        .allProducts()
+        .map((product) => sanitizeBarcode(product.barcode))
+        .whereType<String>()
+        .toSet();
+
+    var createdCount = 0;
+    var mergedCount = 0;
+    var skippedCount = 0;
+    for (final item in list.items) {
+      final normalizedName = normalizeQuery(item.name);
+      if (normalizedName.isEmpty) {
+        skippedCount++;
+        continue;
+      }
+      final barcode = sanitizeBarcode(item.barcode);
+      final hasMatch =
+          (barcode != null && seenBarcodes.contains(barcode)) ||
+          seenNames.contains(normalizedName);
+      if (hasMatch) {
+        mergedCount++;
+      } else {
+        createdCount++;
+      }
+      seenNames.add(normalizedName);
+      if (barcode != null) {
+        seenBarcodes.add(barcode);
+      }
+    }
+
+    if (createdCount + mergedCount > 0) {
+      await _productCatalog.ingestFromLists([list]);
+      notifyListeners();
+    }
+    return SharedCatalogImportResult(
+      createdCount: createdCount,
+      mergedCount: mergedCount,
+      skippedCount: skippedCount,
+    );
+  }
+
   Future<void> replaceCatalogProducts(List<CatalogProduct> products) async {
     await _productCatalog.replaceAllProducts(products);
     notifyListeners();
@@ -733,6 +862,17 @@ class ShoppingListsStore extends ChangeNotifier {
 
   void _sortListsByUpdatedAt() {
     _lists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+  }
+
+  int _compareListsByCreatedAtDesc(
+    ShoppingListModel left,
+    ShoppingListModel right,
+  ) {
+    final byCreatedAt = right.createdAt.compareTo(left.createdAt);
+    if (byCreatedAt != 0) {
+      return byCreatedAt;
+    }
+    return right.updatedAt.compareTo(left.updatedAt);
   }
 
   void _sortHistoryByClosedAt() {
@@ -1049,6 +1189,50 @@ class _DecodedBackupPayload {
   final List<ShoppingListModel> lists;
   final List<CompletedPurchase> history;
   final List<CatalogProduct> catalog;
+}
+
+class SharedCatalogImportResult {
+  const SharedCatalogImportResult({
+    required this.createdCount,
+    required this.mergedCount,
+    required this.skippedCount,
+  });
+
+  final int createdCount;
+  final int mergedCount;
+  final int skippedCount;
+
+  int get changedCount => createdCount + mergedCount;
+}
+
+class _InMemorySharedCatalogImportPreferences
+    implements SharedCatalogImportPreferences {
+  bool _autoImportAll = false;
+  final Set<String> _enabledListIds = <String>{};
+
+  @override
+  Future<bool> loadAutoImportAllSharedLists() async {
+    return _autoImportAll;
+  }
+
+  @override
+  Future<Set<String>> loadEnabledSharedListIds() async {
+    return {..._enabledListIds};
+  }
+
+  @override
+  Future<void> saveAutoImportAllSharedLists(bool enabled) async {
+    _autoImportAll = enabled;
+  }
+
+  @override
+  Future<void> saveEnabledSharedListIds(Set<String> listIds) async {
+    _enabledListIds
+      ..clear()
+      ..addAll(
+        listIds.map((entry) => entry.trim()).where((entry) => entry.isNotEmpty),
+      );
+  }
 }
 
 class _ReplenishmentSuggestionStats {

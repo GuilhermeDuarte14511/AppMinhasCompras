@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../application/ports.dart';
+import '../application/shared_list_sync_policy.dart';
 import '../application/store_and_services.dart';
 import '../data/local/storages.dart';
 import '../data/remote/cosmos_product_lookup_service.dart';
@@ -166,6 +167,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       historyStorage: historyStorage,
       lookupService: widget._lookupService ?? _buildLookupService(),
       homeWidgetService: homeWidgetService,
+      sharedCatalogImportPreferences: widget._storage == null
+          ? const SharedPrefsSharedCatalogImportPreferences()
+          : InMemorySharedCatalogImportPreferences(),
     )..load();
     final launchDuration = widget._storage == null
         ? _minimumLaunchDuration
@@ -306,17 +310,14 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       var mirroredCount = 0;
       for (final shared in ownedShared) {
         final sourceId = shared.sourceLocalListId?.trim() ?? '';
-        if (sourceId.isEmpty) {
-          continue;
-        }
         final local = _store.findById(sourceId);
-        if (local != null && local.updatedAt.isAfter(shared.updatedAt)) {
-          await repository.syncLocalListToShared(
-            localList: local,
-            sharedList: shared,
-            updatedBy: uid,
-          );
-          mirroredCount++;
+        final mirrorAction = resolveOwnedSharedListMirrorAction(
+          hasSourceLocalListId: sourceId.isNotEmpty,
+          hasLocalCopy: local != null,
+          localUpdatedAt: local?.updatedAt,
+          sharedUpdatedAt: shared.updatedAt,
+        );
+        if (mirrorAction == SharedListMirrorAction.skip) {
           continue;
         }
         final items = await repository.fetchListItems(shared.id);
@@ -710,6 +711,13 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       if (cloudTheme != null && cloudTheme != _themeMode) {
         await _setThemeMode(cloudTheme, syncCloud: false);
       }
+      if (snapshot.settings.hasData) {
+        await _store.applySharedCatalogImportSettings(
+          autoImportAllSharedCatalogs:
+              snapshot.settings.autoImportSharedCatalogs,
+          enabledSharedListIds: snapshot.settings.sharedCatalogImportListIds,
+        );
+      }
       debugPrint('[CloudSync][pull] tema OK');
 
       debugPrint('[CloudSync][pull] definindo _loadedCloudUid=$uid');
@@ -885,6 +893,8 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         catalog: _store.catalogProducts,
         settings: FirestoreUserAppSettings(
           themeMode: _themeMode == ThemeMode.dark ? 'dark' : 'light',
+          autoImportSharedCatalogs: _store.autoImportAllSharedCatalogs,
+          sharedCatalogImportListIds: _store.sharedCatalogImportListIds,
         ),
         profile: profile,
       );

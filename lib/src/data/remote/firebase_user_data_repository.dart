@@ -115,11 +115,20 @@ class FirestoreUserProfile {
 }
 
 class FirestoreUserAppSettings {
-  const FirestoreUserAppSettings({this.themeMode});
+  const FirestoreUserAppSettings({
+    this.themeMode,
+    this.autoImportSharedCatalogs = false,
+    this.sharedCatalogImportListIds = const <String>{},
+  });
 
   final String? themeMode;
+  final bool autoImportSharedCatalogs;
+  final Set<String> sharedCatalogImportListIds;
 
-  bool get hasData => themeMode != null && themeMode!.isNotEmpty;
+  bool get hasData =>
+      (themeMode != null && themeMode!.isNotEmpty) ||
+      autoImportSharedCatalogs ||
+      sharedCatalogImportListIds.isNotEmpty;
 
   factory FirestoreUserAppSettings.fromJson(Map<String, dynamic> json) {
     final rawThemeMode = (json['themeMode'] as String?)?.trim();
@@ -128,12 +137,34 @@ class FirestoreUserAppSettings {
       'light' => 'light',
       _ => null,
     };
-    return FirestoreUserAppSettings(themeMode: parsedThemeMode);
+    final rawAutoImport = json['autoImportSharedCatalogs'];
+    final rawListIds = json['sharedCatalogImportListIds'];
+    final listIds = <String>{};
+    if (rawListIds is List) {
+      for (final entry in rawListIds) {
+        if (entry is String && entry.trim().isNotEmpty) {
+          listIds.add(entry.trim());
+        }
+      }
+    }
+    return FirestoreUserAppSettings(
+      themeMode: parsedThemeMode,
+      autoImportSharedCatalogs: rawAutoImport is bool && rawAutoImport,
+      sharedCatalogImportListIds: listIds,
+    );
   }
 
   Map<String, dynamic> toFirestoreJson() {
+    final listIds =
+        sharedCatalogImportListIds
+            .map((entry) => entry.trim())
+            .where((entry) => entry.isNotEmpty)
+            .toList(growable: false)
+          ..sort();
     return <String, dynamic>{
-      'themeMode': hasData ? themeMode : null,
+      'themeMode': themeMode,
+      'autoImportSharedCatalogs': autoImportSharedCatalogs,
+      'sharedCatalogImportListIds': listIds,
       'updatedAt': DateTime.now().toIso8601String(),
     };
   }
@@ -403,7 +434,6 @@ class FirestoreUserDataRepository {
         (batch) => batch.set(
           _settingsDocRef(firestore, uid),
           settings.toFirestoreJson(),
-          SetOptions(merge: true),
         ),
       );
 
@@ -422,38 +452,36 @@ class FirestoreUserDataRepository {
   }
 
   Future<void> saveUserProfile({required FirestoreUserProfile profile}) async {
-  await _runWithDatabaseFallback((firestore) async {
-    final docRef = _userDocRef(firestore, profile.uid);
+    await _runWithDatabaseFallback((firestore) async {
+      final docRef = _userDocRef(firestore, profile.uid);
 
-    try {
-      await docRef.set(
-        profile.toFirestoreJson(includeCreatedAt: false),
-        SetOptions(merge: true),
-      );
-    } on FirebaseException catch (e) {
-      final msg = (e.message ?? '');
+      try {
+        await docRef.set(
+          profile.toFirestoreJson(includeCreatedAt: false),
+          SetOptions(merge: true),
+        );
+      } on FirebaseException catch (e) {
+        final msg = (e.message ?? '');
 
-      if (kIsWeb && msg.contains('INTERNAL ASSERTION FAILED')) {
-        try {
-          await docRef.get(const GetOptions(source: Source.server));
-          return; // trata como sucesso
-        } catch (_) {
+        if (kIsWeb && msg.contains('INTERNAL ASSERTION FAILED')) {
+          try {
+            await docRef.get(const GetOptions(source: Source.server));
+            return; // trata como sucesso
+          } catch (_) {}
         }
+        rethrow;
       }
-      rethrow;
-    }
-  });
-}
+    });
+  }
 
-  Future<bool> migrateProfilePhotoToStoragePath({
-    required User user,
-  }) async {
+  Future<bool> migrateProfilePhotoToStoragePath({required User user}) async {
     final rawUrl = user.photoURL?.trim() ?? '';
     if (rawUrl.isEmpty) {
       return false;
     }
 
-    final isStorageUrl = rawUrl.startsWith('gs://') ||
+    final isStorageUrl =
+        rawUrl.startsWith('gs://') ||
         rawUrl.contains('firebasestorage.googleapis.com') ||
         rawUrl.contains('storage.googleapis.com');
     if (!isStorageUrl) {
