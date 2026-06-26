@@ -117,16 +117,19 @@ class FirestoreUserProfile {
 class FirestoreUserAppSettings {
   const FirestoreUserAppSettings({
     this.themeMode,
+    this.autoImportOwnedSharedCatalogs = true,
     this.autoImportSharedCatalogs = false,
     this.sharedCatalogImportListIds = const <String>{},
   });
 
   final String? themeMode;
+  final bool autoImportOwnedSharedCatalogs;
   final bool autoImportSharedCatalogs;
   final Set<String> sharedCatalogImportListIds;
 
   bool get hasData =>
       (themeMode != null && themeMode!.isNotEmpty) ||
+      !autoImportOwnedSharedCatalogs ||
       autoImportSharedCatalogs ||
       sharedCatalogImportListIds.isNotEmpty;
 
@@ -137,6 +140,7 @@ class FirestoreUserAppSettings {
       'light' => 'light',
       _ => null,
     };
+    final rawAutoImportOwned = json['autoImportOwnedSharedCatalogs'];
     final rawAutoImport = json['autoImportSharedCatalogs'];
     final rawListIds = json['sharedCatalogImportListIds'];
     final listIds = <String>{};
@@ -149,6 +153,9 @@ class FirestoreUserAppSettings {
     }
     return FirestoreUserAppSettings(
       themeMode: parsedThemeMode,
+      autoImportOwnedSharedCatalogs: rawAutoImportOwned is bool
+          ? rawAutoImportOwned
+          : true,
       autoImportSharedCatalogs: rawAutoImport is bool && rawAutoImport,
       sharedCatalogImportListIds: listIds,
     );
@@ -163,6 +170,7 @@ class FirestoreUserAppSettings {
           ..sort();
     return <String, dynamic>{
       'themeMode': themeMode,
+      'autoImportOwnedSharedCatalogs': autoImportOwnedSharedCatalogs,
       'autoImportSharedCatalogs': autoImportSharedCatalogs,
       'sharedCatalogImportListIds': listIds,
       'updatedAt': DateTime.now().toIso8601String(),

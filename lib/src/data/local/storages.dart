@@ -48,12 +48,26 @@ class SharedPrefsShoppingListsStorage implements ShoppingListsStorage {
 
 class SharedPrefsSharedCatalogImportPreferences
     implements SharedCatalogImportPreferences {
+  static const String _autoImportOwnedKey =
+      'shared_catalog_import_auto_import_owned';
   static const String _autoImportAllKey =
       'shared_catalog_import_auto_import_all';
   static const String _enabledListIdsKey =
       'shared_catalog_import_enabled_list_ids';
 
   const SharedPrefsSharedCatalogImportPreferences();
+
+  @override
+  Future<bool> loadAutoImportOwnedSharedLists() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_autoImportOwnedKey) ?? true;
+  }
+
+  @override
+  Future<void> saveAutoImportOwnedSharedLists(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_autoImportOwnedKey, enabled);
+  }
 
   @override
   Future<bool> loadAutoImportAllSharedLists() async {
@@ -91,8 +105,19 @@ class SharedPrefsSharedCatalogImportPreferences
 
 class InMemorySharedCatalogImportPreferences
     implements SharedCatalogImportPreferences {
+  bool _autoImportOwned = true;
   bool _autoImportAll = false;
   final Set<String> _enabledListIds = <String>{};
+
+  @override
+  Future<bool> loadAutoImportOwnedSharedLists() async {
+    return _autoImportOwned;
+  }
+
+  @override
+  Future<void> saveAutoImportOwnedSharedLists(bool enabled) async {
+    _autoImportOwned = enabled;
+  }
 
   @override
   Future<bool> loadAutoImportAllSharedLists() async {

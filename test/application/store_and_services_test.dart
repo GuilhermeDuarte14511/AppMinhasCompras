@@ -17,6 +17,7 @@ void main() {
       await store.load();
 
       expect(store.isSharedCatalogImportEnabled('shared-a'), isFalse);
+      expect(store.autoImportOwnedSharedCatalogs, isTrue);
 
       await store.setSharedCatalogImportEnabled('shared-a', enabled: true);
 
@@ -29,6 +30,19 @@ void main() {
       await reloadedStore.load();
 
       expect(reloadedStore.isSharedCatalogImportEnabled('shared-a'), isTrue);
+      expect(reloadedStore.autoImportOwnedSharedCatalogs, isTrue);
+
+      await reloadedStore.setAutoImportOwnedSharedCatalogs(false);
+
+      final ownerPreferenceReloadedStore = _createStore(
+        sharedCatalogImportPreferences: preferences,
+      );
+      await ownerPreferenceReloadedStore.load();
+
+      expect(
+        ownerPreferenceReloadedStore.autoImportOwnedSharedCatalogs,
+        isFalse,
+      );
 
       await reloadedStore.setSharedCatalogImportEnabled(
         'shared-b',
@@ -48,10 +62,12 @@ void main() {
 
       await store.load();
       await store.applySharedCatalogImportSettings(
+        autoImportOwnedSharedCatalogs: false,
         autoImportAllSharedCatalogs: false,
         enabledSharedListIds: {'shared-cloud'},
       );
 
+      expect(store.autoImportOwnedSharedCatalogs, isFalse);
       expect(store.isSharedCatalogImportEnabled('shared-cloud'), isTrue);
       expect(store.isSharedCatalogImportEnabled('shared-other'), isFalse);
 
@@ -60,6 +76,7 @@ void main() {
       );
       await reloadedStore.load();
 
+      expect(reloadedStore.autoImportOwnedSharedCatalogs, isFalse);
       expect(
         reloadedStore.isSharedCatalogImportEnabled('shared-cloud'),
         isTrue,
@@ -129,6 +146,53 @@ void main() {
         ),
         hasLength(1),
       );
+    },
+  );
+
+  test(
+    'upsertList can skip catalog ingestion for owned shared mirrors',
+    () async {
+      final store = _createStore();
+      await store.load();
+
+      await store.upsertList(
+        _shoppingList(
+          name: 'Lista compartilhada espelhada',
+          createdAt: DateTime(2026, 6, 1),
+          updatedAt: DateTime(2026, 6, 20),
+          items: [
+            _item(
+              name: 'Produto da Carol',
+              quantity: 1,
+              unitPrice: 12,
+              barcode: '789100000099',
+            ),
+          ],
+        ),
+        ingestCatalog: false,
+      );
+
+      expect(store.catalogProducts, isEmpty);
+
+      await store.upsertList(
+        _shoppingList(
+          name: 'Lista local',
+          createdAt: DateTime(2026, 6, 2),
+          updatedAt: DateTime(2026, 6, 21),
+          items: [
+            _item(
+              name: 'Produto local',
+              quantity: 1,
+              unitPrice: 10,
+              barcode: '789100000100',
+            ),
+          ],
+        ),
+      );
+
+      expect(store.catalogProducts.map((product) => product.name), [
+        'Produto local',
+      ]);
     },
   );
 
@@ -354,8 +418,19 @@ ShoppingListModel _shoppingList({
 
 class _MemorySharedCatalogImportPreferences
     implements SharedCatalogImportPreferences {
+  bool _autoImportOwned = true;
   bool _autoImportAll = false;
   final Set<String> _enabledListIds = <String>{};
+
+  @override
+  Future<bool> loadAutoImportOwnedSharedLists() async {
+    return _autoImportOwned;
+  }
+
+  @override
+  Future<void> saveAutoImportOwnedSharedLists(bool enabled) async {
+    _autoImportOwned = enabled;
+  }
 
   @override
   Future<bool> loadAutoImportAllSharedLists() async {

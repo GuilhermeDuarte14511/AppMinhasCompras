@@ -20,6 +20,10 @@ abstract class PurchaseHistoryStorage {
 }
 
 abstract class SharedCatalogImportPreferences {
+  Future<bool> loadAutoImportOwnedSharedLists();
+
+  Future<void> saveAutoImportOwnedSharedLists(bool enabled);
+
   Future<bool> loadAutoImportAllSharedLists();
 
   Future<void> saveAutoImportAllSharedLists(bool enabled);

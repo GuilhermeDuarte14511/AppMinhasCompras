@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -234,6 +235,11 @@ class _DashboardPageState extends State<DashboardPage> {
         builder: (_) => AppOptionsPage(
           themeMode: widget.themeMode,
           onThemeModeChanged: widget.onThemeModeChanged,
+          autoImportOwnedSharedCatalogs:
+              widget.store.autoImportOwnedSharedCatalogs,
+          onAutoImportOwnedSharedCatalogsChanged: (enabled) {
+            unawaited(widget.store.setAutoImportOwnedSharedCatalogs(enabled));
+          },
           userDisplayName: widget.userDisplayName,
           userEmail: widget.userEmail,
           userPhotoUrl: widget.userPhotoUrl,

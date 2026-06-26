@@ -335,7 +335,10 @@ class _ShoppingListAppState extends State<ShoppingListApp>
           isClosed: shared.isClosed,
           closedAt: shared.closedAt,
         );
-        await _store.upsertList(listModel);
+        await _store.upsertList(
+          listModel,
+          ingestCatalog: _store.autoImportOwnedSharedCatalogs,
+        );
         mirroredCount++;
       }
       if (showSnack && mirroredCount > 0) {
@@ -713,6 +716,8 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       }
       if (snapshot.settings.hasData) {
         await _store.applySharedCatalogImportSettings(
+          autoImportOwnedSharedCatalogs:
+              snapshot.settings.autoImportOwnedSharedCatalogs,
           autoImportAllSharedCatalogs:
               snapshot.settings.autoImportSharedCatalogs,
           enabledSharedListIds: snapshot.settings.sharedCatalogImportListIds,
@@ -893,6 +898,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         catalog: _store.catalogProducts,
         settings: FirestoreUserAppSettings(
           themeMode: _themeMode == ThemeMode.dark ? 'dark' : 'light',
+          autoImportOwnedSharedCatalogs: _store.autoImportOwnedSharedCatalogs,
           autoImportSharedCatalogs: _store.autoImportAllSharedCatalogs,
           sharedCatalogImportListIds: _store.sharedCatalogImportListIds,
         ),

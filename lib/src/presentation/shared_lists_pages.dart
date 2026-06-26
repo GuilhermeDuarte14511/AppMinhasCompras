@@ -603,6 +603,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
   String? _lastReminderFingerprint;
   String? _lastLocalMirrorFingerprint;
   final Set<String> _catalogImportPromptedListIds = <String>{};
+  final Set<String> _catalogImportPromptInFlightListIds = <String>{};
   final Map<String, String> _catalogImportFingerprints = <String, String>{};
   _SharedHeaderSection? _expandedHeaderSection;
   SharedItemsFilter _itemsFilter = SharedItemsFilter.pending;
@@ -769,7 +770,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
     );
   }
 
-  Future<void> _enableSharedCatalogImport(
+  Future<bool> _enableSharedCatalogImport(
     SharedShoppingListSummary list,
     ShoppingListModel listModel, {
     bool askForFutureLists = true,
@@ -780,8 +781,14 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
             enableImport: true,
             enableForFutureLists: false,
           );
-    if (!mounted || result == null || !result.enableImport) {
-      return;
+    if (result == null) {
+      return true;
+    }
+    if (!mounted) {
+      return true;
+    }
+    if (!result.enableImport) {
+      return true;
     }
     await widget.store.setSharedCatalogImportEnabled(
       list.id,
@@ -794,6 +801,39 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
       showSnack: true,
       force: true,
     );
+    return true;
+  }
+
+  Future<void> _promptSharedCatalogImport(
+    SharedShoppingListSummary list,
+    ShoppingListModel listModel,
+    List<SharedShoppingItem> items,
+  ) async {
+    final fingerprint = _sharedCatalogImportFingerprint(list, items);
+    final promptKey = '${list.id}|$fingerprint';
+    if (_catalogImportPromptedListIds.contains(promptKey) ||
+        _catalogImportPromptInFlightListIds.contains(promptKey)) {
+      return;
+    }
+
+    _catalogImportPromptInFlightListIds.add(promptKey);
+    try {
+      await Future<void>.delayed(
+        _adaptiveMotionDuration(context, const Duration(milliseconds: 450)),
+      );
+      if (!mounted) {
+        return;
+      }
+      if (ModalRoute.of(context)?.isCurrent != true) {
+        return;
+      }
+      final promptResolved = await _enableSharedCatalogImport(list, listModel);
+      if (promptResolved) {
+        _catalogImportPromptedListIds.add(promptKey);
+      }
+    } finally {
+      _catalogImportPromptInFlightListIds.remove(promptKey);
+    }
   }
 
   void _maybeHandleSharedCatalogImport(
@@ -809,14 +849,14 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
       return;
     }
     if (list.isOwner(_currentUid)) {
+      if (widget.store.autoImportOwnedSharedCatalogs) {
+        unawaited(
+          _importSharedItemsToCatalog(list, listModel, showSnack: false),
+        );
+      }
       return;
     }
-    final fingerprint = _sharedCatalogImportFingerprint(list, items);
-    if (_catalogImportPromptedListIds.contains('${list.id}|$fingerprint')) {
-      return;
-    }
-    _catalogImportPromptedListIds.add('${list.id}|$fingerprint');
-    unawaited(_enableSharedCatalogImport(list, listModel));
+    unawaited(_promptSharedCatalogImport(list, listModel, items));
   }
 
   bool _ensureEditable(SharedShoppingListSummary list) {
@@ -978,7 +1018,12 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
       createdAt: existing?.createdAt ?? listModel.createdAt,
     );
     _log('mirror local listId=$sourceId from shared=${list.id}');
-    unawaited(widget.store.upsertList(mirrored));
+    unawaited(
+      widget.store.upsertList(
+        mirrored,
+        ingestCatalog: widget.store.autoImportOwnedSharedCatalogs,
+      ),
+    );
   }
 
   Future<void> _openBudgetEditor(SharedShoppingListSummary list) async {

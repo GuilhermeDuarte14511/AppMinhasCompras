@@ -677,7 +677,12 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       _linkedSharedSummary = summary;
       _lastSharedSyncAt = DateTime.now();
     });
-    unawaited(widget.store.upsertList(updated));
+    unawaited(
+      widget.store.upsertList(
+        updated,
+        ingestCatalog: widget.store.autoImportOwnedSharedCatalogs,
+      ),
+    );
   }
 
   void _promptOpenSharedList(SharedShoppingListSummary shared) {
@@ -789,7 +794,10 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         isClosed: latest.isClosed,
         closedAt: latest.closedAt,
       );
-      await widget.store.upsertList(mirrored);
+      await widget.store.upsertList(
+        mirrored,
+        ingestCatalog: widget.store.autoImportOwnedSharedCatalogs,
+      );
       if (mounted) {
         setState(() {
           _list = mirrored;

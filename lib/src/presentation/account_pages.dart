@@ -167,6 +167,8 @@ class AppOptionsPage extends StatefulWidget {
     super.key,
     required this.themeMode,
     required this.onThemeModeChanged,
+    required this.autoImportOwnedSharedCatalogs,
+    required this.onAutoImportOwnedSharedCatalogsChanged,
     this.userDisplayName,
     this.userEmail,
     this.userPhotoUrl,
@@ -187,6 +189,8 @@ class AppOptionsPage extends StatefulWidget {
 
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
+  final bool autoImportOwnedSharedCatalogs;
+  final ValueChanged<bool> onAutoImportOwnedSharedCatalogsChanged;
   final String? userDisplayName;
   final String? userEmail;
   final String? userPhotoUrl;
@@ -210,6 +214,7 @@ class AppOptionsPage extends StatefulWidget {
 
 class _AppOptionsPageState extends State<AppOptionsPage> {
   late ThemeMode _selectedThemeMode;
+  late bool _autoImportOwnedSharedCatalogs;
   late String _resolvedName;
   late String? _resolvedEmail;
   String? _resolvedPhotoUrl;
@@ -219,6 +224,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
   void initState() {
     super.initState();
     _selectedThemeMode = widget.themeMode;
+    _autoImportOwnedSharedCatalogs = widget.autoImportOwnedSharedCatalogs;
     _resolvedEmail = _cleanNullable(widget.userEmail);
     _resolvedName = _buildResolvedName(
       displayName: _cleanNullable(widget.userDisplayName),
@@ -235,6 +241,16 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
       _selectedThemeMode = mode;
     });
     widget.onThemeModeChanged(mode);
+  }
+
+  void _updateAutoImportOwnedSharedCatalogs(bool enabled) {
+    if (_autoImportOwnedSharedCatalogs == enabled) {
+      return;
+    }
+    setState(() {
+      _autoImportOwnedSharedCatalogs = enabled;
+    });
+    widget.onAutoImportOwnedSharedCatalogsChanged(enabled);
   }
 
   String? _cleanNullable(String? value) {
@@ -540,6 +556,18 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
                     ),
                   ),
                 ),
+              const SizedBox(height: 10),
+              _AccountContentPanel(
+                child: SwitchListTile(
+                  secondary: const Icon(Icons.inventory_2_rounded),
+                  title: const Text('Atualizar meu catálogo como dono'),
+                  subtitle: const Text(
+                    'Quando alguém adicionar produtos em uma lista compartilhada sua, importar automaticamente para o seu catálogo pessoal.',
+                  ),
+                  value: _autoImportOwnedSharedCatalogs,
+                  onChanged: _updateAutoImportOwnedSharedCatalogs,
+                ),
+              ),
               const SizedBox(height: 10),
               _buildSectionHeader(
                 context,

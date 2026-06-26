@@ -223,12 +223,17 @@
           d.keys().hasOnly([
             'themeMode',
             'updatedAt',
+            'autoImportOwnedSharedCatalogs',
             'autoImportSharedCatalogs',
             'sharedCatalogImportListIds'
           ]) &&
           d.keys().hasAll(['themeMode', 'updatedAt']) &&
           validTheme(d.themeMode) &&
           isDateLike(d.updatedAt) &&
+          (
+            !d.keys().hasAny(['autoImportOwnedSharedCatalogs']) ||
+            d.autoImportOwnedSharedCatalogs is bool
+          ) &&
           (
             !d.keys().hasAny(['autoImportSharedCatalogs']) ||
             d.autoImportSharedCatalogs is bool

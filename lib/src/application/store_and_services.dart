@@ -38,6 +38,7 @@ class ShoppingListsStore extends ChangeNotifier {
   final Set<String> _sharedCatalogImportListIds = <String>{};
   bool _isLoading = true;
   bool _loaded = false;
+  bool _autoImportOwnedSharedCatalogs = true;
   bool _autoImportAllSharedCatalogs = false;
   bool _listSuggestionsDirty = true;
   List<String> _cachedListSuggestions = const <String>[];
@@ -91,6 +92,8 @@ class ShoppingListsStore extends ChangeNotifier {
       _sortListsByUpdatedAt();
       _sortHistoryByClosedAt();
       await _productCatalog.load();
+      _autoImportOwnedSharedCatalogs = await _sharedCatalogImportPreferences
+          .loadAutoImportOwnedSharedLists();
       _autoImportAllSharedCatalogs = await _sharedCatalogImportPreferences
           .loadAutoImportAllSharedLists();
       _sharedCatalogImportListIds
@@ -197,7 +200,10 @@ class ShoppingListsStore extends ChangeNotifier {
     return created;
   }
 
-  Future<void> upsertList(ShoppingListModel list) async {
+  Future<void> upsertList(
+    ShoppingListModel list, {
+    bool ingestCatalog = true,
+  }) async {
     final index = _lists.indexWhere((entry) => entry.id == list.id);
     if (index >= 0) {
       _lists[index] = list;
@@ -208,7 +214,9 @@ class ShoppingListsStore extends ChangeNotifier {
     _invalidateListSuggestionCache();
     await _persistAndNotify();
     await _syncReminderForList(list);
-    await _productCatalog.ingestFromLists([list]);
+    if (ingestCatalog) {
+      await _productCatalog.ingestFromLists([list]);
+    }
   }
 
   Future<ShoppingListModel?> finalizeList(
@@ -581,6 +589,7 @@ class ShoppingListsStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool get autoImportOwnedSharedCatalogs => _autoImportOwnedSharedCatalogs;
   bool get autoImportAllSharedCatalogs => _autoImportAllSharedCatalogs;
   Set<String> get sharedCatalogImportListIds =>
       Set.unmodifiable(_sharedCatalogImportListIds);
@@ -620,10 +629,23 @@ class ShoppingListsStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setAutoImportOwnedSharedCatalogs(bool enabled) async {
+    if (_autoImportOwnedSharedCatalogs == enabled) {
+      return;
+    }
+    _autoImportOwnedSharedCatalogs = enabled;
+    await _sharedCatalogImportPreferences.saveAutoImportOwnedSharedLists(
+      enabled,
+    );
+    notifyListeners();
+  }
+
   Future<void> applySharedCatalogImportSettings({
+    required bool autoImportOwnedSharedCatalogs,
     required bool autoImportAllSharedCatalogs,
     required Set<String> enabledSharedListIds,
   }) async {
+    _autoImportOwnedSharedCatalogs = autoImportOwnedSharedCatalogs;
     _autoImportAllSharedCatalogs = autoImportAllSharedCatalogs;
     _sharedCatalogImportListIds
       ..clear()
@@ -632,6 +654,9 @@ class ShoppingListsStore extends ChangeNotifier {
             .map((entry) => entry.trim())
             .where((entry) => entry.isNotEmpty),
       );
+    await _sharedCatalogImportPreferences.saveAutoImportOwnedSharedLists(
+      _autoImportOwnedSharedCatalogs,
+    );
     await _sharedCatalogImportPreferences.saveAutoImportAllSharedLists(
       _autoImportAllSharedCatalogs,
     );
@@ -1207,8 +1232,19 @@ class SharedCatalogImportResult {
 
 class _InMemorySharedCatalogImportPreferences
     implements SharedCatalogImportPreferences {
+  bool _autoImportOwned = true;
   bool _autoImportAll = false;
   final Set<String> _enabledListIds = <String>{};
+
+  @override
+  Future<bool> loadAutoImportOwnedSharedLists() async {
+    return _autoImportOwned;
+  }
+
+  @override
+  Future<void> saveAutoImportOwnedSharedLists(bool enabled) async {
+    _autoImportOwned = enabled;
+  }
 
   @override
   Future<bool> loadAutoImportAllSharedLists() async {
