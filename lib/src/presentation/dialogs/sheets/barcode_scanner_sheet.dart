@@ -7,6 +7,10 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../core/utils/text_utils.dart';
 import '../../utils/app_modal.dart';
 
+bool shouldStopBarcodeScannerForLifecycle(AppLifecycleState state) {
+  return state == AppLifecycleState.inactive;
+}
+
 Future<String?> showBarcodeScannerSheet(BuildContext context) {
   return showAppModalBottomSheet<String>(
     context: context,
@@ -34,6 +38,7 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
   StreamSubscription<BarcodeCapture>? _subscription;
   bool _handled = false;
   Object? _startError;
+  bool _isStarting = false;
 
   @override
   void initState() {
@@ -77,13 +82,40 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
-        unawaited(_controller.stop());
+        if (shouldStopBarcodeScannerForLifecycle(state)) {
+          unawaited(_controller.stop());
+        }
     }
   }
 
   Future<void> _startScanner() async {
+    if (_isStarting || _controller.value.isRunning) {
+      return;
+    }
+    _isStarting = true;
     try {
       await _controller.start();
+      if (mounted && _startError != null) {
+        setState(() {
+          _startError = null;
+        });
+      }
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _startError = error;
+      });
+    } finally {
+      _isStarting = false;
+    }
+  }
+
+  Future<void> _switchCamera() async {
+    try {
+      await _controller.switchCamera();
+      await _startScanner();
       if (mounted && _startError != null) {
         setState(() {
           _startError = null;
@@ -194,7 +226,7 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Text(
-              'Escaneamento opcional. Se preferir, feche e digite manualmente.',
+              'Escaneamento opcional. Se a tela ficar preta, tente trocar a câmera ou digite manualmente.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -213,6 +245,26 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
                       fit: BoxFit.cover,
                       placeholderBuilder: _buildScannerPlaceholder,
                       errorBuilder: _buildScannerError,
+                    ),
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.58),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: IconButton(
+                            tooltip: 'Trocar câmera',
+                            onPressed: () => unawaited(_switchCamera()),
+                            icon: const Icon(
+                              Icons.cameraswitch_rounded,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                     if (_startError != null)
                       Positioned(
@@ -250,10 +302,22 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
             padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomInset),
             child: SizedBox(
               width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.keyboard_rounded),
-                label: const Text('Digitar manualmente'),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => unawaited(_startScanner()),
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Reabrir câmera'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.keyboard_rounded),
+                    label: const Text('Digitar manualmente'),
+                  ),
+                ],
               ),
             ),
           ),
