@@ -12,6 +12,14 @@ bool shouldStopBarcodeScannerForLifecycle(AppLifecycleState state) {
   return state == AppLifecycleState.inactive;
 }
 
+bool shouldUseFullScreenBarcodeScanner({required bool isWeb}) {
+  return isWeb;
+}
+
+double barcodeScannerViewportRadius({required bool isFullScreen}) {
+  return isFullScreen ? 0 : 18;
+}
+
 Duration barcodeScannerRestartDelay({required bool isWeb}) {
   return isWeb ? const Duration(milliseconds: 250) : Duration.zero;
 }
@@ -25,6 +33,19 @@ String barcodeScannerRecoveryHint({required bool isWeb}) {
 }
 
 Future<String?> showBarcodeScannerSheet(BuildContext context) {
+  if (shouldUseFullScreenBarcodeScanner(isWeb: kIsWeb)) {
+    return Navigator.of(context, rootNavigator: true).push<String>(
+      PageRouteBuilder<String>(
+        fullscreenDialog: true,
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return const BarcodeScannerPage();
+        },
+      ),
+    );
+  }
+
   return showAppModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
@@ -34,8 +55,23 @@ Future<String?> showBarcodeScannerSheet(BuildContext context) {
   );
 }
 
+class BarcodeScannerPage extends StatelessWidget {
+  const BarcodeScannerPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: SafeArea(child: BarcodeScannerSheet.fullScreen()),
+    );
+  }
+}
+
 class BarcodeScannerSheet extends StatefulWidget {
-  const BarcodeScannerSheet({super.key});
+  const BarcodeScannerSheet({super.key}) : fullScreen = false;
+
+  const BarcodeScannerSheet.fullScreen({super.key}) : fullScreen = true;
+
+  final bool fullScreen;
 
   @override
   State<BarcodeScannerSheet> createState() => _BarcodeScannerSheetState();
@@ -267,8 +303,74 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    final scannerRadius = barcodeScannerViewportRadius(
+      isFullScreen: widget.fullScreen,
+    );
+    final scanner = Stack(
+      fit: StackFit.expand,
+      children: [
+        MobileScanner(
+          controller: _controller,
+          fit: BoxFit.cover,
+          placeholderBuilder: _buildScannerPlaceholder,
+          errorBuilder: _buildScannerError,
+        ),
+        Align(
+          alignment: Alignment.topRight,
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.58),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: IconButton(
+                tooltip: 'Trocar câmera',
+                onPressed: () => unawaited(_switchCamera()),
+                icon: const Icon(
+                  Icons.cameraswitch_rounded,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (_startError != null)
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: 12,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.errorContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  'Câmera indisponível agora. Tente novamente ou digite manualmente.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+    final scannerFrame = scannerRadius == 0
+        ? scanner
+        : ClipRRect(
+            borderRadius: BorderRadius.circular(scannerRadius),
+            child: scanner,
+          );
+
     return SizedBox(
-      height: min(MediaQuery.sizeOf(context).height * 0.85, 620),
+      height: widget.fullScreen
+          ? MediaQuery.sizeOf(context).height
+          : min(MediaQuery.sizeOf(context).height * 0.85, 620),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -293,66 +395,7 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    MobileScanner(
-                      controller: _controller,
-                      fit: BoxFit.cover,
-                      placeholderBuilder: _buildScannerPlaceholder,
-                      errorBuilder: _buildScannerError,
-                    ),
-                    Align(
-                      alignment: Alignment.topRight,
-                      child: Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.58),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: IconButton(
-                            tooltip: 'Trocar câmera',
-                            onPressed: () => unawaited(_switchCamera()),
-                            icon: const Icon(
-                              Icons.cameraswitch_rounded,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (_startError != null)
-                      Positioned(
-                        left: 12,
-                        right: 12,
-                        bottom: 12,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.errorContainer,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Text(
-                              'Câmera indisponível agora. Tente novamente ou digite manualmente.',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onErrorContainer,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+              child: scannerFrame,
             ),
           ),
           const SizedBox(height: 12),

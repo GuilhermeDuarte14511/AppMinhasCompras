@@ -37,4 +37,11 @@ void main() {
     expect(hint, contains('navegador'));
     expect(hint, contains('recarregue'));
   });
+
+  test('web scanner opens fullscreen without clipping the camera view', () {
+    expect(shouldUseFullScreenBarcodeScanner(isWeb: true), isTrue);
+    expect(shouldUseFullScreenBarcodeScanner(isWeb: false), isFalse);
+    expect(barcodeScannerViewportRadius(isFullScreen: true), 0);
+    expect(barcodeScannerViewportRadius(isFullScreen: false), greaterThan(0));
+  });
 }
