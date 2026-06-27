@@ -9,8 +9,10 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+import '../application/sync_diagnostics.dart';
 import '../data/remote/firebase_user_data_repository.dart';
 import 'launch.dart';
+import 'sync_diagnostics_page.dart';
 import 'theme/app_tokens.dart';
 import 'utils/app_page_route.dart';
 import 'utils/app_toast.dart';
@@ -169,6 +171,9 @@ class AppOptionsPage extends StatefulWidget {
     required this.onThemeModeChanged,
     required this.autoImportOwnedSharedCatalogs,
     required this.onAutoImportOwnedSharedCatalogsChanged,
+    this.syncDiagnostics,
+    this.onSyncNow,
+    this.onRefreshSyncDiagnostics,
     this.userDisplayName,
     this.userEmail,
     this.userPhotoUrl,
@@ -191,6 +196,9 @@ class AppOptionsPage extends StatefulWidget {
   final ValueChanged<ThemeMode> onThemeModeChanged;
   final bool autoImportOwnedSharedCatalogs;
   final ValueChanged<bool> onAutoImportOwnedSharedCatalogsChanged;
+  final SyncDiagnosticsSnapshot? syncDiagnostics;
+  final Future<void> Function()? onSyncNow;
+  final Future<SyncDiagnosticsSnapshot?> Function()? onRefreshSyncDiagnostics;
   final String? userDisplayName;
   final String? userEmail;
   final String? userPhotoUrl;
@@ -296,6 +304,24 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
     if (refresh != null) {
       await refresh();
     }
+  }
+
+  Future<void> _openSyncDiagnostics() async {
+    final snapshot = widget.syncDiagnostics;
+    final onSyncNow = widget.onSyncNow;
+    if (snapshot == null || onSyncNow == null) {
+      return;
+    }
+    await Navigator.push<void>(
+      context,
+      buildAppPageRoute(
+        builder: (_) => SyncDiagnosticsPage(
+          snapshot: snapshot,
+          onSyncNow: onSyncNow,
+          onRefreshSnapshot: widget.onRefreshSyncDiagnostics,
+        ),
+      ),
+    );
   }
 
   Widget _buildSectionHeader(
@@ -557,6 +583,20 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
                   ),
                 ),
               const SizedBox(height: 10),
+              if (widget.syncDiagnostics != null && widget.onSyncNow != null)
+                _AccountContentPanel(
+                  child: ListTile(
+                    leading: const Icon(Icons.health_and_safety_rounded),
+                    title: const Text('Sincronização e diagnóstico'),
+                    subtitle: const Text(
+                      'Veja status, listas compartilhadas e copie um relatório de suporte.',
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: _openSyncDiagnostics,
+                  ),
+                ),
+              if (widget.syncDiagnostics != null && widget.onSyncNow != null)
+                const SizedBox(height: 10),
               _AccountContentPanel(
                 child: SwitchListTile(
                   secondary: const Icon(Icons.inventory_2_rounded),

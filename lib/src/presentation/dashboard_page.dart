@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 
 import '../application/ports.dart';
 import '../application/store_and_services.dart';
+import '../application/sync_diagnostics.dart';
 import '../core/utils/format_utils.dart';
 import '../data/remote/shared_lists_repository.dart';
 import '../domain/models_and_utils.dart';
@@ -136,6 +137,9 @@ class DashboardPage extends StatefulWidget {
     this.listRecords = 0,
     this.historyRecords = 0,
     this.catalogRecords = 0,
+    this.syncDiagnostics,
+    this.onSyncNow,
+    this.onRefreshSyncDiagnostics,
   });
 
   final ShoppingListsStore store;
@@ -161,6 +165,9 @@ class DashboardPage extends StatefulWidget {
   final int listRecords;
   final int historyRecords;
   final int catalogRecords;
+  final SyncDiagnosticsSnapshot? syncDiagnostics;
+  final Future<void> Function()? onSyncNow;
+  final Future<SyncDiagnosticsSnapshot?> Function()? onRefreshSyncDiagnostics;
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -229,6 +236,10 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _openOptions() async {
+    final syncDiagnostics = await _buildSyncDiagnosticsSnapshot();
+    if (!mounted) {
+      return;
+    }
     await Navigator.push<void>(
       context,
       buildAppPageRoute(
@@ -256,8 +267,60 @@ class _DashboardPageState extends State<DashboardPage> {
           listRecords: widget.listRecords,
           historyRecords: widget.historyRecords,
           catalogRecords: widget.catalogRecords,
+          syncDiagnostics: syncDiagnostics,
+          onSyncNow: widget.onSyncNow,
+          onRefreshSyncDiagnostics: _buildSyncDiagnosticsSnapshot,
         ),
       ),
+    );
+  }
+
+  Future<SyncDiagnosticsSnapshot?> _buildSyncDiagnosticsSnapshot() async {
+    final refreshBase = widget.onRefreshSyncDiagnostics;
+    final snapshot = refreshBase == null
+        ? widget.syncDiagnostics
+        : await refreshBase();
+    if (snapshot == null) {
+      return null;
+    }
+    final sharedRepository = widget.sharedListsRepository;
+    final uid = FirebaseAuth.instance.currentUser?.uid.trim() ?? '';
+    final entries = <SharedListDiagnosticEntry>[];
+    for (final shared in _lastSharedLists) {
+      var itemCount = 0;
+      String? lastError;
+      if (sharedRepository != null) {
+        try {
+          itemCount = (await sharedRepository.fetchListItems(shared.id)).length;
+        } catch (error) {
+          lastError = error.toString();
+        }
+      }
+      final sourceId = shared.sourceLocalListId?.trim() ?? '';
+      entries.add(
+        SharedListDiagnosticEntry(
+          id: shared.id,
+          name: shared.name,
+          ownerUid: shared.ownerUid,
+          isOwner: uid.isNotEmpty && shared.isOwner(uid),
+          memberCount: shared.memberCount,
+          itemCount: itemCount,
+          isCatalogImportEnabled:
+              (shared.isOwner(uid) &&
+                  widget.store.autoImportOwnedSharedCatalogs) ||
+              widget.store.isSharedCatalogImportEnabled(shared.id),
+          isMirroredLocally:
+              sourceId.isNotEmpty && widget.store.findById(sourceId) != null,
+          updatedAt: shared.updatedAt,
+          lastError: lastError,
+        ),
+      );
+    }
+    return snapshot.copyWith(
+      generatedAt: DateTime.now(),
+      sharedListCount: entries.length,
+      sharedLists: List.unmodifiable(entries),
+      lastError: _sharedListsLastError?.toString(),
     );
   }
 

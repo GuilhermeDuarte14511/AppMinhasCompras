@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -14,6 +15,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../application/ports.dart';
 import '../application/shared_list_sync_policy.dart';
 import '../application/store_and_services.dart';
+import '../application/sync_diagnostics.dart';
 import '../data/local/storages.dart';
 import '../data/remote/cosmos_product_lookup_service.dart';
 import '../data/remote/firebase_user_data_repository.dart';
@@ -122,6 +124,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   bool _hasNetworkConnection = true;
   bool _notifySuccessOnNextSync = false;
   DateTime? _lastSuccessfulCloudSyncAt;
+  DateTime? _lastSuccessfulSharedSyncAt;
+  String? _lastCloudSyncError;
+  String? _lastSharedSyncError;
   DateTime? _lastCloudSyncSnackAt;
   String? _lastCloudSyncSnackMessage;
 
@@ -193,6 +198,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
           _resetOnboardingState();
           _hasPendingCloudSync = false;
           _lastSuccessfulCloudSyncAt = null;
+          _lastSuccessfulSharedSyncAt = null;
+          _lastCloudSyncError = null;
+          _lastSharedSyncError = null;
           _cloudSyncDebounce?.cancel();
           _stopCloudRetryTimer();
           unawaited(_store.clearAllLocalData());
@@ -304,7 +312,12 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     try {
       await _waitForStoreLoaded();
       final ownedShared = await repository.fetchOwnedSharedLists(uid);
+      _lastSuccessfulSharedSyncAt = DateTime.now();
+      _lastSharedSyncError = null;
       if (ownedShared.isEmpty) {
+        if (mounted) {
+          setState(() {});
+        }
         return;
       }
       var mirroredCount = 0;
@@ -349,8 +362,12 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         );
       }
     } catch (error, stack) {
+      _lastSharedSyncError = _cloudErrorDetails(error);
       debugPrint('[share_sync] erro ao espelhar: $error');
       debugPrintStack(label: '[share_sync]', stackTrace: stack);
+      if (mounted) {
+        setState(() {});
+      }
     } finally {
       _isMirroringSharedLists = false;
     }
@@ -676,6 +693,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       }
       debugPrint('[CloudSync][pull] chamando loadUserSnapshot...');
       final snapshot = await repository.loadUserSnapshot(uid);
+      _lastCloudSyncError = null;
       debugPrint(
         '[CloudSync][pull] loadUserSnapshot OK — hasCoreData=${snapshot.hasCoreData}',
       );
@@ -744,6 +762,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       _scheduleCloudSync(immediate: true);
       debugPrint('[CloudSync][pull] pull concluído com sucesso para uid=$uid');
     } catch (error, stack) {
+      _lastCloudSyncError = _cloudErrorDetails(error);
       _logCloudError('pull', error, stack);
       // LateInitializationError com nome vazio ('') é causado pelo dart2js
       // em modo release (--omit-late-names) quando o SDK JS do Firebase ainda
@@ -910,6 +929,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       _hasPendingCloudSync = false;
       _loadedCloudUid = uid;
       _lastSuccessfulCloudSyncAt = DateTime.now();
+      _lastCloudSyncError = null;
       _stopCloudRetryTimer();
       if (_notifySuccessOnNextSync) {
         _notifySuccessOnNextSync = false;
@@ -922,6 +942,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         setState(() {});
       }
     } catch (error, stack) {
+      _lastCloudSyncError = _cloudErrorDetails(error);
       _logCloudError('push', error, stack);
       _hasPendingCloudSync = true;
       _notifySuccessOnNextSync = true;
@@ -1009,6 +1030,98 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     _hasPendingCloudSync = true;
     _scheduleCloudSync(immediate: true);
     setState(() {});
+  }
+
+  Future<void> _syncNowFromDiagnostics() async {
+    if (widget._storage != null) {
+      return;
+    }
+    final uid = FirebaseAuth.instance.currentUser?.uid.trim() ?? '';
+    if (uid.isEmpty) {
+      throw StateError('Faça login para sincronizar.');
+    }
+    _cloudSyncDebounce?.cancel();
+    await _refreshConnectivityStatus(triggerSyncIfOnline: false);
+    if (!_hasNetworkConnection) {
+      _hasPendingCloudSync = true;
+      if (mounted) {
+        setState(() {});
+      }
+      throw StateError('Sem internet para sincronizar agora.');
+    }
+    if (_loadedCloudUid != uid) {
+      await _pullFromCloud(uid);
+    }
+    await _mirrorSharedListsToLocal(uid);
+    _hasPendingCloudSync = true;
+    if (mounted) {
+      setState(() {});
+    }
+    await _pushToCloud(uid);
+    if (_lastCloudSyncError != null) {
+      throw StateError(_lastCloudSyncError!);
+    }
+  }
+
+  Future<SyncDiagnosticsSnapshot?> _refreshSyncDiagnosticsSnapshot() async {
+    if (widget._storage != null) {
+      return null;
+    }
+    return _buildSyncDiagnosticsSnapshot();
+  }
+
+  SyncDiagnosticsSnapshot _buildSyncDiagnosticsSnapshot() {
+    final user = FirebaseAuth.instance.currentUser ?? _currentUser;
+    final listRecords = _store.lists.length;
+    final historyRecords = _store.purchaseHistory.length;
+    final catalogRecords = _store.catalogProducts.length;
+    final totalSyncRecords = listRecords + historyRecords + catalogRecords;
+    final pendingSyncRecords = (_hasPendingCloudSync || _isPushingCloudSnapshot)
+        ? totalSyncRecords
+        : 0;
+    final lastError = _lastCloudSyncError ?? _lastSharedSyncError;
+    return SyncDiagnosticsSnapshot(
+      generatedAt: DateTime.now(),
+      userName: user?.displayName,
+      userEmail: user?.email,
+      userUid: user?.uid,
+      providerId: user == null ? null : _resolveProviderId(user),
+      projectId: widget._firestoreInstance?.app.options.projectId,
+      platformLabel: _platformLabel(),
+      appVersion: '1.0.0+1',
+      hasInternetConnection: _hasNetworkConnection,
+      hasPendingCloudSync: _hasPendingCloudSync,
+      isCloudSyncing: _isPushingCloudSnapshot,
+      isPullingCloudSnapshot: _isPullingCloudSnapshot,
+      isMirroringSharedLists: _isMirroringSharedLists,
+      lastCloudSyncAt: _lastSuccessfulCloudSyncAt,
+      lastSharedSyncAt: _lastSuccessfulSharedSyncAt,
+      totalSyncRecords: totalSyncRecords,
+      pendingSyncRecords: pendingSyncRecords,
+      listRecords: listRecords,
+      historyRecords: historyRecords,
+      catalogRecords: catalogRecords,
+      sharedListCount: 0,
+      autoImportOwnedSharedCatalogs: _store.autoImportOwnedSharedCatalogs,
+      autoImportAllSharedCatalogs: _store.autoImportAllSharedCatalogs,
+      enabledSharedCatalogImportCount: _store.sharedCatalogImportListIds.length,
+      lastError: lastError,
+      sharedLists: const <SharedListDiagnosticEntry>[],
+    );
+  }
+
+  String _platformLabel() {
+    if (kIsWeb) {
+      return 'Web';
+    }
+    return switch (defaultTargetPlatform) {
+      TargetPlatform.android => 'Android',
+      TargetPlatform.iOS => 'iOS',
+      TargetPlatform.macOS => 'macOS',
+      TargetPlatform.windows => 'Windows',
+      TargetPlatform.linux => 'Linux',
+      TargetPlatform.fuchsia => 'Fuchsia',
+    };
   }
 
   TextTheme _buildAppTextTheme(TextTheme baseTextTheme) {
@@ -1711,6 +1824,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
                     listRecords: listRecords,
                     historyRecords: historyRecords,
                     catalogRecords: catalogRecords,
+                    syncDiagnostics: _buildSyncDiagnosticsSnapshot(),
+                    onSyncNow: _syncNowFromDiagnostics,
+                    onRefreshSyncDiagnostics: _refreshSyncDiagnosticsSnapshot,
                     onReplayOnboarding: _replayOnboarding,
                     openCreateListOnStart: _openCreateListAfterOnboarding,
                     onCreateListShortcutConsumed:
