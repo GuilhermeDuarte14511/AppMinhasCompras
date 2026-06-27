@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -9,6 +10,18 @@ import '../../utils/app_modal.dart';
 
 bool shouldStopBarcodeScannerForLifecycle(AppLifecycleState state) {
   return state == AppLifecycleState.inactive;
+}
+
+Duration barcodeScannerRestartDelay({required bool isWeb}) {
+  return isWeb ? const Duration(milliseconds: 250) : Duration.zero;
+}
+
+String barcodeScannerRecoveryHint({required bool isWeb}) {
+  if (isWeb) {
+    return 'Se a tela ficar preta no navegador, toque em Trocar câmera ou Reabrir câmera. Se continuar, recarregue a página e permita a câmera novamente.';
+  }
+
+  return 'Escaneamento opcional. Se a tela ficar preta, tente trocar a câmera ou digite manualmente.';
 }
 
 Future<String?> showBarcodeScannerSheet(BuildContext context) {
@@ -39,6 +52,7 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
   bool _handled = false;
   Object? _startError;
   bool _isStarting = false;
+  CameraFacing _lastRequestedFacing = CameraFacing.back;
 
   @override
   void initState() {
@@ -89,12 +103,20 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
   }
 
   Future<void> _startScanner() async {
+    await _startScannerWithDirection();
+  }
+
+  Future<void> _startScannerWithDirection({
+    CameraFacing? cameraDirection,
+  }) async {
     if (_isStarting || _controller.value.isRunning) {
       return;
     }
     _isStarting = true;
     try {
-      await _controller.start();
+      final requestedFacing = cameraDirection ?? _lastRequestedFacing;
+      await _controller.start(cameraDirection: requestedFacing);
+      _lastRequestedFacing = requestedFacing;
       if (mounted && _startError != null) {
         setState(() {
           _startError = null;
@@ -112,10 +134,46 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
     }
   }
 
+  Future<void> _restartScanner({CameraFacing? cameraDirection}) async {
+    if (_isStarting) {
+      return;
+    }
+
+    try {
+      await _controller.stop();
+      final delay = barcodeScannerRestartDelay(isWeb: kIsWeb);
+      if (delay > Duration.zero) {
+        await Future<void>.delayed(delay);
+      }
+      await _startScannerWithDirection(cameraDirection: cameraDirection);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _startError = error;
+      });
+    }
+  }
+
+  CameraFacing _nextRequestedFacing() {
+    return switch (_lastRequestedFacing) {
+      CameraFacing.front => CameraFacing.back,
+      CameraFacing.back => CameraFacing.front,
+      CameraFacing.external || CameraFacing.unknown => CameraFacing.back,
+    };
+  }
+
   Future<void> _switchCamera() async {
+    if (kIsWeb) {
+      final nextFacing = _nextRequestedFacing();
+      _lastRequestedFacing = nextFacing;
+      await _restartScanner(cameraDirection: nextFacing);
+      return;
+    }
+
     try {
       await _controller.switchCamera();
-      await _startScanner();
       if (mounted && _startError != null) {
         setState(() {
           _startError = null;
@@ -196,7 +254,7 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
               ),
               const SizedBox(height: 12),
               FilledButton.tonal(
-                onPressed: () => unawaited(_startScanner()),
+                onPressed: () => unawaited(_restartScanner()),
                 child: const Text('Tentar novamente'),
               ),
             ],
@@ -226,7 +284,7 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Text(
-              'Escaneamento opcional. Se a tela ficar preta, tente trocar a câmera ou digite manualmente.',
+              barcodeScannerRecoveryHint(isWeb: kIsWeb),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -308,7 +366,7 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
                 alignment: WrapAlignment.center,
                 children: [
                   OutlinedButton.icon(
-                    onPressed: () => unawaited(_startScanner()),
+                    onPressed: () => unawaited(_restartScanner()),
                     icon: const Icon(Icons.refresh_rounded),
                     label: const Text('Reabrir câmera'),
                   ),

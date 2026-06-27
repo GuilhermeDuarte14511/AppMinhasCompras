@@ -25,4 +25,16 @@ void main() {
       isFalse,
     );
   });
+
+  test('web scanner recovery uses a clean restart delay', () {
+    expect(barcodeScannerRestartDelay(isWeb: true), greaterThan(Duration.zero));
+    expect(barcodeScannerRestartDelay(isWeb: false), Duration.zero);
+  });
+
+  test('web scanner recovery hint mentions browser refresh options', () {
+    final hint = barcodeScannerRecoveryHint(isWeb: true);
+
+    expect(hint, contains('navegador'));
+    expect(hint, contains('recarregue'));
+  });
 }
