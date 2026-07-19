@@ -2,7 +2,6 @@ import 'dart:developer' as developer;
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../domain/classifications.dart';
@@ -291,6 +290,7 @@ class SharedListsRepository {
 
   static const String _sharedListsCollection = 'shared_lists';
   static const String _listInvitesCollection = 'list_invites';
+  static const String _inviteClaimsCollection = 'invite_claims';
   static const String _itemsSubCollection = 'items';
   static const String _historySubCollection = 'history';
   static const String _inviteAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -309,6 +309,7 @@ class SharedListsRepository {
     });
     return List.unmodifiable(sorted);
   }
+
   final Random _random = Random.secure();
 
   static FirebaseFirestore _buildPreferredFirestore() {
@@ -318,6 +319,13 @@ class SharedListsRepository {
   void _log(String message) {
     debugPrint('[shared_lists] $message');
     developer.log(message, name: 'shared_lists');
+  }
+
+  String _errorKind(Object error) {
+    if (error is FirebaseException) {
+      return '${error.runtimeType}:${error.code}';
+    }
+    return error.runtimeType.toString();
   }
 
   CollectionReference<Map<String, dynamic>> get _sharedListsRef =>
@@ -338,29 +346,37 @@ class SharedListsRepository {
   DocumentReference<Map<String, dynamic>> _inviteRef(String code) =>
       _listInvitesRef.doc(_normalizeInviteCode(code));
 
+  DocumentReference<Map<String, dynamic>> _inviteClaimRef(
+    String code,
+    String uid,
+  ) => _firestore
+      .collection(_inviteClaimsCollection)
+      .doc(inviteClaimIdFor(inviteCode: code, uid: uid));
+
+  @visibleForTesting
+  static String inviteClaimIdFor({
+    required String inviteCode,
+    required String uid,
+  }) {
+    final normalizedCode = _normalizeInviteCode(inviteCode);
+    final trimmedUid = uid.trim();
+    if (normalizedCode.isEmpty || trimmedUid.isEmpty) {
+      throw ArgumentError('Código e UID são obrigatórios para o claim.');
+    }
+    return '${normalizedCode}_$trimmedUid';
+  }
+
   Stream<List<SharedShoppingListSummary>> watchSharedLists(String uid) {
     final trimmedUid = uid.trim();
     if (trimmedUid.isEmpty) {
       return const Stream<List<SharedShoppingListSummary>>.empty();
     }
-    final authUid = FirebaseAuth.instance.currentUser?.uid ?? '';
-    final projectId = _firestore.app.options.projectId;
-    _log(
-      'watchSharedLists start uid=$trimmedUid authUid=$authUid project=$projectId app=${_firestore.app.name}',
-    );
+    _log('watchSharedLists started');
     return _sharedListsRef
         .where('memberUids', arrayContains: trimmedUid)
         .snapshots()
-        .handleError((error, stack) {
-          _log(
-            'watchSharedLists error uid=$trimmedUid authUid=$authUid project=$projectId error=$error',
-          );
-          developer.log(
-            'watchSharedLists error',
-            name: 'shared_lists',
-            error: error,
-            stackTrace: stack,
-          );
+        .handleError((error) {
+          _log('watchSharedLists failed kind=${_errorKind(error)}');
         })
         .map((snapshot) {
           return sortSummariesByCreatedAt(
@@ -610,16 +626,13 @@ class SharedListsRepository {
       throw StateError('Usuário inválido.');
     }
 
-    _log(
-      'createSharedListFromLocal start owner=$trimmedUid list=${localList.id}',
-    );
+    _log('createSharedListFromLocal started');
 
     // Gera um código único (baseado na sua função atual)
     final generatedCode = await _generateUniqueInviteCode();
 
     // Cria o doc da shared_list
     final docRef = _listRef(uniqueId());
-    _log('createSharedListFromLocal listId=${docRef.id} invite=$generatedCode');
 
     // Monta o summary (o objeto que você já usa no app)
     final summary = SharedShoppingListSummary(
@@ -650,7 +663,7 @@ class SharedListsRepository {
         sourceLocalListId: localList.id,
       ),
     );
-    _log('shared_list created listId=${docRef.id}');
+    _log('shared_list created');
 
     // ---------------------------------------------------------------------------
     // 2) SEGUNDO: cria os ITEMS (pode ser em batch, agora a lista já existe)
@@ -684,7 +697,7 @@ class SharedListsRepository {
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
-    _log('list_invite created code=$generatedCode listId=${docRef.id}');
+    _log('list_invite created');
 
     return summary;
   }
@@ -698,28 +711,20 @@ class SharedListsRepository {
     if (trimmedListId.isEmpty || trimmedUid.isEmpty) {
       throw StateError('Dados inválidos para gerar convite.');
     }
-    _log('generateInviteCode start listId=$trimmedListId uid=$trimmedUid');
+    _log('generateInviteCode started');
     final newCode = await _generateUniqueInviteCode();
-    _log('generateInviteCode candidate=$newCode');
     await _firestore.runTransaction((transaction) async {
       final listSnapshot = await transaction.get(_listRef(trimmedListId));
-      _log('generateInviteCode listSnapshot.exists=${listSnapshot.exists}');
       if (!listSnapshot.exists) {
         throw StateError('Lista compartilhada não encontrada.');
       }
       final parsed = SharedShoppingListSummary.fromFirestoreDoc(listSnapshot);
-      _log(
-        'generateInviteCode owner=${parsed.ownerUid} invite=${parsed.inviteCode}',
-      );
       if (!parsed.isOwner(trimmedUid)) {
         throw StateError('Somente o dono pode gerar código.');
       }
       final previousCode = parsed.inviteCode;
       if (previousCode != null && previousCode.isNotEmpty) {
         final previousInvite = await transaction.get(_inviteRef(previousCode));
-        _log(
-          'generateInviteCode previousInvite.exists=${previousInvite.exists}',
-        );
         if (previousInvite.exists) {
           transaction.delete(_inviteRef(previousCode));
         }
@@ -737,7 +742,7 @@ class SharedListsRepository {
         'updatedAt': FieldValue.serverTimestamp(),
       });
     });
-    _log('generateInviteCode done listId=$trimmedListId newCode=$newCode');
+    _log('generateInviteCode completed');
     return newCode;
   }
 
@@ -750,24 +755,19 @@ class SharedListsRepository {
     if (trimmedListId.isEmpty || trimmedUid.isEmpty) {
       throw StateError('Dados inválidos para revogar convite.');
     }
-    _log('revokeInviteCode start listId=$trimmedListId uid=$trimmedUid');
+    _log('revokeInviteCode started');
     await _firestore.runTransaction((transaction) async {
       final listSnapshot = await transaction.get(_listRef(trimmedListId));
-      _log('revokeInviteCode listSnapshot.exists=${listSnapshot.exists}');
       if (!listSnapshot.exists) {
         return;
       }
       final parsed = SharedShoppingListSummary.fromFirestoreDoc(listSnapshot);
-      _log(
-        'revokeInviteCode owner=${parsed.ownerUid} invite=${parsed.inviteCode}',
-      );
       if (!parsed.isOwner(trimmedUid)) {
         throw StateError('Somente o dono pode revogar código.');
       }
       final previousCode = parsed.inviteCode;
       if (previousCode != null && previousCode.isNotEmpty) {
         final previousInvite = await transaction.get(_inviteRef(previousCode));
-        _log('revokeInviteCode previousInvite.exists=${previousInvite.exists}');
         if (previousInvite.exists) {
           transaction.delete(_inviteRef(previousCode));
         }
@@ -777,7 +777,7 @@ class SharedListsRepository {
         'updatedAt': FieldValue.serverTimestamp(),
       });
     });
-    _log('revokeInviteCode done listId=$trimmedListId');
+    _log('revokeInviteCode completed');
   }
 
   Future<void> removeMember({
@@ -797,9 +797,7 @@ class SharedListsRepository {
       throw StateError('Não é possível remover você mesmo.');
     }
 
-    _log(
-      'removeMember start listId=$trimmedListId requester=$trimmedRequester member=$trimmedMember',
-    );
+    _log('removeMember started');
 
     await _firestore.runTransaction((transaction) async {
       final listSnapshot = await transaction.get(_listRef(trimmedListId));
@@ -819,7 +817,7 @@ class SharedListsRepository {
       });
     });
 
-    _log('removeMember done listId=$trimmedListId member=$trimmedMember');
+    _log('removeMember completed');
   }
 
   Future<String> joinByCode({
@@ -833,7 +831,7 @@ class SharedListsRepository {
     }
 
     if (kIsWeb) {
-      _log('joinByCode web mode (sem transação) code=$normalizedCode');
+      _log('joinByCode started in web mode');
       return _joinByCodeWithoutTransaction(
         inviteCode: normalizedCode,
         uid: trimmedUid,
@@ -841,8 +839,9 @@ class SharedListsRepository {
       );
     }
 
+    final claimRef = _inviteClaimRef(normalizedCode, trimmedUid);
     try {
-      return await _firestore.runTransaction((transaction) async {
+      final listId = await _firestore.runTransaction((transaction) async {
         final inviteSnapshot = await transaction.get(
           _inviteRef(normalizedCode),
         );
@@ -858,14 +857,22 @@ class SharedListsRepository {
           throw StateError('Convite sem lista válida.');
         }
 
+        transaction.set(claimRef, <String, dynamic>{
+          'code': normalizedCode,
+          'uid': trimmedUid,
+          'listId': listId,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
         transaction.update(_listRef(listId), <String, dynamic>{
           'memberUids': FieldValue.arrayUnion(<String>[trimmedUid]),
           'updatedAt': FieldValue.serverTimestamp(),
         });
         return listId;
       });
-    } catch (error, stack) {
-      _log('joinByCode transaction error=$error');
+      await _deleteInviteClaimBestEffort(claimRef);
+      return listId;
+    } catch (error) {
+      _log('joinByCode failed kind=${_errorKind(error)}');
       if (error is StateError) {
         rethrow;
       }
@@ -880,23 +887,11 @@ class SharedListsRepository {
             uid: trimmedUid,
             forceServer: true,
           );
-        } catch (fallbackError, fallbackStack) {
-          _log('joinByCode fallback error=$fallbackError');
-          developer.log(
-            'joinByCode fallback stack',
-            name: 'shared_lists',
-            error: fallbackError,
-            stackTrace: fallbackStack,
-          );
+        } catch (fallbackError) {
+          _log('joinByCode fallback failed kind=${_errorKind(fallbackError)}');
           rethrow;
         }
       }
-      developer.log(
-        'joinByCode error',
-        name: 'shared_lists',
-        error: error,
-        stackTrace: stack,
-      );
       rethrow;
     }
   }
@@ -922,11 +917,36 @@ class SharedListsRepository {
     if (listId.isEmpty) {
       throw StateError('Convite sem lista válida.');
     }
-    await _listRef(listId).update(<String, dynamic>{
-      'memberUids': FieldValue.arrayUnion(<String>[uid]),
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-    return listId;
+    final claimRef = _inviteClaimRef(inviteCode, uid);
+    var claimCreated = false;
+    try {
+      await claimRef.set(<String, dynamic>{
+        'code': inviteCode,
+        'uid': uid,
+        'listId': listId,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      claimCreated = true;
+      await _listRef(listId).update(<String, dynamic>{
+        'memberUids': FieldValue.arrayUnion(<String>[uid]),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      return listId;
+    } finally {
+      if (claimCreated) {
+        await _deleteInviteClaimBestEffort(claimRef);
+      }
+    }
+  }
+
+  Future<void> _deleteInviteClaimBestEffort(
+    DocumentReference<Map<String, dynamic>> claimRef,
+  ) async {
+    try {
+      await claimRef.delete();
+    } catch (error) {
+      _log('invite claim cleanup failed kind=${_errorKind(error)}');
+    }
   }
 
   Future<void> updateListMeta({

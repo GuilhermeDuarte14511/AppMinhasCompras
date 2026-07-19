@@ -11,6 +11,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 import 'src/app/shopping_list_app.dart';
 import 'src/data/services/backup_service.dart';
+import 'src/data/services/firebase_app_check_bootstrap.dart';
+import 'src/data/services/firebase_emulator_bootstrap.dart';
 import 'src/data/services/reminder_service.dart';
 
 Future<void> main() async {
@@ -39,12 +41,6 @@ Future<void> main() async {
         );
         debugPrint('[Firebase] initializeApp OK');
 
-        if (kIsWeb) {
-          debugPrint('[Firebase] setPersistence iniciando...');
-          await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
-          debugPrint('[Firebase] setPersistence OK');
-        }
-
         debugPrint('[Firebase] obtendo FirebaseFirestore.instance...');
         final firestore = FirebaseFirestore.instance;
 
@@ -56,12 +52,25 @@ Future<void> main() async {
           );
         }
 
+        final usingFirebaseEmulators = await configureFirebaseEmulators();
+        await activateFirebaseAppCheck(
+          useFirebaseEmulators: usingFirebaseEmulators,
+        );
+
+        if (kIsWeb) {
+          debugPrint('[Firebase] setPersistence iniciando...');
+          await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
+          debugPrint('[Firebase] setPersistence OK');
+        }
+
         debugPrint(
           '[Firebase] FirebaseFirestore.instance OK — databaseId: ${firestore.databaseId}',
         );
 
         if (kIsWeb) {
-          debugPrint('[Firebase] aguardando inicialização interna do SDK Web...');
+          debugPrint(
+            '[Firebase] aguardando inicialização interna do SDK Web...',
+          );
           await Future<void>.delayed(const Duration(milliseconds: 300));
           debugPrint('[Firebase] SDK Web pronto.');
         }

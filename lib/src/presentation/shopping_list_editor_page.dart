@@ -306,10 +306,11 @@ class _ListEditorActionSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        DecoratedBox(
-          decoration: BoxDecoration(
+        Material(
+          color: colorScheme.surfaceContainerLowest.withValues(alpha: 0.72),
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
-            color: colorScheme.surfaceContainerLowest.withValues(alpha: 0.72),
           ),
           child: Column(
             children: [
@@ -620,7 +621,9 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       _startSharedLiveSync(shared.id);
       _promptOpenSharedList(shared);
     } catch (error) {
-      debugPrint('[share_flow] resolveSharedLink error=$error');
+      debugPrint(
+        '[share_flow] resolveSharedLink failed kind=${error.runtimeType}',
+      );
     }
   }
 
@@ -1465,9 +1468,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   }
 
   Future<void> _shareListWithCode() async {
-    _logShare(
-      'click share listId=${_list.id} name="${_list.name}" items=${_list.items.length}',
-    );
+    _logShare('share clicked items=${_list.items.length}');
     final repository = widget.sharedListsRepository;
     if (repository == null) {
       _logShare('share repository is null');
@@ -1481,14 +1482,12 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       return;
     }
     try {
-      _logShare('createOrGetSharedListFromLocal start uid=$uid');
+      _logShare('createOrGetSharedListFromLocal started');
       final sharedList = await repository.createOrGetSharedListFromLocal(
         localList: _list,
         ownerUid: uid,
       );
-      _logShare(
-        'createOrGetSharedListFromLocal ok sharedId=${sharedList.id} invite=${sharedList.inviteCode ?? '-'}',
-      );
+      _logShare('createOrGetSharedListFromLocal completed');
       if (sharedList.inviteCode == null || sharedList.inviteCode!.isEmpty) {
         _logShare('invite vazio, gerando novo código...');
         await repository.generateInviteCode(
@@ -1513,7 +1512,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         listId: sharedList.id,
         currentUid: uid,
         onOpenSharedList: () async {
-          _logShare('open shared list id=${sharedList.id}');
+          _logShare('open shared list');
           await Navigator.push<void>(
             context,
             buildAppPageRoute(
@@ -1534,19 +1533,9 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         return;
       }
       if (error is FirebaseException) {
-        _logShare('share error FirebaseException');
-        developer.log(
-          'FirebaseException while sharing list.',
-          name: 'share_flow',
-          error: error,
-        );
+        _logShare('share failed kind=FirebaseException:${error.code}');
       } else {
-        _logShare('share error');
-        developer.log(
-          'Unexpected error while sharing list.',
-          name: 'share_flow',
-          error: error,
-        );
+        _logShare('share failed kind=${error.runtimeType}');
       }
       _showSnack('Não foi possível compartilhar a lista. Tente novamente.');
     }

@@ -2,6 +2,34 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lista_compras_material/src/data/remote/shared_lists_repository.dart';
 
 void main() {
+  group('invite claim id', () {
+    test('normalizes the invite code and preserves the authenticated UID', () {
+      final claimId = SharedListsRepository.inviteClaimIdFor(
+        inviteCode: ' abcd-2345 ',
+        uid: ' firebase-uid ',
+      );
+
+      expect(claimId, 'ABCD2345_firebase-uid');
+    });
+
+    test('rejects an empty code or UID', () {
+      expect(
+        () => SharedListsRepository.inviteClaimIdFor(
+          inviteCode: '---',
+          uid: 'uid',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => SharedListsRepository.inviteClaimIdFor(
+          inviteCode: 'ABCD2345',
+          uid: '  ',
+        ),
+        throwsArgumentError,
+      );
+    });
+  });
+
   test(
     'sorts shared lists by createdAt when an older list is updated later',
     () {

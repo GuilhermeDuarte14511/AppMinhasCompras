@@ -19,7 +19,7 @@ App Flutter moderno (Material 3) para lista de compras, com foco em uso local/of
   - quantidade
   - valor unitário com máscara monetária (`R$ 0,00`)
 - Consulta por código em APIs online:
-  - Cosmos API (Brasil, quando `COSMOS_API_TOKEN` for informado)
+  - Cosmos API (Brasil) por Cloud Function autenticada, com segredo no servidor
   - Open Products Facts
   - Open Food Facts
 - Fallback para catálogo local por código quando nenhuma API retorna produto.
@@ -85,7 +85,7 @@ App Flutter moderno (Material 3) para lista de compras, com foco em uso local/of
   - `local/storages.dart` (persistência local via `SharedPreferences`, incluindo histórico de fechamentos)
   - `repositories/product_catalog_repository.dart` (implementa gateway de catálogo)
   - `remote/open_food_facts_product_lookup_service.dart` (Open Facts)
-  - `remote/cosmos_product_lookup_service.dart` (Cosmos API Brasil)
+  - `remote/cosmos_backend_product_lookup_service.dart` (proxy seguro da Cosmos)
   - `services/backup_service.dart` (import/export JSON)
   - `services/reminder_service.dart` (notificações locais)
   - `services/home_widget_service.dart` (integração com widgets Android)
@@ -137,19 +137,74 @@ Observações:
 - O Hosting está configurado para SPA (qualquer rota cai em `index.html`).
 - O conteúdo servido vem de `build/web`.
 
-## Executar com Cosmos API (opcional)
-Se quiser habilitar busca da Cosmos por GTIN, rode com `--dart-define`:
+## Configurar o backend Cosmos
+
+O app nunca recebe o token da Cosmos. A consulta passa pela callable
+`lookupCosmosProduct`, que exige usuário autenticado, aplica limites por usuário
+e por dia e mantém cache por GTIN. O deploy atual usa cota global de 150 chamadas
+externas por dia; leituras do cache não consomem essa cota.
+
+### Produção
+
+Cadastre o token atual diretamente no Google Secret Manager. Execute na raiz do
+projeto e cole o token somente quando o Firebase abrir o prompt:
+
 ```powershell
-cd "d:\Projetos\Android Flutter\lista_compras_material"
-& "C:\flutter\bin\flutter.bat" run `
-  --dart-define=COSMOS_API_TOKEN=SEU_TOKEN_AQUI
+firebase functions:secrets:set COSMOS_API_TOKEN `
+  --project minhascompras-3abbe
+
+firebase deploy --only functions:lookupCosmosProduct `
+  --project minhascompras-3abbe
 ```
-Para release:
+
+O token não deve ser adicionado ao Dart, TypeScript, `firebase.json`,
+`--dart-define` ou a qualquer arquivo versionado.
+
+### Desenvolvimento local
+
+O emulador pode usar um arquivo local ignorado pelo Git:
+
 ```powershell
-& "C:\flutter\bin\flutter.bat" run -d ZF524V2GB4 --release `
-  --dart-define=COSMOS_API_TOKEN=SEU_TOKEN_AQUI
+Copy-Item functions/.secret.local.example functions/.secret.local
+notepad functions/.secret.local
 ```
-Não salve token hardcoded no código ou em arquivo versionado.
+
+Substitua apenas o placeholder de `COSMOS_API_TOKEN` nesse arquivo. Ele serve
+somente para o Firebase Emulator.
+
+Inicie todos os serviços locais e habilite o opt-in no Flutter:
+
+```powershell
+firebase emulators:start --only auth,firestore,functions `
+  --project minhascompras-3abbe
+
+flutter run -d chrome `
+  --dart-define=USE_FIREBASE_EMULATORS=true
+```
+
+No emulador Android, use o mesmo `--dart-define`. O app direciona Auth,
+Firestore e Functions para o ambiente local antes de inicializar os
+repositórios. Sem essa flag, ele usa produção; com a flag e algum emulador
+ausente, a operação falha localmente e não faz fallback silencioso para
+produção. Um token Cosmos real em `.secret.local` ainda consulta a API externa
+da Cosmos e consome a cota correspondente.
+
+### App Check
+
+App Check é uma proteção adicional opcional e não bloqueia a Cosmos. Quando
+configurado, builds Android de produção usam Play Integrity; iOS/macOS usam App
+Attest com fallback para DeviceCheck. No Web, a chave pública do reCAPTCHA v3
+pode ser informada por:
+
+```powershell
+flutter run -d chrome `
+  --dart-define=FIREBASE_WEB_APP_CHECK_SITE_KEY=SUA_CHAVE_PUBLICA
+```
+
+Sem App Check, a Cosmos continua disponível pelo backend autenticado, com cache,
+limite por usuário e cota global. Open Products Facts e Open Food Facts
+permanecem como fallback.
+Consulte `docs/security/COSMOS_BACKEND.md` para deploy, verificação e rollback.
 
 ## Emulador Android
 ```powershell

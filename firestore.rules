@@ -248,10 +248,12 @@
       }
 
       function isSharedListMemberFromData(data) {
+        let memberUids = data.get('memberUids', []);
+        let ownerUid = data.get('ownerUid', '');
         return signedIn() &&
           (
-            (data.memberUids is list && request.auth.uid in data.memberUids) ||
-            (data.ownerUid is string && data.ownerUid == request.auth.uid)
+            (memberUids is list && request.auth.uid in memberUids) ||
+            (ownerUid is string && ownerUid == request.auth.uid)
           );
       }
 
@@ -307,6 +309,7 @@
           d.memberUids is list &&
           d.memberUids.size() >= 1 &&
           d.memberUids.size() <= 30 &&
+          d.ownerUid in d.memberUids &&
           isDateLike(d.createdAt) &&
           isDateLike(d.updatedAt) &&
           validInviteCode(d.inviteCode) &&
@@ -331,18 +334,28 @@
         let d = request.resource.data;
         return validSharedListCommon(listId, d) &&
           d.ownerUid == request.auth.uid &&
-          request.auth.uid in d.memberUids;
+          d.memberUids.size() == 1 &&
+          d.memberUids[0] == request.auth.uid;
       }
 
       function validSharedListUpdate(listId) {
         let d = request.resource.data;
         let previous = resource.data;
         return validSharedListCommon(listId, d) &&
-          isSharedListMemberFromData(d) &&
+          isSharedListMemberFromData(previous) &&
           d.ownerUid == previous.ownerUid &&
           d.createdAt == previous.createdAt &&
           (
-            previous.ownerUid == request.auth.uid ||
+            (
+              previous.ownerUid == request.auth.uid &&
+              (
+                d.memberUids == previous.memberUids ||
+                (
+                  previous.memberUids.hasAll(d.memberUids) &&
+                  d.memberUids.size() < previous.memberUids.size()
+                )
+              )
+            ) ||
             (
               d.memberUids == previous.memberUids &&
               d.inviteCode == previous.inviteCode &&
@@ -463,6 +476,70 @@
           sharedListData(listId).ownerUid == ownerUid;
       }
 
+      function inviteExists(code) {
+        return exists(
+          /databases/$(database)/documents/list_invites/$(code)
+        );
+      }
+
+      function inviteData(code) {
+        return get(
+          /databases/$(database)/documents/list_invites/$(code)
+        ).data;
+      }
+
+      function validInviteClaim(claimId, d) {
+        return signedIn() &&
+          d.keys().hasOnly(['code', 'uid', 'listId', 'createdAt']) &&
+          d.keys().hasAll(['code', 'uid', 'listId', 'createdAt']) &&
+          validInviteCode(d.code) &&
+          d.code != null &&
+          isString(d.uid, 1, 200) &&
+          isString(d.listId, 1, 120) &&
+          d.uid == request.auth.uid &&
+          claimId == d.code + '_' + request.auth.uid &&
+          d.createdAt == request.time &&
+          inviteExists(d.code) &&
+          inviteData(d.code).active == true &&
+          inviteData(d.code).listId == d.listId &&
+          sharedListExists(d.listId) &&
+          sharedListData(d.listId).inviteCode == d.code &&
+          sharedListData(d.listId).ownerUid == inviteData(d.code).ownerUid;
+      }
+
+      function hasFreshInviteClaim(listId) {
+        let code = resource.data.inviteCode;
+        let claimPath = /databases/$(database)/documents/invite_claims/$(code + '_' + request.auth.uid);
+        let claim = getAfter(claimPath).data;
+        return code is string &&
+          existsAfter(claimPath) &&
+          claim.code == code &&
+          claim.uid == request.auth.uid &&
+          claim.listId == listId &&
+          claim.createdAt is timestamp &&
+          claim.createdAt >= request.time - duration.value(5, 'm') &&
+          inviteExists(code) &&
+          inviteData(code).active == true &&
+          inviteData(code).listId == listId;
+      }
+
+      function validSharedListJoin(listId) {
+        let d = request.resource.data;
+        let previous = resource.data;
+        return signedIn() &&
+          validSharedListCommon(listId, d) &&
+          !(request.auth.uid in previous.memberUids) &&
+          d.diff(previous).affectedKeys().hasOnly([
+            'memberUids',
+            'updatedAt'
+          ]) &&
+          d.memberUids.hasAll(previous.memberUids) &&
+          d.memberUids.size() == previous.memberUids.size() + 1 &&
+          request.auth.uid in d.memberUids &&
+          d.updatedAt == request.time &&
+          hasFreshInviteClaim(listId);
+      }
+
       match /users/{uid} {
         allow read: if isOwner(uid);
         allow create: if isOwner(uid) && validUserRootCreate();
@@ -495,39 +572,16 @@
       }
 
     match /shared_lists/{listId} {
-      // get (documento individual) continua restrito a membros
       allow get: if isSharedListMemberFromData(resource.data);
-      // list (queries) liberado para usuários autenticados
-      // OBS: isso permite listar documentos; mantenha o filtro no app.
-      allow list: if signedIn();
+      // O cliente deve consultar por memberUids array-contains UID ou
+      // ownerUid == UID; consultas globais não satisfazem esta condição.
+      allow list: if signedIn() &&
+        request.auth.uid in resource.data.memberUids;
+      allow list: if signedIn() &&
+        resource.data.ownerUid == request.auth.uid;
         allow create: if signedIn() && validSharedListCreate(listId);
-        allow update: if (
-            // Caso normal: membro existente editando a lista
-            isSharedListMemberFromData(resource.data) &&
-            validSharedListUpdate(listId)
-          ) || (
-            // Caso especial: entrar na lista pelo código de convite (joinByCode)
-            // Permite que um usuário autenticado adicione apenas a si mesmo como membro,
-            // desde que a lista tenha um inviteCode ativo e o limite não seja ultrapassado.
-            signedIn() &&
-            resource.data.inviteCode != null &&
-            resource.data.inviteCode is string &&
-            resource.data.inviteCode.size() >= 6 &&
-            request.resource.data.ownerUid == resource.data.ownerUid &&
-            request.resource.data.createdAt == resource.data.createdAt &&
-            request.resource.data.name == resource.data.name &&
-            request.resource.data.budget == resource.data.budget &&
-            request.resource.data.reminder == resource.data.reminder &&
-            request.resource.data.paymentBalances == resource.data.paymentBalances &&
-            request.resource.data.isClosed == resource.data.isClosed &&
-            request.resource.data.closedAt == resource.data.closedAt &&
-            request.resource.data.inviteCode == resource.data.inviteCode &&
-            request.resource.data.sourceLocalListId ==
-              resource.data.sourceLocalListId &&
-            request.resource.data.memberUids.hasAll(resource.data.memberUids) &&
-            request.auth.uid in request.resource.data.memberUids &&
-            request.resource.data.memberUids.size() <= 30
-          );
+        allow update: if validSharedListUpdate(listId) ||
+          validSharedListJoin(listId);
         allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
 
         match /items/{itemId} {
@@ -548,8 +602,7 @@
       }
 
       match /list_invites/{code} {
-        // Permite leitura para usuário autenticado (necessário para transações
-        // que verificam existência/estado do convite).
+        // O get por ID é a prova de conhecimento do código; enumeração é negada.
         allow get: if signedIn();
         allow list: if false;
         allow create: if signedIn() &&
@@ -573,6 +626,17 @@
         allow delete: if signedIn() &&
           resource.data.ownerUid == request.auth.uid &&
           inviteMatchesOwnedList(resource.data.listId, request.auth.uid);
+      }
+
+      match /invite_claims/{claimId} {
+        allow read, list: if false;
+        allow create, update: if validInviteClaim(
+          claimId,
+          request.resource.data
+        );
+        allow delete: if signedIn() &&
+          resource.data.uid == request.auth.uid &&
+          claimId == resource.data.code + '_' + request.auth.uid;
       }
 
       match /{document=**} {

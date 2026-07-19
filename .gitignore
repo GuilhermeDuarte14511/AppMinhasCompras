@@ -36,6 +36,11 @@ migrate_working_dir/
 .superpowers/
 .worktrees
 .worktrees/
+/functions/lib/
+/functions/node_modules/
+/functions/.secret.local
+/functions/.env*
+/functions/firebase-debug*.log
 
 # Symbolication related
 app.*.symbols

@@ -1,0 +1,27 @@
+{
+  "name": "lista-compras-functions",
+  "private": true,
+  "version": "1.0.0",
+  "main": "lib/index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('lib',{recursive:true,force:true})\"",
+    "build": "npm run clean && tsc",
+    "build:watch": "tsc --watch",
+    "lint": "eslint \"src/**/*.ts\"",
+    "test": "npm run build && node --test --test-isolation=none \"lib/*.test.js\"",
+    "check": "npm run lint && npm test"
+  },
+  "dependencies": {
+    "firebase-admin": "^14.2.0",
+    "firebase-functions": "^7.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "eslint": "^9.28.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.33.0"
+  }
+}

@@ -202,7 +202,7 @@ class AppOptionsPage extends StatefulWidget {
   final String? userDisplayName;
   final String? userEmail;
   final String? userPhotoUrl;
-  final VoidCallback? onSignOut;
+  final Future<void> Function()? onSignOut;
   final Future<void> Function()? onProfileUpdated;
   final VoidCallback? onReplayOnboarding;
   final bool showCloudSyncStatus;
@@ -227,6 +227,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
   late String? _resolvedEmail;
   String? _resolvedPhotoUrl;
   int _photoCacheKey = 0;
+  bool _isSigningOut = false;
 
   @override
   void initState() {
@@ -303,6 +304,25 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
     final refresh = widget.onProfileUpdated;
     if (refresh != null) {
       await refresh();
+    }
+  }
+
+  Future<void> _requestSignOut() async {
+    final signOut = widget.onSignOut;
+    if (signOut == null || _isSigningOut) {
+      return;
+    }
+    setState(() {
+      _isSigningOut = true;
+    });
+    try {
+      await signOut();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSigningOut = false;
+        });
+      }
     }
   }
 
@@ -466,12 +486,18 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton.icon(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                              widget.onSignOut?.call();
-                            },
-                            icon: const Icon(Icons.logout_rounded),
-                            label: const Text('Deslogar'),
+                            onPressed: _isSigningOut ? null : _requestSignOut,
+                            icon: _isSigningOut
+                                ? const SizedBox.square(
+                                    dimension: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.logout_rounded),
+                            label: Text(
+                              _isSigningOut ? 'Saindo...' : 'Deslogar',
+                            ),
                           ),
                         ),
                       ],
@@ -1488,11 +1514,12 @@ class _AccountContentPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
+    return Material(
+      color: colorScheme.surface,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTokens.radiusXl),
-        border: Border.all(
+        side: BorderSide(
           color: colorScheme.outlineVariant.withValues(alpha: 0.54),
         ),
       ),

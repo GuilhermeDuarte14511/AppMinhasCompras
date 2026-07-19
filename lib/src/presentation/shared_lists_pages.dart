@@ -192,7 +192,7 @@ class _SharedInviteSheetState extends State<_SharedInviteSheet> {
   Future<void> _generateInviteCode(SharedShoppingListSummary list) async {
     setState(() => _busy = true);
     try {
-      _log('invite generate listId=${list.id}');
+      _log('invite generation started');
       await widget.repository.generateInviteCode(
         listId: list.id,
         requesterUid: widget.currentUid,
@@ -206,7 +206,7 @@ class _SharedInviteSheetState extends State<_SharedInviteSheet> {
       if (!mounted) {
         return;
       }
-      _log('invite generate error=$error');
+      _log('invite generation failed kind=${error.runtimeType}');
       _showSnack(
         'Não foi possível gerar o código. Verifique sua conexão e tente novamente.',
         type: AppToastType.error,
@@ -221,7 +221,7 @@ class _SharedInviteSheetState extends State<_SharedInviteSheet> {
   Future<void> _revokeInviteCode(SharedShoppingListSummary list) async {
     setState(() => _busy = true);
     try {
-      _log('invite revoke listId=${list.id}');
+      _log('invite revocation started');
       await widget.repository.revokeInviteCode(
         listId: list.id,
         requesterUid: widget.currentUid,
@@ -235,7 +235,7 @@ class _SharedInviteSheetState extends State<_SharedInviteSheet> {
       if (!mounted) {
         return;
       }
-      _log('invite revoke error=$error');
+      _log('invite revocation failed kind=${error.runtimeType}');
       _showSnack(
         'Não foi possível revogar o código. Tente novamente.',
         type: AppToastType.error,
@@ -304,7 +304,7 @@ class _SharedInviteSheetState extends State<_SharedInviteSheet> {
     }
     setState(() => _busy = true);
     try {
-      _log('remove member listId=${list.id} member=$memberUid');
+      _log('member removal started');
       await widget.repository.removeMember(
         listId: list.id,
         requesterUid: widget.currentUid,
@@ -319,7 +319,7 @@ class _SharedInviteSheetState extends State<_SharedInviteSheet> {
       if (!mounted) {
         return;
       }
-      _log('remove member error=$error');
+      _log('member removal failed kind=${error.runtimeType}');
       _showSnack(
         'Não foi possível remover o membro. Tente novamente.',
         type: AppToastType.error,
@@ -1017,7 +1017,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
       id: sourceId,
       createdAt: existing?.createdAt ?? listModel.createdAt,
     );
-    _log('mirror local listId=$sourceId from shared=${list.id}');
+    _log('shared list mirror started');
     unawaited(
       widget.store.upsertList(
         mirrored,
@@ -1267,10 +1267,7 @@ class _SharedListEditorPageState extends State<SharedListEditorPage> {
 
   Future<void> _openInviteDialog(SharedShoppingListSummary list) async {
     final uid = _currentUid;
-    _log(
-      'openInviteSheet listId=${list.id} owner=${list.ownerUid} '
-      'currentUid=$uid invite=${list.inviteCode ?? '-'}',
-    );
+    _log('open invite sheet');
     if (uid.isEmpty) {
       _showSnack('Faça login para compartilhar.', type: AppToastType.warning);
       return;

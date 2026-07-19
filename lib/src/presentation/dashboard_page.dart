@@ -8,6 +8,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 
 import '../application/ports.dart';
+import '../application/sign_out_coordinator.dart';
+import '../application/sign_out_policy.dart';
 import '../application/store_and_services.dart';
 import '../application/sync_diagnostics.dart';
 import '../core/utils/format_utils.dart';
@@ -150,7 +152,7 @@ class DashboardPage extends StatefulWidget {
   final String? userDisplayName;
   final String? userEmail;
   final String? userPhotoUrl;
-  final VoidCallback? onSignOut;
+  final Future<void> Function({required bool discardPendingChanges})? onSignOut;
   final Future<void> Function()? onProfileUpdated;
   final VoidCallback? onReplayOnboarding;
   final bool openCreateListOnStart;
@@ -175,6 +177,7 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   bool _handledCreateListShortcut = false;
+  bool _isSigningOut = false;
   List<SharedShoppingListSummary> _lastSharedLists =
       const <SharedShoppingListSummary>[];
   Object? _sharedListsLastError;
@@ -254,7 +257,7 @@ class _DashboardPageState extends State<DashboardPage> {
           userDisplayName: widget.userDisplayName,
           userEmail: widget.userEmail,
           userPhotoUrl: widget.userPhotoUrl,
-          onSignOut: widget.onSignOut,
+          onSignOut: _requestSignOut,
           onProfileUpdated: widget.onProfileUpdated,
           onReplayOnboarding: widget.onReplayOnboarding,
           showCloudSyncStatus: widget.showCloudSyncStatus,
@@ -468,7 +471,6 @@ class _DashboardPageState extends State<DashboardPage> {
       return;
     }
     try {
-      debugPrint('[share_flow] joinByCode start code=$inviteCode uid=$uid');
       final listId = await repository.joinByCode(
         inviteCode: inviteCode,
         uid: uid,
@@ -486,7 +488,6 @@ class _DashboardPageState extends State<DashboardPage> {
       if (!mounted) {
         return;
       }
-      debugPrint('[share_flow] joinByCode error=$error');
       if (error is FirebaseException) {
         final code = error.code.trim().toLowerCase();
         if (code == 'permission-denied') {
@@ -515,6 +516,93 @@ class _DashboardPageState extends State<DashboardPage> {
       type: type,
       duration: const Duration(seconds: 4),
     );
+  }
+
+  Future<SignOutDecision> _confirmPendingSignOut(SignOutAction action) async {
+    final isOnline = action == SignOutAction.syncThenSignOut;
+    final result = await showAppDialog<SignOutDecision>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          isOnline ? 'Sincronizar antes de sair?' : 'Sair sem sincronizar?',
+        ),
+        content: Text(
+          isOnline
+              ? 'Há alterações que ainda não foram salvas na nuvem. '
+                    'Sincronize para não perdê-las neste aparelho.'
+              : 'Você está sem internet e há alterações apenas neste aparelho. '
+                    'Ao sair agora, essas alterações serão descartadas.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () =>
+                Navigator.pop(dialogContext, SignOutDecision.cancel),
+            child: Text(isOnline ? 'Cancelar' : 'Continuar no app'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(dialogContext).colorScheme.error,
+            ),
+            onPressed: () =>
+                Navigator.pop(dialogContext, SignOutDecision.discardAndSignOut),
+            child: Text(
+              isOnline ? 'Sair sem sincronizar' : 'Sair e descartar alterações',
+            ),
+          ),
+          if (isOnline && widget.onSyncNow != null)
+            FilledButton.icon(
+              onPressed: () =>
+                  Navigator.pop(dialogContext, SignOutDecision.syncAndSignOut),
+              icon: const Icon(Icons.cloud_upload_rounded),
+              label: const Text('Sincronizar e sair'),
+            ),
+        ],
+      ),
+    );
+    return result ?? SignOutDecision.cancel;
+  }
+
+  Future<void> _requestSignOut() async {
+    final signOut = widget.onSignOut;
+    if (signOut == null || _isSigningOut) {
+      return;
+    }
+
+    _isSigningOut = true;
+    final navigator = Navigator.of(context);
+    try {
+      final action = resolveSignOutAction(
+        hasPendingChanges: widget.hasPendingCloudSync,
+        isSyncing: widget.isCloudSyncing,
+        hasNetworkConnection: widget.hasInternetConnection,
+      );
+
+      try {
+        final signedOut = await const SignOutCoordinator().execute(
+          action: action,
+          requestDecision: _confirmPendingSignOut,
+          synchronize: widget.onSyncNow,
+          signOut: signOut,
+        );
+        if (!signedOut || !mounted) {
+          return;
+        }
+      } on SignOutFailure catch (failure) {
+        if (mounted) {
+          _showSnack(
+            failure.step == SignOutFailureStep.synchronize
+                ? 'Não foi possível sincronizar. Você continua conectado.'
+                : 'Não foi possível sair agora. Tente novamente.',
+            type: AppToastType.error,
+          );
+        }
+        return;
+      }
+      navigator.popUntil((route) => route.isFirst);
+    } finally {
+      _isSigningOut = false;
+    }
   }
 
   @override
@@ -593,7 +681,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   _openCatalog();
                   return;
                 case _DashboardMenuAction.signOut:
-                  widget.onSignOut?.call();
+                  unawaited(_requestSignOut());
                   return;
               }
             },
@@ -748,7 +836,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           }
                           if (tokenSnapshot.hasError) {
                             debugPrint(
-                              '[share_flow] token error uid=$uid error=${tokenSnapshot.error}',
+                              '[share_flow] falha ao atualizar token de autenticação',
                             );
                             return Card(
                               elevation: 0,
@@ -784,7 +872,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               if (sharedSnapshot.hasError) {
                                 _sharedListsLastError = sharedSnapshot.error;
                                 debugPrint(
-                                  '[share_flow] watchSharedLists error uid=$uid error=${sharedSnapshot.error}',
+                                  '[share_flow] falha ao observar listas compartilhadas',
                                 );
                               } else if (sharedSnapshot.hasData) {
                                 _sharedListsLastError = null;

@@ -15,9 +15,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../application/ports.dart';
 import '../application/shared_list_sync_policy.dart';
 import '../application/store_and_services.dart';
+import '../application/sync/sync_operation.dart';
+import '../application/sync/sync_outbox_coordinator.dart';
+import '../application/sync/sync_outbox_storage.dart';
 import '../application/sync_diagnostics.dart';
+import '../data/local/shared_prefs_sync_outbox_storage.dart';
 import '../data/local/storages.dart';
-import '../data/remote/cosmos_product_lookup_service.dart';
+import '../data/remote/cosmos_backend_product_lookup_service.dart';
 import '../data/remote/firebase_user_data_repository.dart';
 import '../data/remote/open_food_facts_product_lookup_service.dart';
 import '../data/remote/shared_lists_repository.dart';
@@ -36,6 +40,15 @@ import '../presentation/utils/app_toast.dart';
 const Color _actionColor = Color(0xFFF97316);
 const Color _actionForegroundColor = Color(0xFF111827);
 
+@visibleForTesting
+List<ProductLookupService> buildDefaultProductLookupServices() {
+  return <ProductLookupService>[
+    CosmosBackendProductLookupService(),
+    const OpenProductsFactsProductLookupService(),
+    const OpenFoodFactsProductLookupService(),
+  ];
+}
+
 class ShoppingListApp extends StatefulWidget {
   const ShoppingListApp({
     super.key,
@@ -47,6 +60,7 @@ class ShoppingListApp extends StatefulWidget {
     ProductLookupService? lookupService,
     ShoppingHomeWidgetService? homeWidgetService,
     FirebaseFirestore? firestoreInstance,
+    SyncOutboxStorage? syncOutboxStorage,
   }) : _storage = storage,
        _backupService = backupService,
        _reminderService = reminderService,
@@ -54,7 +68,8 @@ class ShoppingListApp extends StatefulWidget {
        _historyStorage = historyStorage,
        _lookupService = lookupService,
        _homeWidgetService = homeWidgetService,
-       _firestoreInstance = firestoreInstance;
+       _firestoreInstance = firestoreInstance,
+       _syncOutboxStorage = syncOutboxStorage;
 
   final ShoppingListsStorage? _storage;
   final ShoppingBackupService? _backupService;
@@ -63,6 +78,7 @@ class ShoppingListApp extends StatefulWidget {
   final PurchaseHistoryStorage? _historyStorage;
   final ProductLookupService? _lookupService;
   final ShoppingHomeWidgetService? _homeWidgetService;
+  final SyncOutboxStorage? _syncOutboxStorage;
 
   /// Instância pré-inicializada do Firestore (necessária na Web para evitar
   /// LateInitializationError com databaseId customizado).
@@ -79,10 +95,6 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     milliseconds: 900,
   );
   static const Duration _cloudSyncRetryInterval = Duration(seconds: 25);
-  static const String _cosmosTokenFromDefine = String.fromEnvironment(
-    'COSMOS_API_TOKEN',
-  );
-  static const String _cosmosHardcodedToken = '4hrzg_tHwg2TqECZotwqDg';
   static const String _themeModeKey = 'app_theme_mode_v1';
   static const String _onboardingCompletionKeyPrefix =
       'onboarding_completed_v1_';
@@ -100,6 +112,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   late final ShoppingListsStore _store;
   late final ShoppingBackupService _backupService;
   late final Future<void> _launchDelay;
+  late final SyncOutboxCoordinator _syncOutbox;
   FirestoreUserDataRepository? _cloudRepository;
   SharedListsRepository? _sharedListsRepository;
 
@@ -118,8 +131,16 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   String? _loadedCloudUid;
   bool _isApplyingCloudSnapshot = false;
   bool _isPushingCloudSnapshot = false;
+  Completer<void>? _activeCloudPush;
+  bool _cloudPushRequestedWhileActive = false;
   bool _isPullingCloudSnapshot = false;
   bool _isMirroringSharedLists = false;
+  bool _isSigningOut = false;
+  bool _storeReadyForOutbox = false;
+  int _suppressStoreChangeTracking = 0;
+  Future<void> _snapshotOutboxTail = Future<void>.value();
+  Object? _lastOutboxWriteError;
+  String? _outboxWriteErrorUid;
   bool _hasPendingCloudSync = false;
   bool _hasNetworkConnection = true;
   bool _notifySuccessOnNextSync = false;
@@ -149,6 +170,10 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     }
     _backupService =
         widget._backupService ?? const FilePickerShoppingBackupService();
+    _syncOutbox = SyncOutboxCoordinator(
+      storage:
+          widget._syncOutboxStorage ?? const SharedPrefsSyncOutboxStorage(),
+    );
     final catalogStorage =
         widget._catalogStorage ??
         (widget._storage == null
@@ -192,6 +217,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         _authStateResolved = true;
 
         if (user == null) {
+          _storeReadyForOutbox = false;
           _isInitialCloudHydration = false;
           _hydratingCloudUid = null;
           _loadedCloudUid = null;
@@ -203,7 +229,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
           _lastSharedSyncError = null;
           _cloudSyncDebounce?.cancel();
           _stopCloudRetryTimer();
-          unawaited(_store.clearAllLocalData());
+          unawaited(_clearLocalDataWithoutSyncTracking());
           if (mounted) {
             setState(() {});
           }
@@ -212,7 +238,8 @@ class _ShoppingListAppState extends State<ShoppingListApp>
 
         final isDifferentUser = previousUid != user.uid;
         if (isDifferentUser && previousUid != null) {
-          unawaited(_store.clearAllLocalData());
+          _storeReadyForOutbox = false;
+          unawaited(_clearLocalDataWithoutSyncTracking());
         }
         if (isDifferentUser) {
           _resetOnboardingState();
@@ -223,6 +250,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
           _hydratingCloudUid = user.uid;
         }
         _hasPendingCloudSync = true;
+        unawaited(_activateOutboxForUser(user.uid));
         if (mounted) {
           setState(() {});
         }
@@ -242,18 +270,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   }
 
   ProductLookupService _buildLookupService() {
-    final services = <ProductLookupService>[];
-    final cosmosToken = _cosmosTokenFromDefine.trim().isNotEmpty
-        ? _cosmosTokenFromDefine
-        : _cosmosHardcodedToken;
-    if (cosmosToken.trim().isNotEmpty) {
-      services.add(CosmosProductLookupService(token: cosmosToken));
-    }
-    services.addAll(const <ProductLookupService>[
-      OpenProductsFactsProductLookupService(),
-      OpenFoodFactsProductLookupService(),
-    ]);
-    return CompositeProductLookupService(services);
+    return CompositeProductLookupService(buildDefaultProductLookupServices());
   }
 
   @override
@@ -291,6 +308,131 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   Future<void> _waitForStoreLoaded() async {
     while (mounted && _store.isLoading) {
       await Future<void>.delayed(const Duration(milliseconds: 80));
+    }
+  }
+
+  Future<void> _clearLocalDataWithoutSyncTracking() async {
+    _suppressStoreChangeTracking++;
+    try {
+      await _store.clearAllLocalData();
+    } finally {
+      _suppressStoreChangeTracking--;
+    }
+  }
+
+  Future<void> _activateOutboxForUser(String uid) async {
+    await _waitForStoreLoaded();
+    if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) {
+      return;
+    }
+    await _snapshotOutboxTail;
+
+    List<SyncOperation> pending;
+    try {
+      pending = await _syncOutbox.pending(userId: uid);
+    } on FormatException catch (error) {
+      debugPrint(
+        '[CloudSync][outbox] dados inválidos; reconstruindo marcador local',
+      );
+      await _syncOutbox.clear(userId: uid);
+      await _enqueueLegacySnapshotOperation(uid);
+      pending = await _syncOutbox.pending(userId: uid);
+      _lastCloudSyncError = 'outbox-local-invalida';
+      _lastOutboxWriteError = null;
+      _outboxWriteErrorUid = null;
+      debugPrint(
+        '[CloudSync][outbox] marcador reconstruído kind=${error.runtimeType}',
+      );
+    } catch (error) {
+      pending = const <SyncOperation>[];
+      _lastOutboxWriteError = error;
+      _outboxWriteErrorUid = uid;
+      _lastCloudSyncError = 'falha-outbox-local';
+      _hasPendingCloudSync = true;
+      _ensureCloudRetryTimer();
+      debugPrint(
+        '[CloudSync][outbox] falha ao carregar fila kind=${error.runtimeType}',
+      );
+    }
+
+    if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) {
+      return;
+    }
+    _storeReadyForOutbox = true;
+    if (pending.isNotEmpty) {
+      _hasPendingCloudSync = true;
+      _ensureCloudRetryTimer();
+      _scheduleCloudSync(immediate: true);
+    }
+    setState(() {});
+  }
+
+  void _queueLegacySnapshotOperation(String uid) {
+    final previous = _snapshotOutboxTail;
+    _snapshotOutboxTail = _appendLegacySnapshotOperation(
+      previous: previous,
+      uid: uid,
+    );
+  }
+
+  Future<void> _appendLegacySnapshotOperation({
+    required Future<void> previous,
+    required String uid,
+  }) async {
+    try {
+      await previous;
+    } catch (_) {}
+    try {
+      await _enqueueLegacySnapshotOperation(uid);
+      if (_outboxWriteErrorUid == null || _outboxWriteErrorUid == uid) {
+        _lastOutboxWriteError = null;
+        _outboxWriteErrorUid = null;
+      }
+    } catch (error) {
+      _lastOutboxWriteError = error;
+      _outboxWriteErrorUid = uid;
+      _lastCloudSyncError = 'falha-outbox-local';
+      debugPrint(
+        '[CloudSync][outbox] falha ao persistir marcador kind=${error.runtimeType}',
+      );
+    }
+  }
+
+  Future<void> _enqueueLegacySnapshotOperation(String uid) async {
+    final current = await _syncOutbox.pending(userId: uid);
+    var nextRevision = 1;
+    for (final operation in current) {
+      if (operation.aggregateType == 'legacy-user-snapshot' &&
+          operation.aggregateId == 'private-data' &&
+          operation.revision >= nextRevision) {
+        nextRevision = operation.revision + 1;
+      }
+    }
+    await _syncOutbox.enqueue(
+      userId: uid,
+      operation: SyncOperation(
+        operationId: 'snapshot_${uniqueId()}',
+        aggregateType: 'legacy-user-snapshot',
+        aggregateId: 'private-data',
+        revision: nextRevision,
+        kind: SyncOperationKind.upsert,
+        payload: const <String, Object?>{'schemaVersion': 1},
+        occurredAt: DateTime.now().toUtc(),
+      ),
+    );
+  }
+
+  Future<void> _recoverOrThrowOutboxWriteFailure(String uid) async {
+    await _snapshotOutboxTail;
+    if (_lastOutboxWriteError == null || _outboxWriteErrorUid != uid) {
+      return;
+    }
+    try {
+      await _enqueueLegacySnapshotOperation(uid);
+      _lastOutboxWriteError = null;
+      _outboxWriteErrorUid = null;
+    } catch (_) {
+      throw StateError('Não foi possível preservar a fila local.');
     }
   }
 
@@ -435,7 +577,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
 
     if (!fromCloud && resolvedCompletion == true) {
       _hasPendingCloudSync = true;
-      _scheduleCloudSync(immediate: true);
+      _scheduleCloudSync(immediate: true, recordLocalChange: true);
     }
   }
 
@@ -457,7 +599,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       _openCreateListAfterOnboarding = createFirstList;
       _hasPendingCloudSync = true;
     });
-    _scheduleCloudSync(immediate: true);
+    _scheduleCloudSync(immediate: true, recordLocalChange: true);
   }
 
   void _replayOnboarding() {
@@ -493,7 +635,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       await prefs.setString(_themeModeKey, raw);
     }
     if (syncCloud) {
-      _scheduleCloudSync();
+      _scheduleCloudSync(recordLocalChange: true);
     }
   }
 
@@ -670,7 +812,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     // em andamento, causando LateInitializationError no SDK Web do Firestore.
     if (_isPullingCloudSnapshot) {
       debugPrint(
-        '[CloudSync][pull] já em andamento, ignorando chamada duplicada para uid=$uid',
+        '[CloudSync][pull] já em andamento; chamada duplicada ignorada',
       );
       return;
     }
@@ -682,7 +824,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     }
     try {
       debugPrint(
-        '[CloudSync][pull] iniciando para uid=$uid asInitialHydration=$asInitialHydration',
+        '[CloudSync][pull] iniciando; hidrataçãoInicial=$asInitialHydration',
       );
       await _waitForStoreLoaded();
       if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) {
@@ -733,17 +875,22 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         await _setThemeMode(cloudTheme, syncCloud: false);
       }
       if (snapshot.settings.hasData) {
-        await _store.applySharedCatalogImportSettings(
-          autoImportOwnedSharedCatalogs:
-              snapshot.settings.autoImportOwnedSharedCatalogs,
-          autoImportAllSharedCatalogs:
-              snapshot.settings.autoImportSharedCatalogs,
-          enabledSharedListIds: snapshot.settings.sharedCatalogImportListIds,
-        );
+        _suppressStoreChangeTracking++;
+        try {
+          await _store.applySharedCatalogImportSettings(
+            autoImportOwnedSharedCatalogs:
+                snapshot.settings.autoImportOwnedSharedCatalogs,
+            autoImportAllSharedCatalogs:
+                snapshot.settings.autoImportSharedCatalogs,
+            enabledSharedListIds: snapshot.settings.sharedCatalogImportListIds,
+          );
+        } finally {
+          _suppressStoreChangeTracking--;
+        }
       }
       debugPrint('[CloudSync][pull] tema OK');
 
-      debugPrint('[CloudSync][pull] definindo _loadedCloudUid=$uid');
+      debugPrint('[CloudSync][pull] vinculando snapshot ao usuário atual');
       _loadedCloudUid = uid;
       debugPrint('[CloudSync][pull] chamando _resolveOnboardingForUser...');
       await _resolveOnboardingForUser(uid, profile: snapshot.profile);
@@ -760,7 +907,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       // _scheduleCloudSync e outro direto), o que causava
       // LateInitializationError no SDK Web do Firestore.
       _scheduleCloudSync(immediate: true);
-      debugPrint('[CloudSync][pull] pull concluído com sucesso para uid=$uid');
+      debugPrint('[CloudSync][pull] concluído com sucesso');
     } catch (error, stack) {
       _lastCloudSyncError = _cloudErrorDetails(error);
       _logCloudError('pull', error, stack);
@@ -805,9 +952,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       // na segunda chamada (asInitialHydration=false) deixe _isInitialCloudHydration
       // preso em true para sempre, causando loading eterno na Web.
       if (_hydratingCloudUid == uid && mounted) {
-        debugPrint(
-          '[CloudSync][pull] finally: limpando _isInitialCloudHydration para uid=$uid',
-        );
+        debugPrint('[CloudSync][pull] finalizando hidratação inicial');
         setState(() {
           _isInitialCloudHydration = false;
           _hydratingCloudUid = null;
@@ -819,13 +964,18 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   void _handleStoreChanged() {
     if (widget._storage != null ||
         _store.isLoading ||
-        _isApplyingCloudSnapshot) {
+        _isApplyingCloudSnapshot ||
+        !_storeReadyForOutbox ||
+        _suppressStoreChangeTracking > 0) {
       return;
     }
-    _scheduleCloudSync();
+    _scheduleCloudSync(recordLocalChange: true);
   }
 
-  void _scheduleCloudSync({bool immediate = false}) {
+  void _scheduleCloudSync({
+    bool immediate = false,
+    bool recordLocalChange = false,
+  }) {
     if (widget._storage != null ||
         _store.isLoading ||
         _isApplyingCloudSnapshot) {
@@ -834,6 +984,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null || uid.isEmpty) {
       return;
+    }
+    if (recordLocalChange) {
+      _queueLegacySnapshotOperation(uid);
     }
     if (!_hasPendingCloudSync) {
       _hasPendingCloudSync = true;
@@ -861,15 +1014,19 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     if (repository == null) {
       return;
     }
-    if (_isPushingCloudSnapshot || _isApplyingCloudSnapshot) {
-      debugPrint(
-        '[CloudSync][push] ignorado: isPushing=$_isPushingCloudSnapshot isApplying=$_isApplyingCloudSnapshot',
-      );
+    if (_isPushingCloudSnapshot) {
+      debugPrint('[CloudSync][push] aguardando sincronização já iniciada');
+      _cloudPushRequestedWhileActive = true;
+      await _activeCloudPush?.future;
+      return;
+    }
+    if (_isApplyingCloudSnapshot) {
+      debugPrint('[CloudSync][push] ignorado durante aplicação da nuvem');
       return;
     }
     if (_loadedCloudUid != uid) {
       debugPrint(
-        '[CloudSync][push] ignorado: _loadedCloudUid=$_loadedCloudUid != uid=$uid — aguardando pull',
+        '[CloudSync][push] aguardando vínculo do snapshot com o usuário atual',
       );
       _ensureCloudRetryTimer();
       return;
@@ -891,56 +1048,69 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     }
 
     debugPrint(
-      '[CloudSync][push] iniciando saveUserSnapshot para uid=$uid — listas=${_store.lists.length} histórico=${_store.purchaseHistory.length} catálogo=${_store.catalogProducts.length}',
+      '[CloudSync][push] iniciando snapshot — listas=${_store.lists.length} histórico=${_store.purchaseHistory.length} catálogo=${_store.catalogProducts.length}',
     );
+    final activePush = Completer<void>();
+    _activeCloudPush = activePush;
     _isPushingCloudSnapshot = true;
     if (mounted) {
       setState(() {});
     }
     try {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      final profile = currentUser == null
-          ? null
-          : FirestoreUserProfile(
-              uid: uid,
-              displayName: currentUser.displayName,
-              email: currentUser.email,
-              photoUrl: currentUser.photoURL,
-              provider: _resolveProviderId(currentUser),
-              themeMode: _themeMode == ThemeMode.dark ? 'dark' : 'light',
-              isOnboardingCompleted: _onboardingCompleted,
-            );
-      await repository.saveUserSnapshot(
-        uid: uid,
-        lists: _store.lists,
-        history: _store.purchaseHistory,
-        catalog: _store.catalogProducts,
-        settings: FirestoreUserAppSettings(
-          themeMode: _themeMode == ThemeMode.dark ? 'dark' : 'light',
-          autoImportOwnedSharedCatalogs: _store.autoImportOwnedSharedCatalogs,
-          autoImportSharedCatalogs: _store.autoImportAllSharedCatalogs,
-          sharedCatalogImportListIds: _store.sharedCatalogImportListIds,
-        ),
-        profile: profile,
-      );
-      debugPrint(
-        '[CloudSync][push] saveUserSnapshot OK — sincronização concluída!',
-      );
-      _hasPendingCloudSync = false;
-      _loadedCloudUid = uid;
-      _lastSuccessfulCloudSyncAt = DateTime.now();
-      _lastCloudSyncError = null;
-      _stopCloudRetryTimer();
-      if (_notifySuccessOnNextSync) {
-        _notifySuccessOnNextSync = false;
-        _showCloudSyncNotification(
-          'Sincronização concluída.',
-          type: AppToastType.success,
+      do {
+        _cloudPushRequestedWhileActive = false;
+        await _recoverOrThrowOutboxWriteFailure(uid);
+        final outboxBatch = await _syncOutbox.captureForPush(userId: uid);
+        final currentUser = FirebaseAuth.instance.currentUser;
+        final profile = currentUser == null
+            ? null
+            : FirestoreUserProfile(
+                uid: uid,
+                displayName: currentUser.displayName,
+                email: currentUser.email,
+                photoUrl: currentUser.photoURL,
+                provider: _resolveProviderId(currentUser),
+                themeMode: _themeMode == ThemeMode.dark ? 'dark' : 'light',
+                isOnboardingCompleted: _onboardingCompleted,
+              );
+        await repository.saveUserSnapshot(
+          uid: uid,
+          lists: _store.lists,
+          history: _store.purchaseHistory,
+          catalog: _store.catalogProducts,
+          settings: FirestoreUserAppSettings(
+            themeMode: _themeMode == ThemeMode.dark ? 'dark' : 'light',
+            autoImportOwnedSharedCatalogs: _store.autoImportOwnedSharedCatalogs,
+            autoImportSharedCatalogs: _store.autoImportAllSharedCatalogs,
+            sharedCatalogImportListIds: _store.sharedCatalogImportListIds,
+          ),
+          profile: profile,
         );
-      }
-      if (mounted) {
-        setState(() {});
-      }
+        debugPrint(
+          '[CloudSync][push] saveUserSnapshot OK — sincronização concluída!',
+        );
+        await _recoverOrThrowOutboxWriteFailure(uid);
+        await _syncOutbox.acknowledge(outboxBatch);
+        final pendingOperations = await _syncOutbox.pending(userId: uid);
+        _hasPendingCloudSync =
+            _cloudPushRequestedWhileActive || pendingOperations.isNotEmpty;
+        _loadedCloudUid = uid;
+        _lastSuccessfulCloudSyncAt = DateTime.now();
+        _lastCloudSyncError = null;
+        if (!_hasPendingCloudSync) {
+          _stopCloudRetryTimer();
+        }
+        if (_notifySuccessOnNextSync && !_hasPendingCloudSync) {
+          _notifySuccessOnNextSync = false;
+          _showCloudSyncNotification(
+            'Sincronização concluída.',
+            type: AppToastType.success,
+          );
+        }
+        if (mounted) {
+          setState(() {});
+        }
+      } while (_cloudPushRequestedWhileActive && _hasNetworkConnection);
     } catch (error, stack) {
       _lastCloudSyncError = _cloudErrorDetails(error);
       _logCloudError('push', error, stack);
@@ -965,6 +1135,12 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       }
     } finally {
       _isPushingCloudSnapshot = false;
+      if (!activePush.isCompleted) {
+        activePush.complete();
+      }
+      if (identical(_activeCloudPush, activePush)) {
+        _activeCloudPush = null;
+      }
       if (mounted) {
         setState(() {});
       }
@@ -996,12 +1172,47 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     _cloudSyncRetryTimer = null;
   }
 
-  Future<void> _signOut() async {
+  Future<void> _signOut({required bool discardPendingChanges}) async {
+    if (_isSigningOut) {
+      return;
+    }
+    _isSigningOut = true;
+    final uid = FirebaseAuth.instance.currentUser?.uid.trim() ?? '';
+    SyncPushBatch? discardedBatch;
     _cloudSyncDebounce?.cancel();
     _stopCloudRetryTimer();
-    _hasPendingCloudSync = false;
-    _resetOnboardingState();
-    await FirebaseAuth.instance.signOut();
+    try {
+      if (discardPendingChanges && uid.isNotEmpty) {
+        await _recoverOrThrowOutboxWriteFailure(uid);
+        discardedBatch = await _syncOutbox.captureForPush(userId: uid);
+        await _syncOutbox.clear(userId: uid);
+      }
+      await FirebaseAuth.instance.signOut();
+      if (discardPendingChanges) {
+        _hasPendingCloudSync = false;
+      }
+    } catch (_) {
+      final operationsToRestore = discardedBatch?.operations;
+      if (operationsToRestore != null) {
+        try {
+          for (final operation in operationsToRestore) {
+            await _syncOutbox.enqueue(userId: uid, operation: operation);
+          }
+        } catch (error) {
+          _lastOutboxWriteError = error;
+          _outboxWriteErrorUid = uid;
+          debugPrint(
+            '[CloudSync][outbox] falha ao restaurar descarte kind=${error.runtimeType}',
+          );
+        }
+      }
+      if (_hasPendingCloudSync) {
+        _ensureCloudRetryTimer();
+      }
+      rethrow;
+    } finally {
+      _isSigningOut = false;
+    }
   }
 
   Future<void> _refreshCurrentUserProfile() async {
@@ -1028,7 +1239,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     }
     _currentUser = FirebaseAuth.instance.currentUser;
     _hasPendingCloudSync = true;
-    _scheduleCloudSync(immediate: true);
+    _scheduleCloudSync(immediate: true, recordLocalChange: true);
     setState(() {});
   }
 
@@ -1053,6 +1264,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       await _pullFromCloud(uid);
     }
     await _mirrorSharedListsToLocal(uid);
+    _cloudSyncDebounce?.cancel();
     _hasPendingCloudSync = true;
     if (mounted) {
       setState(() {});
