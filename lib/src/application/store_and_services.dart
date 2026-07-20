@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:lista_compras_material/src/domain/models_and_utils.dart';
 
 import '../domain/classifications.dart';
+import 'fiscal_receipt_import.dart';
 import 'ports.dart';
 
 class ShoppingListsStore extends ChangeNotifier {
@@ -270,6 +271,161 @@ class ShoppingListsStore extends ChangeNotifier {
     await _syncReminderForList(updatedList);
     await _productCatalog.ingestFromLists([updatedList]);
     return updatedList.deepCopy();
+  }
+
+  Future<FiscalReceiptImportTransaction?> applyFiscalReceiptReview(
+    String listId,
+    FiscalReceiptReviewSubmission submission,
+  ) async {
+    final index = _lists.indexWhere((entry) => entry.id == listId);
+    if (index < 0) {
+      return null;
+    }
+
+    final source = _lists[index];
+    final beforeList = source.deepCopy();
+    final catalogBefore = _productCatalog.allProducts();
+    final historyBefore = _copyPurchaseHistory(_history);
+    final now = DateTime.now();
+    final plan = const FiscalReceiptImportPlanner().createPlan(
+      source: source,
+      submission: submission,
+      recordedAt: now,
+      createId: uniqueId,
+    );
+    final completedPurchaseId = submission.finalizePurchase ? uniqueId() : null;
+
+    _lists[index] = plan.updatedList;
+    if (completedPurchaseId != null) {
+      _history.add(
+        CompletedPurchase(
+          id: completedPurchaseId,
+          listId: plan.updatedList.id,
+          listName: plan.updatedList.name,
+          closedAt: now,
+          items: plan.updatedList.items
+              .map((item) => item.copyWith())
+              .toList(growable: false),
+          budget: plan.updatedList.budget,
+          paymentBalances: plan.updatedList.paymentBalances
+              .map((entry) => entry.copyWith())
+              .toList(growable: false),
+        ),
+      );
+      _trimHistory();
+      _sortHistoryByClosedAt();
+    }
+    _sortListsByUpdatedAt();
+    _invalidateListSuggestionCache();
+
+    try {
+      await _persistAndNotify();
+      await _syncReminderForList(plan.updatedList);
+      for (final draft in plan.appliedDrafts) {
+        await _productCatalog.upsertFromDraft(draft);
+      }
+      notifyListeners();
+    } catch (_) {
+      await _restoreFiscalReceiptState(
+        list: beforeList,
+        catalog: catalogBefore,
+        history: historyBefore,
+      );
+      rethrow;
+    }
+
+    return FiscalReceiptImportTransaction(
+      beforeList: beforeList,
+      appliedList: plan.updatedList.deepCopy(),
+      catalogBefore: catalogBefore,
+      historyBefore: historyBefore,
+      addedCount: plan.addedCount,
+      updatedCount: plan.updatedCount,
+      completedPurchaseId: completedPurchaseId,
+    );
+  }
+
+  Future<ShoppingListModel?> undoFiscalReceiptImport(
+    FiscalReceiptImportTransaction transaction,
+  ) async {
+    final index = _lists.indexWhere(
+      (entry) => entry.id == transaction.appliedList.id,
+    );
+    if (index < 0) {
+      return null;
+    }
+    final current = _lists[index];
+    if (current.updatedAt != transaction.appliedList.updatedAt ||
+        current.isClosed != transaction.appliedList.isClosed) {
+      throw StateError(
+        'A lista mudou depois da importação e não pode ser restaurada.',
+      );
+    }
+
+    final currentList = current.deepCopy();
+    final currentCatalog = _productCatalog.allProducts();
+    final currentHistory = _copyPurchaseHistory(_history);
+
+    _lists[index] = transaction.beforeList.deepCopy();
+    _history
+      ..clear()
+      ..addAll(_copyPurchaseHistory(transaction.historyBefore));
+    _sortListsByUpdatedAt();
+    _sortHistoryByClosedAt();
+    _invalidateListSuggestionCache();
+
+    try {
+      await _productCatalog.replaceAllProducts(transaction.catalogBefore);
+      await _persistAndNotify();
+      await _syncReminderForList(transaction.beforeList);
+    } catch (_) {
+      _lists[index] = currentList;
+      _history
+        ..clear()
+        ..addAll(currentHistory);
+      await _productCatalog.replaceAllProducts(currentCatalog);
+      await _persistAndNotify();
+      await _syncReminderForList(currentList);
+      rethrow;
+    }
+    return transaction.beforeList.deepCopy();
+  }
+
+  Future<void> _restoreFiscalReceiptState({
+    required ShoppingListModel list,
+    required List<CatalogProduct> catalog,
+    required List<CompletedPurchase> history,
+  }) async {
+    final index = _lists.indexWhere((entry) => entry.id == list.id);
+    if (index >= 0) {
+      _lists[index] = list.deepCopy();
+    }
+    _history
+      ..clear()
+      ..addAll(_copyPurchaseHistory(history));
+    _sortListsByUpdatedAt();
+    _sortHistoryByClosedAt();
+    _invalidateListSuggestionCache();
+    await _productCatalog.replaceAllProducts(catalog);
+    await _persistAndNotify();
+    await _syncReminderForList(list);
+  }
+
+  List<CompletedPurchase> _copyPurchaseHistory(
+    Iterable<CompletedPurchase> source,
+  ) {
+    return source
+        .map(
+          (entry) => entry.copyWith(
+            items: entry.items
+                .map((item) => item.copyWith())
+                .toList(growable: false),
+            paymentBalances: entry.paymentBalances
+                .map((balance) => balance.copyWith())
+                .toList(growable: false),
+          ),
+        )
+        .toList(growable: false);
   }
 
   Future<ShoppingListModel?> reopenList(String listId) async {

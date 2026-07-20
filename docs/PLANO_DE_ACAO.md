@@ -18,7 +18,7 @@ com migrações compatíveis e possibilidade de rollback.
 
 ## Andamento da implementação
 
-Atualizado em 19 de julho de 2026:
+Atualizado em 20 de julho de 2026:
 
 - [x] removido o token Cosmos hardcoded e mantidos os provedores Open Facts
   como fallback sem segredo no cliente;
@@ -49,6 +49,9 @@ Atualizado em 19 de julho de 2026:
 - [x] cadastrado o token Cosmos atual no Secret Manager; a rotação foi adiada
   por decisão explícita do responsável e permanece como risco aceito;
 - [x] vinculada e publicada a Function no projeto Firebase;
+- [x] revisão completa do cupom fiscal entregue com seleção, edição, confiança
+  do matching, vínculo a itens planejados, reconciliação de totais, confirmação
+  transacional e desfazer;
 - [ ] registrar opcionalmente os provedores App Check como defesa adicional;
 - [ ] publicar as novas Firestore Rules somente após revisão do ambiente e
   definição de rollback.
@@ -637,11 +640,15 @@ Somente iniciar após P0 e P1.
 
 Prioridade: alta.
 
-- selecionar itens antes da importação;
-- editar nome, quantidade e preço;
-- mostrar confiança do matching;
-- comparar soma dos itens com total do cupom;
-- desfazer importação.
+Status: implementado em 20 de julho de 2026.
+
+- [x] selecionar itens antes da importação;
+- [x] editar nome, quantidade e preço;
+- [x] mostrar confiança do matching;
+- [x] relacionar cada linha a um item planejado;
+- [x] comparar soma dos itens com total do cupom e destacar divergências;
+- [x] confirmar a compra atualizando histórico e catálogo em uma operação;
+- [x] desfazer importação local e compartilhada.
 
 ### 22. Central de colaboração
 

@@ -14,6 +14,8 @@ class AppToast {
     required String message,
     AppToastType type = AppToastType.info,
     Duration duration = const Duration(seconds: 4),
+    String? actionLabel,
+    VoidCallback? onAction,
   }) {
     final messenger = ScaffoldMessenger.maybeOf(context);
     if (messenger == null) {
@@ -24,6 +26,8 @@ class AppToast {
       message: message,
       type: type,
       duration: duration,
+      actionLabel: actionLabel,
+      onAction: onAction,
     );
   }
 
@@ -32,6 +36,8 @@ class AppToast {
     required String message,
     AppToastType type = AppToastType.info,
     Duration duration = const Duration(seconds: 4),
+    String? actionLabel,
+    VoidCallback? onAction,
   }) {
     final context = messenger.context;
     final colorScheme = Theme.of(context).colorScheme;
@@ -131,6 +137,19 @@ class AppToast {
                       ),
                     ),
                   ),
+                  if (actionLabel != null && onAction != null) ...[
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: onAction,
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(48, 44),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        textStyle: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      child: Text(actionLabel),
+                    ),
+                  ],
                 ],
               ),
             ),

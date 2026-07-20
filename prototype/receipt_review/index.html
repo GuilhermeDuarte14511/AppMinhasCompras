@@ -1,0 +1,1268 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Protótipo interativo da revisão de cupom fiscal do Minhas Compras."
+    />
+    <title>Minhas Compras — Revisão de cupom</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --canvas: #eef3f2;
+        --surface: #ffffff;
+        --surface-soft: #f7faf9;
+        --ink: #17201f;
+        --muted: #62706e;
+        --line: #dce5e3;
+        --primary: #0d9488;
+        --primary-dark: #0f766e;
+        --primary-soft: #ccfbf1;
+        --danger: #b3261e;
+        --danger-soft: #ffdad6;
+        --warning-soft: #ffedd5;
+        --shadow: 0 24px 70px rgba(30, 55, 51, 0.12);
+        --radius-lg: 26px;
+        --radius-md: 18px;
+        --radius-sm: 12px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 8% 0%, rgba(13, 148, 136, 0.09), transparent 30rem),
+          var(--canvas);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible {
+        outline: 3px solid rgba(13, 148, 136, 0.25);
+        outline-offset: 2px;
+      }
+
+      .demo-bar {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 8px 20px;
+        color: #31504c;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+      }
+
+      .demo-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--primary);
+        box-shadow: 0 0 0 5px rgba(13, 148, 136, 0.11);
+      }
+
+      .app {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto 48px;
+        overflow: hidden;
+        background: var(--surface);
+        border: 1px solid rgba(220, 229, 227, 0.9);
+        border-radius: 32px;
+        box-shadow: var(--shadow);
+        animation: app-in 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+
+      .app-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 72px;
+        padding: 14px 24px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.92);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-mark {
+        width: 42px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        border-radius: 14px;
+        color: white;
+        background: var(--primary);
+        box-shadow: 0 9px 24px rgba(13, 148, 136, 0.22);
+      }
+
+      .brand-mark svg,
+      .title-icon svg,
+      .icon-button svg,
+      .status-icon svg,
+      .button-icon {
+        width: 22px;
+        height: 22px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .brand-name {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 850;
+        letter-spacing: -0.02em;
+      }
+
+      .brand-context {
+        margin: 2px 0 0;
+        color: var(--muted);
+        font-size: 0.75rem;
+      }
+
+      .ghost-button {
+        min-height: 44px;
+        padding: 0 14px;
+        border: 0;
+        border-radius: 12px;
+        background: transparent;
+        color: var(--primary-dark);
+        font-weight: 750;
+      }
+
+      .ghost-button:hover {
+        background: var(--primary-soft);
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 340px;
+        min-height: 720px;
+      }
+
+      .review {
+        min-width: 0;
+        padding: 34px clamp(20px, 4vw, 48px) 44px;
+      }
+
+      .review-title {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+      }
+
+      .title-icon {
+        flex: 0 0 auto;
+        width: 48px;
+        height: 48px;
+        display: grid;
+        place-items: center;
+        border-radius: 16px;
+        color: var(--primary-dark);
+        background: var(--primary-soft);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.6rem, 3vw, 2.15rem);
+        line-height: 1.08;
+        letter-spacing: -0.04em;
+      }
+
+      .lead {
+        max-width: 620px;
+        margin: 8px 0 0;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 30px 0 14px;
+      }
+
+      .selection-label {
+        font-size: 0.92rem;
+        font-weight: 800;
+      }
+
+      .text-button {
+        min-height: 44px;
+        padding: 0 10px;
+        border: 0;
+        border-radius: 10px;
+        color: var(--primary-dark);
+        background: transparent;
+        font-weight: 800;
+      }
+
+      .text-button:hover {
+        background: var(--primary-soft);
+      }
+
+      .items {
+        display: grid;
+        gap: 12px;
+      }
+
+      .receipt-item {
+        position: relative;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        background: var(--surface);
+        transition:
+          opacity 180ms ease,
+          border-color 180ms ease,
+          transform 180ms ease,
+          box-shadow 180ms ease;
+        animation: item-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation-delay: calc(var(--index) * 55ms + 120ms);
+      }
+
+      .receipt-item:hover {
+        transform: translateY(-1px);
+        border-color: rgba(13, 148, 136, 0.38);
+        box-shadow: 0 12px 34px rgba(31, 70, 65, 0.08);
+      }
+
+      .receipt-item.is-off {
+        opacity: 0.54;
+        background: var(--surface-soft);
+      }
+
+      .item-top {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .check-wrap {
+        position: relative;
+        width: 44px;
+        height: 44px;
+        flex: 0 0 auto;
+        display: grid;
+        place-items: center;
+      }
+
+      .check-wrap input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .custom-check {
+        width: 22px;
+        height: 22px;
+        display: grid;
+        place-items: center;
+        border: 2px solid #91a09e;
+        border-radius: 7px;
+        color: white;
+        transition:
+          background 150ms ease,
+          border-color 150ms ease,
+          transform 150ms ease;
+      }
+
+      .check-wrap input:checked + .custom-check {
+        border-color: var(--primary);
+        background: var(--primary);
+      }
+
+      .check-wrap input:focus-visible + .custom-check {
+        outline: 3px solid rgba(13, 148, 136, 0.25);
+        outline-offset: 3px;
+      }
+
+      .custom-check::after {
+        content: "";
+        width: 8px;
+        height: 4px;
+        border-left: 2px solid currentColor;
+        border-bottom: 2px solid currentColor;
+        transform: translateY(-1px) rotate(-45deg) scale(0);
+        transition: transform 150ms ease;
+      }
+
+      .check-wrap input:checked + .custom-check::after {
+        transform: translateY(-1px) rotate(-45deg) scale(1);
+      }
+
+      .item-number {
+        flex: 1;
+        font-size: 0.86rem;
+        font-weight: 850;
+      }
+
+      .confidence {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 30px;
+        padding: 0 10px;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 850;
+        white-space: nowrap;
+      }
+
+      .confidence.high {
+        color: #075e55;
+        background: var(--primary-soft);
+      }
+
+      .confidence.medium {
+        color: #7c3d0a;
+        background: var(--warning-soft);
+      }
+
+      .confidence.low {
+        color: #8a1d17;
+        background: var(--danger-soft);
+      }
+
+      .item-fields {
+        display: grid;
+        grid-template-columns: minmax(0, 1.55fr) minmax(145px, 0.85fr);
+        gap: 12px;
+        margin: 10px 0 0 54px;
+      }
+
+      .money-row {
+        display: grid;
+        grid-template-columns: minmax(110px, 0.65fr) minmax(160px, 1fr);
+        gap: 12px;
+        margin: 12px 0 0 54px;
+      }
+
+      .field {
+        position: relative;
+      }
+
+      .field label {
+        display: block;
+        margin: 0 0 6px;
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 750;
+      }
+
+      .field input,
+      .field select {
+        width: 100%;
+        min-height: 46px;
+        padding: 0 12px;
+        border: 1px solid #cbd7d5;
+        border-radius: var(--radius-sm);
+        background: var(--surface);
+        color: var(--ink);
+        font-weight: 650;
+        transition:
+          border-color 150ms ease,
+          box-shadow 150ms ease;
+      }
+
+      .field input:hover,
+      .field select:hover {
+        border-color: #8ca4a0;
+      }
+
+      .field input:focus,
+      .field select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+        outline: 0;
+      }
+
+      .receipt-item.is-off input,
+      .receipt-item.is-off select {
+        pointer-events: none;
+        background: #edf2f1;
+      }
+
+      .subtotal {
+        margin: 13px 0 0 54px;
+        color: var(--primary-dark);
+        font-size: 0.82rem;
+        font-weight: 850;
+        text-align: right;
+      }
+
+      .summary {
+        padding: 34px 26px;
+        border-left: 1px solid var(--line);
+        background: var(--surface-soft);
+      }
+
+      .summary-inner {
+        position: sticky;
+        top: 24px;
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--primary-dark);
+        font-size: 0.72rem;
+        font-weight: 850;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 1.35rem;
+        letter-spacing: -0.025em;
+      }
+
+      .summary-copy {
+        margin: 7px 0 24px;
+        color: var(--muted);
+        font-size: 0.85rem;
+        line-height: 1.5;
+      }
+
+      .totals {
+        padding: 4px 0 18px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .total-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 8px 0;
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      .total-row strong {
+        color: var(--ink);
+        font-size: 0.98rem;
+      }
+
+      .total-row.main strong {
+        color: var(--primary-dark);
+        font-size: 1.35rem;
+        letter-spacing: -0.03em;
+      }
+
+      .difference {
+        margin: 18px 0;
+        padding: 14px;
+        border-radius: 16px;
+        color: #7d1b15;
+        background: var(--danger-soft);
+        transition:
+          background 180ms ease,
+          color 180ms ease,
+          transform 180ms ease;
+      }
+
+      .difference.is-ok {
+        color: #075e55;
+        background: var(--primary-soft);
+      }
+
+      .difference.pulse {
+        transform: scale(1.018);
+      }
+
+      .difference-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.82rem;
+        font-weight: 850;
+      }
+
+      .difference p {
+        margin: 6px 0 0;
+        font-size: 0.78rem;
+        line-height: 1.45;
+      }
+
+      .status-icon {
+        width: 26px;
+        height: 26px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.52);
+      }
+
+      .switch-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+        align-items: center;
+        padding: 9px 0 20px;
+      }
+
+      .switch-title {
+        margin: 0;
+        font-size: 0.86rem;
+        font-weight: 850;
+      }
+
+      .switch-copy {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 0.75rem;
+        line-height: 1.4;
+      }
+
+      .switch {
+        position: relative;
+        width: 52px;
+        height: 44px;
+        display: grid;
+        place-items: center;
+      }
+
+      .switch input {
+        position: absolute;
+        opacity: 0;
+      }
+
+      .switch-track {
+        width: 46px;
+        height: 26px;
+        padding: 3px;
+        border-radius: 999px;
+        background: #a9b6b4;
+        transition: background 160ms ease;
+      }
+
+      .switch-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: white;
+        box-shadow: 0 2px 7px rgba(21, 42, 39, 0.25);
+        transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .switch input:checked + .switch-track {
+        background: var(--primary);
+      }
+
+      .switch input:checked + .switch-track .switch-thumb {
+        transform: translateX(20px);
+      }
+
+      .switch input:focus-visible + .switch-track {
+        outline: 3px solid rgba(13, 148, 136, 0.25);
+        outline-offset: 3px;
+      }
+
+      .primary-button {
+        width: 100%;
+        min-height: 52px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        border: 0;
+        border-radius: 15px;
+        color: white;
+        background: var(--primary);
+        box-shadow: 0 12px 26px rgba(13, 148, 136, 0.22);
+        font-weight: 850;
+        transition:
+          transform 160ms ease,
+          background 160ms ease,
+          box-shadow 160ms ease;
+      }
+
+      .primary-button:hover:not(:disabled) {
+        transform: translateY(-1px);
+        background: var(--primary-dark);
+        box-shadow: 0 16px 32px rgba(13, 148, 136, 0.28);
+      }
+
+      .primary-button:disabled {
+        cursor: not-allowed;
+        color: #70807d;
+        background: #d9e2e0;
+        box-shadow: none;
+      }
+
+      .privacy {
+        margin: 12px 8px 0;
+        color: var(--muted);
+        font-size: 0.7rem;
+        line-height: 1.4;
+        text-align: center;
+      }
+
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 22px;
+        z-index: 10;
+        width: min(560px, calc(100% - 28px));
+        min-height: 64px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px 10px 16px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 18px;
+        color: white;
+        background: linear-gradient(135deg, #0a7e61, #13a87e);
+        box-shadow: 0 18px 45px rgba(9, 80, 62, 0.28);
+        opacity: 0;
+        pointer-events: none;
+        transform: translate(-50%, 18px);
+        transition:
+          opacity 220ms ease,
+          transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .toast.is-visible {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translate(-50%, 0);
+      }
+
+      .toast-check {
+        width: 34px;
+        height: 34px;
+        flex: 0 0 auto;
+        display: grid;
+        place-items: center;
+        border-radius: 11px;
+        background: rgba(255, 255, 255, 0.17);
+        font-weight: 900;
+      }
+
+      .toast-message {
+        flex: 1;
+        font-size: 0.84rem;
+        font-weight: 750;
+        line-height: 1.35;
+      }
+
+      .undo-button {
+        min-height: 44px;
+        padding: 0 12px;
+        border: 0;
+        border-radius: 11px;
+        color: white;
+        background: rgba(255, 255, 255, 0.14);
+        font-weight: 850;
+      }
+
+      .undo-button:hover {
+        background: rgba(255, 255, 255, 0.23);
+      }
+
+      @keyframes app-in {
+        from {
+          opacity: 0;
+          transform: translateY(14px) scale(0.992);
+        }
+      }
+
+      @keyframes item-in {
+        from {
+          opacity: 0;
+          transform: translateY(9px);
+        }
+      }
+
+      @media (max-width: 880px) {
+        .app {
+          width: min(720px, calc(100% - 20px));
+          border-radius: 24px;
+        }
+
+        .workspace {
+          grid-template-columns: 1fr;
+        }
+
+        .summary {
+          border-top: 1px solid var(--line);
+          border-left: 0;
+        }
+
+        .summary-inner {
+          position: static;
+        }
+      }
+
+      @media (max-width: 620px) {
+        .demo-bar {
+          padding-inline: 12px;
+          text-align: center;
+        }
+
+        .app {
+          width: 100%;
+          margin-bottom: 0;
+          border-right: 0;
+          border-bottom: 0;
+          border-left: 0;
+          border-radius: 22px 22px 0 0;
+        }
+
+        .app-header {
+          padding-inline: 16px;
+        }
+
+        .brand-context {
+          display: none;
+        }
+
+        .review {
+          padding: 26px 14px 32px;
+        }
+
+        .review-title {
+          gap: 11px;
+        }
+
+        .title-icon {
+          width: 44px;
+          height: 44px;
+          border-radius: 14px;
+        }
+
+        .receipt-item {
+          padding: 12px 10px 14px;
+        }
+
+        .item-fields,
+        .money-row {
+          grid-template-columns: 1fr;
+          margin-left: 0;
+        }
+
+        .subtotal {
+          margin-left: 0;
+        }
+
+        .summary {
+          padding: 28px 18px 100px;
+        }
+
+        .toast {
+          bottom: 12px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-bar">
+      <span class="demo-dot" aria-hidden="true"></span>
+      Protótipo interativo com dados fictícios — altere os campos para testar
+    </div>
+
+    <main class="app">
+      <header class="app-header">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M3 4h2l2.3 10.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L21 8H7" />
+              <circle cx="10" cy="20" r="1" />
+              <circle cx="18" cy="20" r="1" />
+            </svg>
+          </div>
+          <div>
+            <p class="brand-name">Minhas Compras</p>
+            <p class="brand-context">Lista “Compra da semana”</p>
+          </div>
+        </div>
+        <button class="ghost-button" id="resetButton" type="button">
+          Restaurar exemplo
+        </button>
+      </header>
+
+      <div class="workspace">
+        <section class="review" aria-labelledby="pageTitle">
+          <div class="review-title">
+            <div class="title-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M6 3h9l4 4v14H6z" />
+                <path d="M15 3v5h5M9 13l2 2 4-4M9 18h6" />
+              </svg>
+            </div>
+            <div>
+              <h1 id="pageTitle">Revisar compra</h1>
+              <p class="lead">
+                Selecione os itens, corrija o que o cupom reconheceu e relacione
+                cada linha ao que você planejou comprar.
+              </p>
+            </div>
+          </div>
+
+          <div class="toolbar">
+            <span class="selection-label" id="selectionLabel">4 itens selecionados</span>
+            <button class="text-button" id="toggleAllButton" type="button">
+              Desmarcar todos
+            </button>
+          </div>
+
+          <div class="items" id="items"></div>
+        </section>
+
+        <aside class="summary" aria-labelledby="summaryTitle">
+          <div class="summary-inner">
+            <p class="eyebrow">Conferência</p>
+            <h2 id="summaryTitle">Resumo do cupom</h2>
+            <p class="summary-copy">
+              Os valores abaixo mudam conforme você seleciona ou edita os itens.
+            </p>
+
+            <div class="totals">
+              <div class="total-row">
+                <span>Itens selecionados</span>
+                <strong id="summaryCount">4</strong>
+              </div>
+              <div class="total-row">
+                <span>Unidades</span>
+                <strong id="summaryUnits">5</strong>
+              </div>
+              <div class="total-row main">
+                <span>Soma reconhecida</span>
+                <strong id="recognizedTotal">R$ 61,48</strong>
+              </div>
+              <div class="total-row">
+                <span>Total do cupom</span>
+                <strong>R$ 59,90</strong>
+              </div>
+            </div>
+
+            <div class="difference" id="differenceBox" role="status" aria-live="polite">
+              <div class="difference-title">
+                <span class="status-icon" aria-hidden="true">!</span>
+                <span id="differenceTitle">Divergência de R$ 1,58</span>
+              </div>
+              <p id="differenceCopy">
+                Revise itens, quantidades e preços antes de confirmar.
+              </p>
+            </div>
+
+            <div class="switch-row">
+              <div>
+                <p class="switch-title">Fechar lista e salvar no histórico</p>
+                <p class="switch-copy">
+                  Atualiza os preços e registra a compra de uma vez.
+                </p>
+              </div>
+              <label class="switch">
+                <input id="finalizeSwitch" type="checkbox" checked />
+                <span class="switch-track"><span class="switch-thumb"></span></span>
+                <span hidden>Fechar lista e salvar no histórico</span>
+              </label>
+            </div>
+
+            <button class="primary-button" id="confirmButton" type="button">
+              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="9"></circle>
+                <path d="m8 12 2.5 2.5L16 9"></path>
+              </svg>
+              <span id="confirmLabel">Confirmar compra</span>
+            </button>
+            <p class="privacy">
+              Neste protótipo nada é salvo. No aplicativo, a confirmação também
+              atualiza seu histórico de preços.
+            </p>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">
+      <span class="toast-check" aria-hidden="true">✓</span>
+      <span class="toast-message" id="toastMessage">
+        Compra confirmada. Histórico e preços atualizados.
+      </span>
+      <button class="undo-button" id="undoButton" type="button">Desfazer</button>
+    </div>
+
+    <script>
+      const declaredTotal = 59.9;
+      const initialItems = [
+        {
+          id: "rice",
+          selected: true,
+          name: "ARROZ TIPO 1",
+          quantity: 1,
+          price: 24.9,
+          confidence: "Alta 98%",
+          confidenceType: "high",
+          planned: "Arroz",
+        },
+        {
+          id: "milk",
+          selected: true,
+          name: "LEITE INTEGRAL",
+          quantity: 2,
+          price: 5.49,
+          confidence: "Alta 91%",
+          confidenceType: "high",
+          planned: "Leite integral",
+        },
+        {
+          id: "coffee",
+          selected: true,
+          name: "CAFE TORRADO",
+          quantity: 1,
+          price: 18.9,
+          confidence: "Média 68%",
+          confidenceType: "medium",
+          planned: "",
+        },
+        {
+          id: "banana",
+          selected: true,
+          name: "BANANA PRATA",
+          quantity: 1,
+          price: 6.7,
+          confidence: "Baixa 47%",
+          confidenceType: "low",
+          planned: "Banana",
+        },
+      ];
+
+      const plannedOptions = [
+        "",
+        "Arroz",
+        "Leite integral",
+        "Café",
+        "Banana",
+        "Detergente",
+      ];
+
+      let items = structuredClone(initialItems);
+      let snapshot = null;
+      let confirmed = false;
+      let toastTimer = null;
+
+      const itemsElement = document.querySelector("#items");
+      const selectionLabel = document.querySelector("#selectionLabel");
+      const toggleAllButton = document.querySelector("#toggleAllButton");
+      const summaryCount = document.querySelector("#summaryCount");
+      const summaryUnits = document.querySelector("#summaryUnits");
+      const recognizedTotal = document.querySelector("#recognizedTotal");
+      const differenceBox = document.querySelector("#differenceBox");
+      const differenceTitle = document.querySelector("#differenceTitle");
+      const differenceCopy = document.querySelector("#differenceCopy");
+      const finalizeSwitch = document.querySelector("#finalizeSwitch");
+      const confirmButton = document.querySelector("#confirmButton");
+      const confirmLabel = document.querySelector("#confirmLabel");
+      const toast = document.querySelector("#toast");
+      const toastMessage = document.querySelector("#toastMessage");
+
+      const money = new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      });
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;");
+      }
+
+      function optionsFor(selected) {
+        return plannedOptions
+          .map((option) => {
+            const label = option || "Não relacionar";
+            return `<option value="${escapeHtml(option)}" ${
+              option === selected ? "selected" : ""
+            }>${escapeHtml(label)}</option>`;
+          })
+          .join("");
+      }
+
+      function renderItems() {
+        itemsElement.innerHTML = items
+          .map(
+            (item, index) => `
+              <article
+                class="receipt-item ${item.selected ? "" : "is-off"}"
+                style="--index:${index}"
+                data-id="${item.id}"
+              >
+                <div class="item-top">
+                  <label class="check-wrap">
+                    <input
+                      type="checkbox"
+                      data-field="selected"
+                      ${item.selected ? "checked" : ""}
+                      aria-label="${item.selected ? "Remover" : "Selecionar"} item ${index + 1}"
+                    />
+                    <span class="custom-check"></span>
+                  </label>
+                  <span class="item-number">Item ${index + 1}</span>
+                  <span
+                    class="confidence ${item.confidenceType}"
+                    title="Compara o texto do cupom com sua lista e seu catálogo"
+                  >
+                    ${escapeHtml(item.confidence)}
+                  </span>
+                </div>
+
+                <div class="item-fields">
+                  <div class="field">
+                    <label for="name-${item.id}">Produto</label>
+                    <input
+                      id="name-${item.id}"
+                      data-field="name"
+                      value="${escapeHtml(item.name)}"
+                      ${item.selected ? "" : "disabled"}
+                    />
+                  </div>
+                  <div class="field">
+                    <label for="planned-${item.id}">Relacionar à lista</label>
+                    <select
+                      id="planned-${item.id}"
+                      data-field="planned"
+                      ${item.selected ? "" : "disabled"}
+                    >
+                      ${optionsFor(item.planned)}
+                    </select>
+                  </div>
+                </div>
+
+                <div class="money-row">
+                  <div class="field">
+                    <label for="quantity-${item.id}">Quantidade</label>
+                    <input
+                      id="quantity-${item.id}"
+                      data-field="quantity"
+                      type="number"
+                      inputmode="numeric"
+                      min="1"
+                      max="999"
+                      value="${item.quantity}"
+                      ${item.selected ? "" : "disabled"}
+                    />
+                  </div>
+                  <div class="field">
+                    <label for="price-${item.id}">Preço unitário</label>
+                    <input
+                      id="price-${item.id}"
+                      data-field="price"
+                      type="number"
+                      inputmode="decimal"
+                      min="0.01"
+                      step="0.01"
+                      value="${item.price.toFixed(2)}"
+                      ${item.selected ? "" : "disabled"}
+                    />
+                  </div>
+                </div>
+
+                <div class="subtotal">
+                  Subtotal ${money.format(item.quantity * item.price)}
+                </div>
+              </article>
+            `,
+          )
+          .join("");
+      }
+
+      function selectedItems() {
+        return items.filter((item) => item.selected);
+      }
+
+      function updateSummary(animate = true) {
+        const selected = selectedItems();
+        const count = selected.length;
+        const units = selected.reduce((sum, item) => sum + item.quantity, 0);
+        const total = selected.reduce(
+          (sum, item) => sum + item.quantity * item.price,
+          0,
+        );
+        const difference = total - declaredTotal;
+        const isOk = Math.abs(difference) <= 0.05;
+
+        selectionLabel.textContent = `${count} ${
+          count === 1 ? "item selecionado" : "itens selecionados"
+        }`;
+        toggleAllButton.textContent =
+          count === items.length ? "Desmarcar todos" : "Selecionar todos";
+        summaryCount.textContent = count;
+        summaryUnits.textContent = units;
+        recognizedTotal.textContent = money.format(total);
+        differenceBox.classList.toggle("is-ok", isOk);
+
+        if (isOk) {
+          differenceTitle.textContent = "Os valores conferem";
+          differenceCopy.textContent =
+            "A soma dos itens selecionados corresponde ao total do cupom.";
+        } else {
+          differenceTitle.textContent = `Divergência de ${money.format(
+            Math.abs(difference),
+          )}`;
+          differenceCopy.textContent =
+            "Revise itens, quantidades e preços antes de confirmar.";
+        }
+
+        confirmButton.disabled = count === 0 || confirmed;
+        if (animate) {
+          differenceBox.classList.add("pulse");
+          window.setTimeout(() => differenceBox.classList.remove("pulse"), 180);
+        }
+      }
+
+      function render(animate = false) {
+        renderItems();
+        updateSummary(animate);
+      }
+
+      function updateItemFromControl(control) {
+        const card = control.closest("[data-id]");
+        const item = items.find((entry) => entry.id === card?.dataset.id);
+        if (!item) return;
+
+        const field = control.dataset.field;
+        if (field === "selected") {
+          item.selected = control.checked;
+          render(true);
+          return;
+        }
+        if (field === "quantity") {
+          item.quantity = Math.max(1, Number.parseInt(control.value || "1", 10));
+        } else if (field === "price") {
+          item.price = Math.max(0, Number.parseFloat(control.value || "0"));
+        } else {
+          item[field] = control.value;
+        }
+
+        const subtotal = card.querySelector(".subtotal");
+        subtotal.textContent = `Subtotal ${money.format(item.quantity * item.price)}`;
+        updateSummary(true);
+      }
+
+      itemsElement.addEventListener("change", (event) => {
+        if (event.target.matches("[data-field]")) {
+          updateItemFromControl(event.target);
+        }
+      });
+
+      itemsElement.addEventListener("input", (event) => {
+        if (event.target.matches('[data-field="quantity"], [data-field="price"]')) {
+          updateItemFromControl(event.target);
+        }
+      });
+
+      toggleAllButton.addEventListener("click", () => {
+        const shouldSelect = selectedItems().length !== items.length;
+        items.forEach((item) => {
+          item.selected = shouldSelect;
+        });
+        render(true);
+      });
+
+      finalizeSwitch.addEventListener("change", () => {
+        confirmLabel.textContent = finalizeSwitch.checked
+          ? "Confirmar compra"
+          : "Aplicar à lista";
+      });
+
+      confirmButton.addEventListener("click", () => {
+        snapshot = {
+          items: structuredClone(items),
+          finalize: finalizeSwitch.checked,
+        };
+        confirmed = true;
+        confirmButton.disabled = true;
+        confirmLabel.textContent = finalizeSwitch.checked
+          ? "Compra confirmada"
+          : "Cupom aplicado";
+        toastMessage.textContent = finalizeSwitch.checked
+          ? "Compra confirmada. Histórico e preços atualizados."
+          : "Cupom aplicado. Itens e preços atualizados.";
+        toast.classList.add("is-visible");
+        clearTimeout(toastTimer);
+        toastTimer = window.setTimeout(
+          () => toast.classList.remove("is-visible"),
+          8000,
+        );
+      });
+
+      document.querySelector("#undoButton").addEventListener("click", () => {
+        if (!snapshot) return;
+        items = structuredClone(snapshot.items);
+        finalizeSwitch.checked = snapshot.finalize;
+        confirmed = false;
+        confirmLabel.textContent = finalizeSwitch.checked
+          ? "Confirmar compra"
+          : "Aplicar à lista";
+        toastMessage.textContent =
+          "Importação desfeita. Lista, histórico e preços restaurados.";
+        render(true);
+        clearTimeout(toastTimer);
+        toastTimer = window.setTimeout(
+          () => toast.classList.remove("is-visible"),
+          3800,
+        );
+      });
+
+      document.querySelector("#resetButton").addEventListener("click", () => {
+        items = structuredClone(initialItems);
+        snapshot = null;
+        confirmed = false;
+        finalizeSwitch.checked = true;
+        confirmLabel.textContent = "Confirmar compra";
+        toast.classList.remove("is-visible");
+        render(true);
+      });
+
+      render();
+    </script>
+  </body>
+</html>

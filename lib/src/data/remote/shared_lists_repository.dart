@@ -1102,6 +1102,30 @@ class SharedListsRepository {
     });
   }
 
+  Future<void> undoSharedFinalization({
+    required String listId,
+    required String historyId,
+    required String updatedBy,
+  }) async {
+    final trimmedListId = listId.trim();
+    final trimmedHistoryId = historyId.trim();
+    final trimmedUid = updatedBy.trim();
+    if (trimmedListId.isEmpty ||
+        trimmedHistoryId.isEmpty ||
+        trimmedUid.isEmpty) {
+      throw StateError('Dados inválidos para desfazer a compra.');
+    }
+
+    final batch = _firestore.batch();
+    batch.update(_listRef(trimmedListId), <String, dynamic>{
+      'isClosed': false,
+      'closedAt': null,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    batch.delete(_historyRef(trimmedListId).doc(trimmedHistoryId));
+    await batch.commit();
+  }
+
   Future<void> upsertItem({
     required String listId,
     required SharedShoppingItem item,

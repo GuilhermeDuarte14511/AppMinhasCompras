@@ -10,6 +10,7 @@ enum ReceiptItemMatchConfidence { none, low, medium, high, exact }
 
 class ReceiptItemMatchCandidate {
   const ReceiptItemMatchCandidate({
+    required this.id,
     required this.source,
     required this.name,
     required this.category,
@@ -18,6 +19,7 @@ class ReceiptItemMatchCandidate {
     this.barcode,
   });
 
+  final String id;
   final ReceiptItemMatchSource source;
   final String name;
   final ShoppingCategory category;
@@ -110,6 +112,7 @@ class ReceiptItemMatcher {
     ShoppingItem item,
   ) {
     return ReceiptItemMatchCandidate(
+      id: item.id,
       source: ReceiptItemMatchSource.currentList,
       name: item.name,
       category: item.category,
@@ -134,6 +137,7 @@ class ReceiptItemMatcher {
     CatalogProduct product,
   ) {
     return ReceiptItemMatchCandidate(
+      id: product.id,
       source: ReceiptItemMatchSource.catalog,
       name: product.name,
       category: product.category,

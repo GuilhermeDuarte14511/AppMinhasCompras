@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../application/fiscal_receipt_import.dart';
 import '../core/utils/format_utils.dart';
 import '../domain/models_and_utils.dart';
 import 'dialogs/sheets/fiscal_receipt_import_sheet.dart';
@@ -856,12 +857,12 @@ Future<List<ReplenishmentSuggestion>?> showReplenishmentSuggestionsSheet(
   );
 }
 
-Future<List<ShoppingItemDraft>?> showFiscalReceiptImportSheet(
+Future<FiscalReceiptReviewSubmission?> showFiscalReceiptImportSheet(
   BuildContext context, {
   List<ShoppingItem> currentItems = const <ShoppingItem>[],
   List<CatalogProduct> catalogProducts = const <CatalogProduct>[],
 }) {
-  return showAppModalBottomSheet<List<ShoppingItemDraft>>(
+  return showAppModalBottomSheet<FiscalReceiptReviewSubmission>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,

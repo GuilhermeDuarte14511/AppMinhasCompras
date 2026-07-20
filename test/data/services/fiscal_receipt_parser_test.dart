@@ -418,4 +418,46 @@ AR007242 CHAI LEAO CAMOMILA 1X10G 1 UND9 2,58 2,58
       ShoppingCategory.beverages,
     ]);
   });
+
+  test('returns declared total and the recognized difference', () {
+    const rawText = '''
+AR001 ARROZ TIPO 1 1 UND9 20,00 20,00
+AR002 FEIJAO CARIOCA 2 UND9 7,50 15,00
+Valor total R\$ 36,90
+VALOR PAGO R\$ 34,00
+''';
+
+    final result = parser.parseReceipt(rawText);
+
+    expect(result.items, hasLength(2));
+    expect(result.recognizedTotal, closeTo(35, 0.001));
+    expect(result.declaredTotal, closeTo(36.90, 0.001));
+    expect(result.differenceFromDeclaredTotal, closeTo(-1.90, 0.001));
+  });
+
+  test('returns no declared total when the receipt does not expose one', () {
+    const rawText = 'AR001 CAFE TORRADO 1 UND9 18,90 18,90';
+
+    final result = parser.parseReceipt(rawText);
+
+    expect(result.items, hasLength(1));
+    expect(result.declaredTotal, isNull);
+    expect(result.differenceFromDeclaredTotal, isNull);
+  });
+
+  test(
+    'extracts declared total when OCR splits its value onto the next line',
+    () {
+      const rawText = '''
+AR001 CAFE TORRADO 1 UND9 18,90 18,90
+Valor total R\$
+18,90
+''';
+
+      final result = parser.parseReceipt(rawText);
+
+      expect(result.declaredTotal, 18.90);
+      expect(result.differenceFromDeclaredTotal, closeTo(0, 0.001));
+    },
+  );
 }

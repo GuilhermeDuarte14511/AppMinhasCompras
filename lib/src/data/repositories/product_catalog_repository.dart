@@ -5,9 +5,11 @@ import '../../domain/classifications.dart';
 import '../../domain/models_and_utils.dart';
 
 class ProductCatalogRepository implements ProductCatalogGateway {
-  ProductCatalogRepository(this._storage);
+  ProductCatalogRepository(this._storage, {DateTime Function()? now})
+    : _now = now ?? DateTime.now;
 
   final ProductCatalogStorage _storage;
+  final DateTime Function() _now;
   final List<CatalogProduct> _products = <CatalogProduct>[];
   final Map<String, int> _indexByNormalizedName = <String, int>{};
   final Map<String, int> _indexByBarcode = <String, int>{};
@@ -23,11 +25,18 @@ class ProductCatalogRepository implements ProductCatalogGateway {
     }
 
     final loaded = await _storage.loadProducts();
+    final normalized = _mergeDuplicatedProducts(
+      loaded,
+      collapseLegacyDailyDuplicates: true,
+    );
     _products
       ..clear()
-      ..addAll(_mergeDuplicatedProducts(loaded));
+      ..addAll(normalized);
     _rebuildIndexes();
     _loaded = true;
+    if (!_sameCatalogProducts(loaded, normalized)) {
+      await _save();
+    }
   }
 
   @override
@@ -119,21 +128,15 @@ class ProductCatalogRepository implements ProductCatalogGateway {
   @override
   Future<void> upsertFromDraft(ShoppingItemDraft draft) async {
     await _ensureLoaded();
+    final now = _now();
     final changed = _upsertCatalogEntry(
       name: draft.name,
       category: draft.category,
       unitPrice: draft.unitPrice,
       barcode: draft.barcode,
       usageIncrement: 1,
-      incomingHistory: draft.unitPrice > 0
-          ? [
-              PriceHistoryEntry(
-                price: draft.unitPrice,
-                recordedAt: DateTime.now(),
-              ),
-            ]
-          : const <PriceHistoryEntry>[],
-      updatedAt: DateTime.now(),
+      incomingHistory: const <PriceHistoryEntry>[],
+      updatedAt: now,
     );
 
     if (changed) {
@@ -150,6 +153,7 @@ class ProductCatalogRepository implements ProductCatalogGateway {
       return;
     }
 
+    final now = _now();
     final changed = _upsertCatalogEntry(
       name: name,
       category: result.category ?? ShoppingCategory.other,
@@ -157,7 +161,7 @@ class ProductCatalogRepository implements ProductCatalogGateway {
       barcode: result.barcode,
       usageIncrement: 1,
       incomingHistory: result.priceHistory,
-      updatedAt: DateTime.now(),
+      updatedAt: now,
     );
 
     if (changed) {
@@ -196,7 +200,9 @@ class ProductCatalogRepository implements ProductCatalogGateway {
   Future<void> replaceAllProducts(List<CatalogProduct> products) async {
     _products
       ..clear()
-      ..addAll(_mergeDuplicatedProducts(products));
+      ..addAll(
+        _mergeDuplicatedProducts(products, collapseLegacyDailyDuplicates: true),
+      );
     _rebuildIndexes();
     _loaded = true;
     await _save();
@@ -226,9 +232,11 @@ class ProductCatalogRepository implements ProductCatalogGateway {
 
     final sanitizedBarcode = sanitizeBarcode(barcode);
     final price = unitPrice != null && unitPrice > 0 ? unitPrice : null;
-    final normalizedHistory = _normalizeHistory(
-      incomingHistory,
-      fallbackPrice: price,
+    var normalizedHistory = _normalizeHistory(incomingHistory);
+    normalizedHistory = _appendPriceChange(
+      normalizedHistory,
+      price: price,
+      recordedAt: updatedAt,
     );
 
     final existingIndex = _findExistingIndex(
@@ -261,6 +269,7 @@ class ProductCatalogRepository implements ProductCatalogGateway {
       existing.priceHistory,
       normalizedHistory,
       fallbackPrice: price,
+      fallbackRecordedAt: updatedAt,
     );
 
     final resolvedUnitPrice = mergedHistory.isNotEmpty
@@ -380,10 +389,17 @@ class ProductCatalogRepository implements ProductCatalogGateway {
     await _storage.saveProducts(_products);
   }
 
-  List<CatalogProduct> _mergeDuplicatedProducts(List<CatalogProduct> source) {
+  List<CatalogProduct> _mergeDuplicatedProducts(
+    List<CatalogProduct> source, {
+    bool collapseLegacyDailyDuplicates = false,
+  }) {
     final mergedByName = <String, CatalogProduct>{};
 
-    for (final product in source) {
+    for (final rawProduct in source) {
+      final product = _normalizeProduct(
+        rawProduct,
+        collapseLegacyDailyDuplicates: collapseLegacyDailyDuplicates,
+      );
       final normalizedName = normalizeQuery(product.name);
       if (normalizedName.isEmpty) {
         continue;
@@ -399,6 +415,7 @@ class ProductCatalogRepository implements ProductCatalogGateway {
         current.priceHistory,
         product.priceHistory,
         fallbackPrice: product.unitPrice,
+        fallbackRecordedAt: product.updatedAt,
       );
       final merged = current.copyWith(
         category: _resolveCategory(current.category, product.category),
@@ -418,6 +435,27 @@ class ProductCatalogRepository implements ProductCatalogGateway {
     return mergedByName.values.toList(growable: false);
   }
 
+  CatalogProduct _normalizeProduct(
+    CatalogProduct product, {
+    required bool collapseLegacyDailyDuplicates,
+  }) {
+    var history = _normalizeHistory(
+      product.priceHistory,
+      collapseLegacyDailyDuplicates: collapseLegacyDailyDuplicates,
+    );
+    if (history.isEmpty) {
+      history = _appendPriceChange(
+        history,
+        price: product.unitPrice,
+        recordedAt: product.updatedAt,
+      );
+    }
+    return product.copyWith(
+      unitPrice: history.isNotEmpty ? history.last.price : product.unitPrice,
+      priceHistory: history,
+    );
+  }
+
   ShoppingCategory _resolveCategory(
     ShoppingCategory current,
     ShoppingCategory incoming,
@@ -430,7 +468,7 @@ class ProductCatalogRepository implements ProductCatalogGateway {
 
   List<PriceHistoryEntry> _normalizeHistory(
     List<PriceHistoryEntry> source, {
-    double? fallbackPrice,
+    bool collapseLegacyDailyDuplicates = false,
   }) {
     final history = <PriceHistoryEntry>[];
     for (final entry in source) {
@@ -439,41 +477,76 @@ class ProductCatalogRepository implements ProductCatalogGateway {
       }
     }
 
-    if (history.isEmpty && fallbackPrice != null && fallbackPrice > 0) {
-      history.add(
-        PriceHistoryEntry(price: fallbackPrice, recordedAt: DateTime.now()),
-      );
-    }
-
     history.sort((a, b) => a.recordedAt.compareTo(b.recordedAt));
-    return _compactHistory(history);
+    return _compactHistory(
+      history,
+      collapseLegacyDailyDuplicates: collapseLegacyDailyDuplicates,
+    );
   }
 
   List<PriceHistoryEntry> _mergeHistory(
     List<PriceHistoryEntry> current,
     List<PriceHistoryEntry> incoming, {
     double? fallbackPrice,
+    required DateTime fallbackRecordedAt,
   }) {
     final merged = <PriceHistoryEntry>[...current, ...incoming]
       ..removeWhere((entry) => entry.price <= 0)
       ..sort((a, b) => a.recordedAt.compareTo(b.recordedAt));
 
-    if (merged.isEmpty && fallbackPrice != null && fallbackPrice > 0) {
-      merged.add(
-        PriceHistoryEntry(price: fallbackPrice, recordedAt: DateTime.now()),
-      );
-    }
-
-    return _compactHistory(merged);
+    return _appendPriceChange(
+      _compactHistory(merged),
+      price: fallbackPrice,
+      recordedAt: fallbackRecordedAt,
+    );
   }
 
-  List<PriceHistoryEntry> _compactHistory(List<PriceHistoryEntry> source) {
+  List<PriceHistoryEntry> _appendPriceChange(
+    List<PriceHistoryEntry> history, {
+    required double? price,
+    required DateTime recordedAt,
+  }) {
+    if (price == null || price <= 0) {
+      return history;
+    }
+    if (history.isNotEmpty && (history.last.price - price).abs() < 0.0001) {
+      return history;
+    }
+    final updated = <PriceHistoryEntry>[
+      ...history,
+      PriceHistoryEntry(price: price, recordedAt: recordedAt),
+    ]..sort((a, b) => a.recordedAt.compareTo(b.recordedAt));
+    return _compactHistory(updated);
+  }
+
+  List<PriceHistoryEntry> _compactHistory(
+    List<PriceHistoryEntry> source, {
+    bool collapseLegacyDailyDuplicates = false,
+  }) {
     if (source.isEmpty) {
       return const <PriceHistoryEntry>[];
     }
 
     final compacted = <PriceHistoryEntry>[];
+    final seenMinutePrices = <String>{};
+    final seenDailyPrices = <String>{};
     for (final entry in source) {
+      final priceInCents = (entry.price * 100).round();
+      final minuteKey =
+          '${entry.recordedAt.year}-${entry.recordedAt.month}-'
+          '${entry.recordedAt.day}-${entry.recordedAt.hour}-'
+          '${entry.recordedAt.minute}:$priceInCents';
+      if (!seenMinutePrices.add(minuteKey)) {
+        continue;
+      }
+      if (collapseLegacyDailyDuplicates) {
+        final dailyKey =
+            '${entry.recordedAt.year}-${entry.recordedAt.month}-'
+            '${entry.recordedAt.day}:$priceInCents';
+        if (!seenDailyPrices.add(dailyKey)) {
+          continue;
+        }
+      }
       if (compacted.isEmpty) {
         compacted.add(entry);
         continue;
@@ -481,9 +554,7 @@ class ProductCatalogRepository implements ProductCatalogGateway {
 
       final last = compacted.last;
       final samePrice = (last.price - entry.price).abs() < 0.0001;
-      final sameMinute =
-          last.recordedAt.difference(entry.recordedAt).inMinutes.abs() == 0;
-      if (samePrice && sameMinute) {
+      if (samePrice) {
         continue;
       }
       compacted.add(entry);
@@ -494,6 +565,30 @@ class ProductCatalogRepository implements ProductCatalogGateway {
       return compacted;
     }
     return compacted.sublist(compacted.length - maxEntries);
+  }
+
+  bool _sameCatalogProducts(
+    List<CatalogProduct> left,
+    List<CatalogProduct> right,
+  ) {
+    if (left.length != right.length) {
+      return false;
+    }
+    for (var index = 0; index < left.length; index++) {
+      final a = left[index];
+      final b = right[index];
+      if (a.id != b.id ||
+          a.name != b.name ||
+          a.category != b.category ||
+          a.unitPrice != b.unitPrice ||
+          a.barcode != b.barcode ||
+          a.usageCount != b.usageCount ||
+          a.updatedAt != b.updatedAt ||
+          !_sameHistory(a.priceHistory, b.priceHistory)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   bool _sameHistory(

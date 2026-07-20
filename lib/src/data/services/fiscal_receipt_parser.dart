@@ -2,6 +2,23 @@ import '../../domain/classifications.dart';
 import '../../domain/models_and_utils.dart';
 import '../../domain/receipt_aliases.dart';
 
+class FiscalReceiptParseResult {
+  const FiscalReceiptParseResult({required this.items, this.declaredTotal});
+
+  final List<ShoppingItemDraft> items;
+  final double? declaredTotal;
+
+  double get recognizedTotal => items.fold<double>(
+    0,
+    (sum, item) => sum + (item.quantity * item.unitPrice),
+  );
+
+  double? get differenceFromDeclaredTotal {
+    final total = declaredTotal;
+    return total == null ? null : recognizedTotal - total;
+  }
+}
+
 class FiscalReceiptParser {
   const FiscalReceiptParser();
 
@@ -86,6 +103,10 @@ class FiscalReceiptParser {
   };
 
   List<ShoppingItemDraft> parse(String rawText) {
+    return parseReceipt(rawText).items;
+  }
+
+  FiscalReceiptParseResult parseReceipt(String rawText) {
     final sourceLines = rawText
         .split(RegExp(r'\r?\n'))
         .map(_normalizeLine)
@@ -94,7 +115,10 @@ class FiscalReceiptParser {
 
     final structuredItems = _parseStructuredNfceItems(sourceLines);
     if (structuredItems.isNotEmpty) {
-      return _draftsFromParsedItems(structuredItems);
+      return FiscalReceiptParseResult(
+        items: _draftsFromParsedItems(structuredItems),
+        declaredTotal: _extractDeclaredTotal(sourceLines),
+      );
     }
 
     final lines = _prepareOcrLines(sourceLines);
@@ -119,7 +143,47 @@ class FiscalReceiptParser {
       }
     }
 
-    return _draftsFromParsedItems(parsedItems);
+    return FiscalReceiptParseResult(
+      items: _draftsFromParsedItems(parsedItems),
+      declaredTotal: _extractDeclaredTotal(sourceLines),
+    );
+  }
+
+  double? _extractDeclaredTotal(List<String> lines) {
+    const labels = <String>[
+      'valor total',
+      'total da nota',
+      'total do cupom',
+      'valor a pagar',
+      'total a pagar',
+      'valor pago',
+    ];
+
+    for (final label in labels) {
+      for (var index = 0; index < lines.length; index++) {
+        final line = lines[index];
+        final normalized = normalizeQuery(line);
+        if (!normalized.startsWith(label)) {
+          continue;
+        }
+        var prices = _pricePattern.allMatches(line).toList(growable: false);
+        if (prices.isEmpty &&
+            index + 1 < lines.length &&
+            _isStandalonePriceLine(lines[index + 1])) {
+          prices = _pricePattern
+              .allMatches(lines[index + 1])
+              .toList(growable: false);
+        }
+        if (prices.isEmpty) {
+          continue;
+        }
+        final parsed = _parseBrlNumber(prices.last.group(0));
+        if (parsed != null && parsed > 0) {
+          return parsed;
+        }
+      }
+    }
+    return null;
   }
 
   List<ShoppingItemDraft> _draftsFromParsedItems(

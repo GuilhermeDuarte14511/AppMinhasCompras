@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lista_compras_material/src/application/fiscal_receipt_import.dart';
 import 'package:lista_compras_material/src/application/ports.dart';
 import 'package:lista_compras_material/src/application/store_and_services.dart';
 import 'package:lista_compras_material/src/data/repositories/product_catalog_repository.dart';
@@ -272,6 +273,98 @@ void main() {
       expect(suggestions.first.occurrences, 3);
       expect(suggestions.first.suggestedQuantity, 2);
       expect(suggestions.first.suggestedUnitPrice, 12);
+    },
+  );
+
+  test(
+    'receipt review updates list, history, catalog and undo restores snapshots',
+    () async {
+      final planned = ShoppingItem(
+        id: 'planned-rice',
+        name: 'Arroz',
+        quantity: 1,
+        unitPrice: 10,
+        isPurchased: false,
+        category: ShoppingCategory.grainsAndPasta,
+        priceHistory: [
+          PriceHistoryEntry(price: 10, recordedAt: DateTime(2026, 7, 1)),
+        ],
+      );
+      final list = ShoppingListModel(
+        id: 'receipt-list',
+        name: 'Compra semanal',
+        createdAt: DateTime(2026, 7, 1),
+        updatedAt: DateTime(2026, 7, 19),
+        items: [planned],
+      );
+      final previousPurchase = _purchase(
+        closedAt: DateTime(2026, 6, 20),
+        items: [_item(name: 'Café', quantity: 1, unitPrice: 15)],
+      );
+      final previousCatalog = _catalogProduct(
+        name: 'Café',
+        barcode: '789100000099',
+        unitPrice: 15,
+        usageCount: 2,
+      );
+      final store = _createStore(
+        lists: [list],
+        history: [previousPurchase],
+        catalogProducts: [previousCatalog],
+      );
+      await store.load();
+      final catalogBefore = store.catalogProducts
+          .map((product) => product.toJson())
+          .toList(growable: false);
+
+      final transaction = await store.applyFiscalReceiptReview(
+        list.id,
+        const FiscalReceiptReviewSubmission(
+          items: [
+            FiscalReceiptReviewedItem(
+              plannedItemId: 'planned-rice',
+              draft: ShoppingItemDraft(
+                name: 'Arroz integral',
+                quantity: 2,
+                unitPrice: 12.50,
+                category: ShoppingCategory.grainsAndPasta,
+                barcode: '789100000001',
+              ),
+            ),
+          ],
+          finalizePurchase: true,
+          declaredTotal: 25,
+        ),
+      );
+
+      expect(transaction, isNotNull);
+      expect(store.findById(list.id)!.isClosed, isTrue);
+      expect(store.findById(list.id)!.items.single.isPurchased, isTrue);
+      expect(store.findById(list.id)!.items.single.unitPrice, 12.50);
+      expect(store.purchaseHistory, hasLength(2));
+      expect(
+        store.catalogProducts.any(
+          (product) =>
+              product.name == 'Arroz integral' && product.unitPrice == 12.50,
+        ),
+        isTrue,
+      );
+
+      final restored = await store.undoFiscalReceiptImport(transaction!);
+
+      expect(restored, isNotNull);
+      expect(restored!.isClosed, isFalse);
+      expect(restored.items.single.name, 'Arroz');
+      expect(restored.items.single.unitPrice, 10);
+      expect(restored.items.single.isPurchased, isFalse);
+      expect(store.purchaseHistory, hasLength(1));
+      expect(store.purchaseHistory.single.id, previousPurchase.id);
+      expect(
+        store.catalogProducts
+            .map((product) => product.toJson())
+            .toList(growable: false),
+        catalogBefore,
+      );
     },
   );
 }

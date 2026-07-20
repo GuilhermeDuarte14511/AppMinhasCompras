@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../application/fiscal_receipt_import.dart';
 import '../application/shared_list_sync_policy.dart';
 import '../application/store_and_services.dart';
 import '../core/utils/format_utils.dart';
@@ -827,21 +828,36 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   Future<void> _syncLocalChangesToShared(
     ShoppingListModel updated, {
     bool showSnack = false,
+    bool throwOnError = false,
   }) async {
     final repository = widget.sharedListsRepository;
     final shared = _linkedSharedSummary;
     if (repository == null || shared == null) {
+      if (throwOnError) {
+        throw StateError('Lista compartilhada indisponível.');
+      }
       return;
     }
     final uid = FirebaseAuth.instance.currentUser?.uid.trim() ?? '';
     if (uid.isEmpty) {
+      if (throwOnError) {
+        throw StateError('Entre na sua conta para sincronizar.');
+      }
       return;
     }
     final sourceLocalId = shared.sourceLocalListId?.trim() ?? '';
     if (sourceLocalId.isNotEmpty && sourceLocalId != updated.id) {
+      if (throwOnError) {
+        throw StateError(
+          'A lista local não corresponde à lista compartilhada.',
+        );
+      }
       return;
     }
     if (_isSyncingToShared) {
+      if (throwOnError) {
+        throw StateError('A sincronização da lista ainda está em andamento.');
+      }
       return;
     }
     _isSyncingToShared = true;
@@ -870,6 +886,9 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         _showSnack(
           'Não foi possível sincronizar. Verifique sua conexão e tente novamente.',
         );
+      }
+      if (throwOnError) {
+        rethrow;
       }
     } finally {
       _isSyncingToShared = false;
@@ -1021,90 +1040,185 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       return;
     }
 
-    final drafts = await showFiscalReceiptImportSheet(
+    final submission = await showFiscalReceiptImportSheet(
       context,
       currentItems: _list.items,
       catalogProducts: widget.store.catalogProducts,
     );
-    if (!mounted || drafts == null || drafts.isEmpty) {
+    if (!mounted || submission == null || submission.items.isEmpty) {
       return;
     }
 
-    final items = [..._list.items];
-    var addedCount = 0;
-    var mergedCount = 0;
-
-    for (final draft in drafts) {
-      final normalizedDraftName = normalizeQuery(draft.name);
-      if (normalizedDraftName.isEmpty) {
-        continue;
-      }
-
-      final index = items.indexWhere(
-        (item) => normalizeQuery(item.name) == normalizedDraftName,
+    FiscalReceiptImportTransaction? transaction;
+    CompletedPurchase? sharedPurchase;
+    try {
+      transaction = await widget.store.applyFiscalReceiptReview(
+        _list.id,
+        submission,
       );
-      if (index == -1) {
-        items.add(
-          ShoppingItem(
-            id: uniqueId(),
-            name: draft.name,
-            quantity: draft.quantity,
-            unitPrice: draft.unitPrice,
-            barcode: draft.barcode,
-            isPurchased: draft.isPurchased,
-            category: draft.category,
-            priceHistory: [
-              PriceHistoryEntry(
-                price: draft.unitPrice,
-                recordedAt: DateTime.now(),
-              ),
-            ],
-          ),
-        );
-        addedCount++;
-      } else {
-        final existing = items[index];
-        final history = [...existing.priceHistory];
-        if (history.isEmpty) {
-          history.add(
-            PriceHistoryEntry(
-              price: existing.unitPrice,
-              recordedAt: DateTime.now(),
-            ),
-          );
-        }
-        if ((history.last.price - draft.unitPrice).abs() > 0.0001) {
-          history.add(
-            PriceHistoryEntry(
-              price: draft.unitPrice,
-              recordedAt: DateTime.now(),
-            ),
-          );
-        }
-        items[index] = existing.copyWith(
-          quantity: existing.quantity + draft.quantity,
-          unitPrice: draft.unitPrice,
-          barcode: existing.barcode ?? draft.barcode,
-          isPurchased: existing.isPurchased || draft.isPurchased,
-          category: draft.category,
-          priceHistory: history,
-        );
-        mergedCount++;
+      if (transaction == null) {
+        throw StateError('A lista não está mais disponível.');
       }
 
-      unawaited(widget.store.saveDraftToCatalog(draft));
-    }
+      final shared = _linkedSharedSummary;
+      if (shared != null) {
+        final repository = widget.sharedListsRepository;
+        final uid = FirebaseAuth.instance.currentUser?.uid.trim() ?? '';
+        if (repository == null || uid.isEmpty) {
+          throw StateError(
+            'Entre na sua conta para atualizar a lista compartilhada.',
+          );
+        }
 
-    if (addedCount == 0 && mergedCount == 0) {
-      _showSnack('Nenhum item válido foi extraído do cupom.');
+        final listToSync = submission.finalizePurchase
+            ? transaction.appliedList.copyWith(
+                isClosed: false,
+                clearClosedAt: true,
+              )
+            : transaction.appliedList;
+        await _syncLocalChangesToShared(listToSync, throwOnError: true);
+        if (submission.finalizePurchase) {
+          sharedPurchase = await repository.finalizeSharedList(
+            listId: shared.id,
+            updatedBy: uid,
+            markPendingAsPurchased: false,
+          );
+        }
+      }
+    } catch (error) {
+      final applied = transaction;
+      if (applied != null) {
+        await _rollbackFailedFiscalReceiptImport(applied);
+      }
+      if (!mounted) {
+        return;
+      }
+      _showSnack(
+        'Não foi possível aplicar o cupom. Revise os dados e tente novamente.',
+        type: AppToastType.error,
+      );
       return;
     }
 
-    _updateList(
-      _list.copyWith(items: items),
-      message:
-          'Cupom importado: ${formatCountLabel(addedCount, 'novo', 'novos')}, ${formatCountLabel(mergedCount, 'atualizado', 'atualizados')}.',
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _list = transaction!.appliedList.deepCopy();
+      _didShowBudgetWarning = _list.isOverBudget;
+      _didShowBudgetNearLimitWarning = false;
+    });
+    _maybeWarnBudgetExceeded(_list);
+    HapticFeedback.mediumImpact();
+
+    final appliedTransaction = transaction;
+    final sharedHistoryId = sharedPurchase?.id;
+    _showSnack(
+      submission.finalizePurchase
+          ? 'Compra confirmada. Histórico e preços atualizados.'
+          : 'Cupom aplicado. Itens e preços atualizados.',
+      type: AppToastType.success,
+      duration: const Duration(seconds: 8),
+      actionLabel: 'Desfazer',
+      onAction: () => unawaited(
+        _undoFiscalReceiptImport(
+          appliedTransaction,
+          sharedHistoryId: sharedHistoryId,
+        ),
+      ),
     );
+  }
+
+  Future<void> _rollbackFailedFiscalReceiptImport(
+    FiscalReceiptImportTransaction transaction,
+  ) async {
+    try {
+      final restored = await widget.store.undoFiscalReceiptImport(transaction);
+      final shared = _linkedSharedSummary;
+      final repository = widget.sharedListsRepository;
+      final uid = FirebaseAuth.instance.currentUser?.uid.trim() ?? '';
+      if (restored != null &&
+          shared != null &&
+          repository != null &&
+          uid.isNotEmpty) {
+        await repository.syncLocalListToShared(
+          localList: restored,
+          sharedList: shared,
+          updatedBy: uid,
+        );
+      }
+    } catch (error, stackTrace) {
+      developer.log(
+        'Falha ao restaurar importação de cupom',
+        name: 'fiscal_receipt_import',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<void> _undoFiscalReceiptImport(
+    FiscalReceiptImportTransaction transaction, {
+    String? sharedHistoryId,
+  }) async {
+    final shared = _linkedSharedSummary;
+    final repository = widget.sharedListsRepository;
+    final uid = FirebaseAuth.instance.currentUser?.uid.trim() ?? '';
+    final shouldUndoShared =
+        shared != null &&
+        repository != null &&
+        uid.isNotEmpty &&
+        sharedHistoryId != null;
+
+    try {
+      if (shouldUndoShared) {
+        await repository.undoSharedFinalization(
+          listId: shared.id,
+          historyId: sharedHistoryId,
+          updatedBy: uid,
+        );
+      }
+
+      final restored = await widget.store.undoFiscalReceiptImport(transaction);
+      if (restored == null) {
+        throw StateError('A lista não está mais disponível.');
+      }
+
+      if (shared != null && repository != null && uid.isNotEmpty) {
+        await repository.syncLocalListToShared(
+          localList: restored,
+          sharedList: shared,
+          updatedBy: uid,
+        );
+      }
+
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _list = restored.deepCopy();
+        _didShowBudgetWarning = _list.isOverBudget;
+        _didShowBudgetNearLimitWarning = false;
+      });
+      _showSnack(
+        'Importação desfeita. A lista, o histórico e os preços foram restaurados.',
+        type: AppToastType.success,
+      );
+    } catch (error, stackTrace) {
+      developer.log(
+        'Falha ao desfazer importação de cupom',
+        name: 'fiscal_receipt_import',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      if (!mounted) {
+        return;
+      }
+      _showSnack(
+        'Não foi possível desfazer porque a lista mudou ou está sem conexão.',
+        type: AppToastType.error,
+      );
+    }
   }
 
   void _togglePurchased(ShoppingItem item, bool? value) {
@@ -1321,8 +1435,17 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     String message, {
     AppToastType type = AppToastType.info,
     Duration duration = const Duration(seconds: 4),
+    String? actionLabel,
+    VoidCallback? onAction,
   }) {
-    AppToast.show(context, message: message, type: type, duration: duration);
+    AppToast.show(
+      context,
+      message: message,
+      type: type,
+      duration: duration,
+      actionLabel: actionLabel,
+      onAction: onAction,
+    );
   }
 
   void _logShare(String message) {

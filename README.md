@@ -27,8 +27,12 @@ App Flutter moderno (Material 3) para lista de compras, com foco em uso local/of
 - Importação de cupom fiscal por texto (OCR/PDF):
   - cola o texto bruto do cupom
   - parser tenta extrair nome, quantidade e valor
-  - preview antes de importar
-  - mescla com itens existentes da lista
+  - revisão permite selecionar e editar produto, quantidade e preço
+  - mostra a confiança da correspondência com lista/catálogo
+  - relaciona cada linha a um item planejado
+  - compara a soma reconhecida com o total declarado e destaca divergências
+  - confirmação pode fechar a compra e atualizar histórico e preços em conjunto
+  - ação `Desfazer` restaura lista, histórico e catálogo
 - Todo produto adicionado/atualizado entra no catálogo local para autocomplete.
 - Cálculo automático de subtotal por item e total da lista.
 - Busca, ordenação, filtro por categoria e modo mercado.
