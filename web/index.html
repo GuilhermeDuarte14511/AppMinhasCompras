@@ -34,6 +34,11 @@
 </head>
 <body>
   <!--
+    iOS WebKit requires camera-backed video elements to play inline.
+    This helper also resumes the preview after Safari/PWA visibility changes.
+  -->
+  <script src="camera_compat.js"></script>
+  <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
     or to give the user feedback during the initialization process.

@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../domain/models_and_utils.dart';
+import '../domain/pantry.dart';
 
 class FiscalReceiptReviewedItem {
   const FiscalReceiptReviewedItem({required this.draft, this.plannedItemId});
@@ -51,6 +52,7 @@ class FiscalReceiptImportTransaction {
     required this.appliedList,
     required this.catalogBefore,
     required this.historyBefore,
+    required this.pantryBefore,
     required this.addedCount,
     required this.updatedCount,
     this.completedPurchaseId,
@@ -60,6 +62,7 @@ class FiscalReceiptImportTransaction {
   final ShoppingListModel appliedList;
   final List<CatalogProduct> catalogBefore;
   final List<CompletedPurchase> historyBefore;
+  final List<PantryItem> pantryBefore;
   final int addedCount;
   final int updatedCount;
   final String? completedPurchaseId;

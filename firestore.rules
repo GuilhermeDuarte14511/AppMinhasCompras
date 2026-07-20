@@ -247,6 +247,47 @@
           );
       }
 
+      function validPantryDoc(pantryItemId) {
+        let d = request.resource.data;
+        return d.keys().hasOnly([
+            'id',
+            'catalogProductId',
+            'name',
+            'category',
+            'barcode',
+            'unitPrice',
+            'suggestedQuantity',
+            'status',
+            'updatedAt',
+            'lastPurchasedAt'
+          ]) &&
+          d.keys().hasAll([
+            'id',
+            'catalogProductId',
+            'name',
+            'category',
+            'barcode',
+            'unitPrice',
+            'suggestedQuantity',
+            'status',
+            'updatedAt',
+            'lastPurchasedAt'
+          ]) &&
+          d.id == pantryItemId &&
+          (d.catalogProductId == null ||
+            isString(d.catalogProductId, 1, 180)) &&
+          isString(d.name, 1, 180) &&
+          validCategory(d.category) &&
+          (d.barcode == null || isString(d.barcode, 8, 64)) &&
+          isNumberOrNull(d.unitPrice) &&
+          d.suggestedQuantity is int &&
+          d.suggestedQuantity >= 1 &&
+          d.suggestedQuantity <= 9999 &&
+          d.status in ['in_stock', 'running_low', 'out_of_stock'] &&
+          isDateLike(d.updatedAt) &&
+          (d.lastPurchasedAt == null || isDateLike(d.lastPurchasedAt));
+      }
+
       function isSharedListMemberFromData(data) {
         let memberUids = data.get('memberUids', []);
         let ownerUid = data.get('ownerUid', '');
@@ -561,6 +602,13 @@
         match /catalog/{productId} {
           allow read: if isOwner(uid);
           allow create, update: if isOwner(uid) && validCatalogDoc(productId);
+          allow delete: if isOwner(uid);
+        }
+
+        match /pantry/{pantryItemId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid) &&
+            validPantryDoc(pantryItemId);
           allow delete: if isOwner(uid);
         }
 

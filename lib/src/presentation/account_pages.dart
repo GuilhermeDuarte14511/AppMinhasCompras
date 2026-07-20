@@ -190,6 +190,7 @@ class AppOptionsPage extends StatefulWidget {
     this.listRecords = 0,
     this.historyRecords = 0,
     this.catalogRecords = 0,
+    this.pantryRecords = 0,
   });
 
   final ThemeMode themeMode;
@@ -215,6 +216,7 @@ class AppOptionsPage extends StatefulWidget {
   final int listRecords;
   final int historyRecords;
   final int catalogRecords;
+  final int pantryRecords;
 
   @override
   State<AppOptionsPage> createState() => _AppOptionsPageState();
@@ -583,6 +585,7 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
                   listRecords: widget.listRecords,
                   historyRecords: widget.historyRecords,
                   catalogRecords: widget.catalogRecords,
+                  pantryRecords: widget.pantryRecords,
                   compact: false,
                 )
               else
@@ -1206,6 +1209,7 @@ class _CloudSyncStatusCard extends StatelessWidget {
     required this.listRecords,
     required this.historyRecords,
     required this.catalogRecords,
+    required this.pantryRecords,
     required this.compact,
   });
 
@@ -1218,6 +1222,7 @@ class _CloudSyncStatusCard extends StatelessWidget {
   final int listRecords;
   final int historyRecords;
   final int catalogRecords;
+  final int pantryRecords;
   final bool compact;
 
   @override
@@ -1315,7 +1320,7 @@ class _CloudSyncStatusCard extends StatelessWidget {
               const SizedBox(height: 10),
               if (compact)
                 Text(
-                  '$lastSyncLabel • Listas: $listRecords • Histórico: $historyRecords • Catálogo: $catalogRecords',
+                  '$lastSyncLabel • Listas: $listRecords • Histórico: $historyRecords • Catálogo: $catalogRecords • Despensa: $pantryRecords',
                   style: textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -1351,6 +1356,12 @@ class _CloudSyncStatusCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             'Catálogo: $catalogRecords',
+                            style: textTheme.bodySmall,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            'Despensa: $pantryRecords',
                             style: textTheme.bodySmall,
                           ),
                         ),

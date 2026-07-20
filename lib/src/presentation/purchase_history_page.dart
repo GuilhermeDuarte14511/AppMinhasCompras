@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import '../application/ports.dart';
 import '../application/store_and_services.dart';
 import '../core/utils/format_utils.dart';
 import '../domain/classifications.dart';
@@ -15,9 +16,14 @@ import 'utils/app_page_route.dart';
 import 'utils/app_toast.dart';
 
 class PurchaseHistoryPage extends StatefulWidget {
-  const PurchaseHistoryPage({super.key, required this.store});
+  const PurchaseHistoryPage({
+    super.key,
+    required this.store,
+    this.voiceRecognitionService,
+  });
 
   final ShoppingListsStore store;
+  final ShoppingVoiceRecognitionService? voiceRecognitionService;
 
   @override
   State<PurchaseHistoryPage> createState() => _PurchaseHistoryPageState();
@@ -189,8 +195,11 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
     await Navigator.push<void>(
       context,
       buildAppPageRoute(
-        builder: (_) =>
-            ShoppingListEditorPage(store: widget.store, listId: created.id),
+        builder: (_) => ShoppingListEditorPage(
+          store: widget.store,
+          listId: created.id,
+          voiceRecognitionService: widget.voiceRecognitionService,
+        ),
       ),
     );
   }

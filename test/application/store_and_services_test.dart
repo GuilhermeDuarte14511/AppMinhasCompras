@@ -7,6 +7,7 @@ import 'package:lista_compras_material/src/data/services/home_widget_service.dar
 import 'package:lista_compras_material/src/data/services/reminder_service.dart';
 import 'package:lista_compras_material/src/domain/classifications.dart';
 import 'package:lista_compras_material/src/domain/models_and_utils.dart';
+import 'package:lista_compras_material/src/domain/pantry.dart';
 
 void main() {
   test(
@@ -359,6 +360,7 @@ void main() {
       expect(restored.items.single.isPurchased, isFalse);
       expect(store.purchaseHistory, hasLength(1));
       expect(store.purchaseHistory.single.id, previousPurchase.id);
+      expect(store.pantryItems, isEmpty);
       expect(
         store.catalogProducts
             .map((product) => product.toJson())
@@ -367,12 +369,112 @@ void main() {
       );
     },
   );
+
+  test('finalizing a purchase replenishes the simplified pantry', () async {
+    final list = _shoppingList(
+      name: 'Compra da semana',
+      createdAt: DateTime(2026, 7, 19),
+      updatedAt: DateTime(2026, 7, 20),
+      items: [
+        _item(
+          name: 'Detergente Minuano',
+          quantity: 2,
+          unitPrice: 3.49,
+          barcode: '789100000001',
+        ),
+      ],
+    );
+    final pantryStorage = _MemoryPantryStorage([
+      PantryItem(
+        id: 'pantry-detergent',
+        name: 'Detergente',
+        category: ShoppingCategory.cleaning,
+        barcode: '789100000001',
+        status: PantryStockStatus.outOfStock,
+        updatedAt: DateTime(2026, 7, 18),
+      ),
+    ]);
+    final store = _createStore(lists: [list], pantryStorage: pantryStorage);
+    await store.load();
+
+    await store.finalizeList(list.id);
+
+    expect(store.pantryItems, hasLength(1));
+    expect(store.pantryItems.single.id, 'pantry-detergent');
+    expect(store.pantryItems.single.status, PantryStockStatus.inStock);
+    expect(store.pantryItems.single.suggestedQuantity, 2);
+    expect(pantryStorage.savedItems.single.status, PantryStockStatus.inStock);
+  });
+
+  test(
+    'pantry item can be added to an open list and merges duplicates',
+    () async {
+      final list = _shoppingList(
+        name: 'Compra',
+        createdAt: DateTime(2026, 7, 19),
+        updatedAt: DateTime(2026, 7, 20),
+        items: [_item(name: 'Arroz', quantity: 1, unitPrice: 20)],
+      );
+      final store = _createStore(
+        lists: [list],
+        pantryStorage: _MemoryPantryStorage([
+          PantryItem(
+            id: 'pantry-rice',
+            name: 'arroz',
+            category: ShoppingCategory.grocery,
+            unitPrice: 22,
+            suggestedQuantity: 2,
+            status: PantryStockStatus.outOfStock,
+            updatedAt: DateTime(2026, 7, 20),
+          ),
+        ]),
+      );
+      await store.load();
+
+      final result = await store.addPantryItemToList(
+        pantryItemId: 'pantry-rice',
+        listId: list.id,
+      );
+
+      expect(result, isNotNull);
+      expect(result!.merged, isTrue);
+      expect(result.list.items, hasLength(1));
+      expect(result.list.items.single.quantity, 3);
+      expect(result.list.items.single.unitPrice, 20);
+    },
+  );
+
+  test('backup version 4 restores pantry data', () async {
+    final source = _createStore(
+      pantryStorage: _MemoryPantryStorage([
+        PantryItem(
+          id: 'pantry-coffee',
+          name: 'Café',
+          category: ShoppingCategory.grocery,
+          unitPrice: 18,
+          status: PantryStockStatus.runningLow,
+          updatedAt: DateTime(2026, 7, 20),
+        ),
+      ]),
+    );
+    await source.load();
+    final payload = source.exportBackupJson();
+
+    final target = _createStore();
+    await target.load();
+    await target.importBackupJson(payload, replaceExisting: true);
+
+    expect(target.pantryItems, hasLength(1));
+    expect(target.pantryItems.single.id, 'pantry-coffee');
+    expect(target.pantryItems.single.status, PantryStockStatus.runningLow);
+  });
 }
 
 ShoppingListsStore _createStore({
   List<ShoppingListModel> lists = const <ShoppingListModel>[],
   List<CatalogProduct> catalogProducts = const <CatalogProduct>[],
   List<CompletedPurchase> history = const <CompletedPurchase>[],
+  PantryStorage? pantryStorage,
   SharedCatalogImportPreferences? sharedCatalogImportPreferences,
 }) {
   return ShoppingListsStore(
@@ -382,6 +484,7 @@ ShoppingListsStore _createStore({
       _MemoryProductCatalogStorage(catalogProducts),
     ),
     historyStorage: _MemoryPurchaseHistoryStorage(history),
+    pantryStorage: pantryStorage,
     lookupService: const _NoopLookupService(),
     homeWidgetService: const NoopShoppingHomeWidgetService(),
     sharedCatalogImportPreferences: sharedCatalogImportPreferences,
@@ -430,6 +533,25 @@ class _MemoryPurchaseHistoryStorage implements PurchaseHistoryStorage {
 
   @override
   Future<void> saveHistory(List<CompletedPurchase> history) async {}
+}
+
+class _MemoryPantryStorage implements PantryStorage {
+  _MemoryPantryStorage([List<PantryItem> items = const <PantryItem>[]])
+    : _items = items;
+
+  List<PantryItem> _items;
+
+  List<PantryItem> get savedItems => List.unmodifiable(_items);
+
+  @override
+  Future<List<PantryItem>> loadItems() async {
+    return _items.map((item) => item.copyWith()).toList(growable: false);
+  }
+
+  @override
+  Future<void> saveItems(List<PantryItem> items) async {
+    _items = items.map((item) => item.copyWith()).toList(growable: false);
+  }
 }
 
 class _NoopLookupService implements ProductLookupService {

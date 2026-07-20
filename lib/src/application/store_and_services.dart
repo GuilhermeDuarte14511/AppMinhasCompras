@@ -5,7 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:lista_compras_material/src/domain/models_and_utils.dart';
 
 import '../domain/classifications.dart';
+import '../domain/pantry.dart';
 import 'fiscal_receipt_import.dart';
+import 'pantry_inventory_policy.dart';
 import 'ports.dart';
 
 class ShoppingListsStore extends ChangeNotifier {
@@ -14,12 +16,14 @@ class ShoppingListsStore extends ChangeNotifier {
     required ShoppingReminderService reminderService,
     required ProductCatalogGateway productCatalog,
     required PurchaseHistoryStorage historyStorage,
+    PantryStorage? pantryStorage,
     required ProductLookupService lookupService,
     required ShoppingHomeWidgetService homeWidgetService,
     SharedCatalogImportPreferences? sharedCatalogImportPreferences,
   }) : _reminderService = reminderService,
        _productCatalog = productCatalog,
        _historyStorage = historyStorage,
+       _pantryStorage = pantryStorage ?? _InMemoryPantryStorage(),
        _lookupService = lookupService,
        _homeWidgetService = homeWidgetService,
        _sharedCatalogImportPreferences =
@@ -30,12 +34,15 @@ class ShoppingListsStore extends ChangeNotifier {
   final ShoppingReminderService _reminderService;
   final ProductCatalogGateway _productCatalog;
   final PurchaseHistoryStorage _historyStorage;
+  final PantryStorage _pantryStorage;
   final ProductLookupService _lookupService;
   final ShoppingHomeWidgetService _homeWidgetService;
   final SharedCatalogImportPreferences _sharedCatalogImportPreferences;
 
   final List<ShoppingListModel> _lists = <ShoppingListModel>[];
   final List<CompletedPurchase> _history = <CompletedPurchase>[];
+  final List<PantryItem> _pantry = <PantryItem>[];
+  static const PantryInventoryPolicy _pantryPolicy = PantryInventoryPolicy();
   final Set<String> _sharedCatalogImportListIds = <String>{};
   bool _isLoading = true;
   bool _loaded = false;
@@ -55,6 +62,9 @@ class ShoppingListsStore extends ChangeNotifier {
 
   List<CompletedPurchase> get purchaseHistory => List.unmodifiable(_history);
   List<CatalogProduct> get catalogProducts => _productCatalog.allProducts();
+  List<PantryItem> get pantryItems => List.unmodifiable(_pantry);
+  int get pantryNeedsRestockCount =>
+      _pantry.where((item) => item.needsRestock).length;
 
   Map<DateTime, List<CompletedPurchase>> historyGroupedByMonth() {
     final groups = <DateTime, List<CompletedPurchase>>{};
@@ -84,14 +94,19 @@ class ShoppingListsStore extends ChangeNotifier {
     try {
       final loadedLists = await _storage.loadLists();
       final loadedHistory = await _historyStorage.loadHistory();
+      final loadedPantry = await _pantryStorage.loadItems();
       _lists
         ..clear()
         ..addAll(loadedLists);
       _history
         ..clear()
         ..addAll(loadedHistory);
+      _pantry
+        ..clear()
+        ..addAll(loadedPantry);
       _sortListsByUpdatedAt();
       _sortHistoryByClosedAt();
+      _sortPantry();
       await _productCatalog.load();
       _autoImportOwnedSharedCatalogs = await _sharedCatalogImportPreferences
           .loadAutoImportOwnedSharedLists();
@@ -104,7 +119,10 @@ class ShoppingListsStore extends ChangeNotifier {
         );
       await _productCatalog.ingestFromLists(_lists);
       await _reminderService.syncFromLists(_lists, reset: true);
-      await _homeWidgetService.updateFromLists(_lists);
+      await _homeWidgetService.updateSnapshot(
+        lists: _lists,
+        pantryItems: _pantry,
+      );
     } finally {
       _loaded = true;
       _isLoading = false;
@@ -220,6 +238,120 @@ class ShoppingListsStore extends ChangeNotifier {
     }
   }
 
+  Future<PantryItem> addCatalogProductToPantry(
+    CatalogProduct product, {
+    PantryStockStatus status = PantryStockStatus.inStock,
+  }) async {
+    final updated = _pantryPolicy.addCatalogProduct(
+      current: _pantry,
+      product: product,
+      status: status,
+      updatedAt: DateTime.now(),
+      createId: uniqueId,
+    );
+    _pantry
+      ..clear()
+      ..addAll(updated);
+    await _persistAndNotify();
+    return _pantry.firstWhere(
+      (item) => item.catalogProductId == product.id,
+      orElse: () => _pantry.firstWhere(
+        (item) => normalizeQuery(item.name) == normalizeQuery(product.name),
+      ),
+    );
+  }
+
+  Future<void> setPantryStatus(
+    String pantryItemId,
+    PantryStockStatus status,
+  ) async {
+    final index = _pantry.indexWhere((item) => item.id == pantryItemId);
+    if (index < 0 || _pantry[index].status == status) {
+      return;
+    }
+    _pantry[index] = _pantry[index].copyWith(
+      status: status,
+      updatedAt: DateTime.now(),
+    );
+    _sortPantry();
+    await _persistAndNotify();
+  }
+
+  Future<void> removePantryItem(String pantryItemId) async {
+    final before = _pantry.length;
+    _pantry.removeWhere((item) => item.id == pantryItemId);
+    if (_pantry.length == before) {
+      return;
+    }
+    await _persistAndNotify();
+  }
+
+  Future<PantryListAddResult?> addPantryItemToList({
+    required String pantryItemId,
+    required String listId,
+  }) async {
+    final pantryItem = _pantry
+        .where((item) => item.id == pantryItemId)
+        .firstOrNull;
+    final listIndex = _lists.indexWhere(
+      (list) => list.id == listId && !list.isClosed,
+    );
+    if (pantryItem == null || listIndex < 0) {
+      return null;
+    }
+
+    final source = _lists[listIndex];
+    final draft = _pantryPolicy.toShoppingDraft(pantryItem);
+    final barcode = sanitizeBarcode(draft.barcode);
+    final normalizedName = normalizeQuery(draft.name);
+    var merged = false;
+    final items = source.items.map((item) => item.copyWith()).toList();
+    final existingIndex = items.indexWhere(
+      (item) =>
+          (barcode != null && sanitizeBarcode(item.barcode) == barcode) ||
+          normalizeQuery(item.name) == normalizedName,
+    );
+    final now = DateTime.now();
+    if (existingIndex >= 0) {
+      final existing = items[existingIndex];
+      items[existingIndex] = existing.copyWith(
+        quantity: existing.quantity + draft.quantity,
+        unitPrice: existing.unitPrice > 0
+            ? existing.unitPrice
+            : draft.unitPrice,
+        barcode: existing.barcode ?? draft.barcode,
+        category: existing.category == ShoppingCategory.other
+            ? draft.category
+            : existing.category,
+      );
+      merged = true;
+    } else {
+      items.add(
+        ShoppingItem(
+          id: uniqueId(),
+          name: draft.name,
+          quantity: draft.quantity,
+          unitPrice: draft.unitPrice,
+          barcode: draft.barcode,
+          category: draft.category,
+          priceHistory: draft.unitPrice > 0
+              ? <PriceHistoryEntry>[
+                  PriceHistoryEntry(price: draft.unitPrice, recordedAt: now),
+                ]
+              : const <PriceHistoryEntry>[],
+        ),
+      );
+    }
+
+    final updated = source.copyWith(items: items, updatedAt: now);
+    _lists[listIndex] = updated;
+    _sortListsByUpdatedAt();
+    _invalidateListSuggestionCache();
+    await _persistAndNotify();
+    await _productCatalog.ingestFromLists([updated]);
+    return PantryListAddResult(list: updated.deepCopy(), merged: merged);
+  }
+
   Future<ShoppingListModel?> finalizeList(
     String listId, {
     bool markPendingAsPurchased = false,
@@ -264,6 +396,7 @@ class ShoppingListsStore extends ChangeNotifier {
       updatedAt: now,
     );
     _lists[index] = updatedList;
+    _replenishPantryFromCompletedItems(completedItems, purchasedAt: now);
     _sortListsByUpdatedAt();
     _invalidateListSuggestionCache();
 
@@ -286,6 +419,7 @@ class ShoppingListsStore extends ChangeNotifier {
     final beforeList = source.deepCopy();
     final catalogBefore = _productCatalog.allProducts();
     final historyBefore = _copyPurchaseHistory(_history);
+    final pantryBefore = _copyPantry(_pantry);
     final now = DateTime.now();
     final plan = const FiscalReceiptImportPlanner().createPlan(
       source: source,
@@ -314,6 +448,10 @@ class ShoppingListsStore extends ChangeNotifier {
       );
       _trimHistory();
       _sortHistoryByClosedAt();
+      _replenishPantryFromCompletedItems(
+        plan.updatedList.items,
+        purchasedAt: now,
+      );
     }
     _sortListsByUpdatedAt();
     _invalidateListSuggestionCache();
@@ -330,6 +468,7 @@ class ShoppingListsStore extends ChangeNotifier {
         list: beforeList,
         catalog: catalogBefore,
         history: historyBefore,
+        pantry: pantryBefore,
       );
       rethrow;
     }
@@ -339,6 +478,7 @@ class ShoppingListsStore extends ChangeNotifier {
       appliedList: plan.updatedList.deepCopy(),
       catalogBefore: catalogBefore,
       historyBefore: historyBefore,
+      pantryBefore: pantryBefore,
       addedCount: plan.addedCount,
       updatedCount: plan.updatedCount,
       completedPurchaseId: completedPurchaseId,
@@ -365,11 +505,15 @@ class ShoppingListsStore extends ChangeNotifier {
     final currentList = current.deepCopy();
     final currentCatalog = _productCatalog.allProducts();
     final currentHistory = _copyPurchaseHistory(_history);
+    final currentPantry = _copyPantry(_pantry);
 
     _lists[index] = transaction.beforeList.deepCopy();
     _history
       ..clear()
       ..addAll(_copyPurchaseHistory(transaction.historyBefore));
+    _pantry
+      ..clear()
+      ..addAll(_copyPantry(transaction.pantryBefore));
     _sortListsByUpdatedAt();
     _sortHistoryByClosedAt();
     _invalidateListSuggestionCache();
@@ -383,6 +527,9 @@ class ShoppingListsStore extends ChangeNotifier {
       _history
         ..clear()
         ..addAll(currentHistory);
+      _pantry
+        ..clear()
+        ..addAll(currentPantry);
       await _productCatalog.replaceAllProducts(currentCatalog);
       await _persistAndNotify();
       await _syncReminderForList(currentList);
@@ -395,6 +542,7 @@ class ShoppingListsStore extends ChangeNotifier {
     required ShoppingListModel list,
     required List<CatalogProduct> catalog,
     required List<CompletedPurchase> history,
+    required List<PantryItem> pantry,
   }) async {
     final index = _lists.indexWhere((entry) => entry.id == list.id);
     if (index >= 0) {
@@ -403,6 +551,9 @@ class ShoppingListsStore extends ChangeNotifier {
     _history
       ..clear()
       ..addAll(_copyPurchaseHistory(history));
+    _pantry
+      ..clear()
+      ..addAll(_copyPantry(pantry));
     _sortListsByUpdatedAt();
     _sortHistoryByClosedAt();
     _invalidateListSuggestionCache();
@@ -426,6 +577,10 @@ class ShoppingListsStore extends ChangeNotifier {
           ),
         )
         .toList(growable: false);
+  }
+
+  List<PantryItem> _copyPantry(Iterable<PantryItem> source) {
+    return source.map((item) => item.copyWith()).toList(growable: false);
   }
 
   Future<ShoppingListModel?> reopenList(String listId) async {
@@ -509,6 +664,7 @@ class ShoppingListsStore extends ChangeNotifier {
   Future<void> clearAllLocalData() async {
     _lists.clear();
     _history.clear();
+    _pantry.clear();
     _invalidateListSuggestionCache();
     await _productCatalog.replaceAllProducts(const <CatalogProduct>[]);
     await _reminderService.syncFromLists(
@@ -544,7 +700,7 @@ class ShoppingListsStore extends ChangeNotifier {
 
   String exportBackupJson() {
     final payload = <String, dynamic>{
-      'version': 3,
+      'version': 4,
       'exportedAt': DateTime.now().toIso8601String(),
       'lists': _lists.map((list) => list.toJson()).toList(growable: false),
       'purchaseHistory': _history
@@ -554,6 +710,7 @@ class ShoppingListsStore extends ChangeNotifier {
           .allProducts()
           .map((entry) => entry.toJson())
           .toList(growable: false),
+      'pantry': _pantry.map((entry) => entry.toJson()).toList(growable: false),
     };
     return jsonEncode(payload);
   }
@@ -574,6 +731,7 @@ class ShoppingListsStore extends ChangeNotifier {
     final imported = decodedPayload.lists;
     final importedHistory = decodedPayload.history;
     final importedCatalog = decodedPayload.catalog;
+    final importedPantry = decodedPayload.pantry;
     final normalized = _normalizeImportedLists(
       imported,
       existingIds: replaceExisting
@@ -586,6 +744,12 @@ class ShoppingListsStore extends ChangeNotifier {
           ? <String>{}
           : _history.map((entry) => entry.id).toSet(),
     );
+    final normalizedPantry = _normalizeImportedPantry(
+      importedPantry,
+      existingIds: replaceExisting
+          ? <String>{}
+          : _pantry.map((entry) => entry.id).toSet(),
+    );
 
     if (replaceExisting) {
       _lists
@@ -594,9 +758,13 @@ class ShoppingListsStore extends ChangeNotifier {
       _history
         ..clear()
         ..addAll(normalizedHistory);
+      _pantry
+        ..clear()
+        ..addAll(normalizedPantry);
     } else {
       _lists.addAll(normalized);
       _history.addAll(normalizedHistory);
+      _pantry.addAll(normalizedPantry);
     }
 
     if (replaceExisting) {
@@ -612,6 +780,7 @@ class ShoppingListsStore extends ChangeNotifier {
     _trimHistory();
     _sortListsByUpdatedAt();
     _sortHistoryByClosedAt();
+    _sortPantry();
     _invalidateListSuggestionCache();
     await _persistAndNotify();
     await _reminderService.syncFromLists(_lists, reset: true);
@@ -1060,6 +1229,36 @@ class ShoppingListsStore extends ChangeNotifier {
     _history.sort((a, b) => b.closedAt.compareTo(a.closedAt));
   }
 
+  void _sortPantry() {
+    _pantry.sort((a, b) {
+      final byStatus = b.status.index.compareTo(a.status.index);
+      if (byStatus != 0) {
+        return byStatus;
+      }
+      return normalizeQuery(a.name).compareTo(normalizeQuery(b.name));
+    });
+  }
+
+  void _replenishPantryFromCompletedItems(
+    Iterable<ShoppingItem> completedItems, {
+    required DateTime purchasedAt,
+  }) {
+    final copiedItems = List<ShoppingItem>.from(completedItems);
+    final purchased = copiedItems.where((item) => item.isPurchased).toList();
+    final relevant = purchased.isNotEmpty ? purchased : copiedItems;
+    final updated = _pantryPolicy.replenishFromPurchase(
+      current: _pantry,
+      purchasedItems: relevant,
+      catalogProducts: _productCatalog.allProducts(),
+      purchasedAt: purchasedAt,
+      createId: uniqueId,
+    );
+    _pantry
+      ..clear()
+      ..addAll(updated);
+    _sortPantry();
+  }
+
   void _trimHistory() {
     const maxHistoryEntries = 600;
     if (_history.length <= maxHistoryEntries) {
@@ -1194,6 +1393,7 @@ class ShoppingListsStore extends ChangeNotifier {
         lists: _parseLists(decoded),
         history: const <CompletedPurchase>[],
         catalog: const <CatalogProduct>[],
+        pantry: const <PantryItem>[],
       );
     }
     if (decoded is Map<String, dynamic>) {
@@ -1203,10 +1403,12 @@ class ShoppingListsStore extends ChangeNotifier {
       }
       final rawHistory = decoded['purchaseHistory'];
       final rawCatalog = decoded['catalog'];
+      final rawPantry = decoded['pantry'];
       return _DecodedBackupPayload(
         lists: _parseLists(rawLists),
         history: rawHistory is List ? _parseHistory(rawHistory) : const [],
         catalog: rawCatalog is List ? _parseCatalog(rawCatalog) : const [],
+        pantry: rawPantry is List ? _parsePantry(rawPantry) : const [],
       );
     }
     throw const FormatException('Formato de backup inválido');
@@ -1244,6 +1446,14 @@ class ShoppingListsStore extends ChangeNotifier {
       }
     }
     return parsed;
+  }
+
+  List<PantryItem> _parsePantry(List<dynamic> rawPantry) {
+    return rawPantry
+        .whereType<Map>()
+        .map((entry) => PantryItem.fromJson(Map<String, dynamic>.from(entry)))
+        .where((item) => item.name.trim().isNotEmpty)
+        .toList(growable: false);
   }
 
   List<ShoppingListModel> _normalizeImportedLists(
@@ -1310,6 +1520,23 @@ class ShoppingListsStore extends ChangeNotifier {
     return normalized;
   }
 
+  List<PantryItem> _normalizeImportedPantry(
+    List<PantryItem> imported, {
+    required Set<String> existingIds,
+  }) {
+    final ids = {...existingIds};
+    final normalized = <PantryItem>[];
+    for (final source in imported) {
+      var id = source.id;
+      if (id.trim().isEmpty || ids.contains(id)) {
+        id = uniqueId();
+      }
+      ids.add(id);
+      normalized.add(source.copyWith(id: id));
+    }
+    return normalized;
+  }
+
   Future<void> _syncReminderForList(ShoppingListModel list) async {
     if (list.isClosed || list.reminder == null) {
       await _reminderService.cancelForList(list.id);
@@ -1321,8 +1548,12 @@ class ShoppingListsStore extends ChangeNotifier {
   Future<void> _persistAndNotify() async {
     await _storage.saveLists(_lists);
     await _historyStorage.saveHistory(_history);
+    await _pantryStorage.saveItems(_pantry);
     try {
-      await _homeWidgetService.updateFromLists(_lists);
+      await _homeWidgetService.updateSnapshot(
+        lists: _lists,
+        pantryItems: _pantry,
+      );
     } catch (_) {
       // Widget updates are optional and should not block the main flow.
     }
@@ -1365,11 +1596,20 @@ class _DecodedBackupPayload {
     required this.lists,
     required this.history,
     required this.catalog,
+    required this.pantry,
   });
 
   final List<ShoppingListModel> lists;
   final List<CompletedPurchase> history;
   final List<CatalogProduct> catalog;
+  final List<PantryItem> pantry;
+}
+
+class PantryListAddResult {
+  const PantryListAddResult({required this.list, required this.merged});
+
+  final ShoppingListModel list;
+  final bool merged;
 }
 
 class SharedCatalogImportResult {
@@ -1424,6 +1664,20 @@ class _InMemorySharedCatalogImportPreferences
       ..addAll(
         listIds.map((entry) => entry.trim()).where((entry) => entry.isNotEmpty),
       );
+  }
+}
+
+class _InMemoryPantryStorage implements PantryStorage {
+  List<PantryItem> _items = const <PantryItem>[];
+
+  @override
+  Future<List<PantryItem>> loadItems() async {
+    return _items.map((item) => item.copyWith()).toList(growable: false);
+  }
+
+  @override
+  Future<void> saveItems(List<PantryItem> items) async {
+    _items = items.map((item) => item.copyWith()).toList(growable: false);
   }
 }
 

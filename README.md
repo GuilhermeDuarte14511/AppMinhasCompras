@@ -56,15 +56,31 @@ App Flutter moderno (Material 3) para lista de compras, com foco em uso local/of
 - Orçamento por lista com alerta de excesso.
 - Histórico de preço por produto.
 - Bloqueio de item duplicado por nome na mesma lista.
+- Adição rápida por voz:
+  - reconhece vários produtos em uma única frase
+  - extrai quantidade e preço quando informados
+  - procura correspondências seguras no catálogo local
+  - recupera nome, categoria, último preço e código de barras do catálogo
+  - pede confirmação quando existem produtos parecidos
+  - soma a quantidade quando o produto já está na lista
+  - exige revisão e valor antes de confirmar produtos novos
+- Despensa simplificada:
+  - acompanha cada produto como `Tenho`, `Está acabando` ou `Acabou`
+  - recebe automaticamente os itens de uma compra finalizada
+  - permite adicionar produtos diretamente do catálogo
+  - adiciona itens de reposição a uma lista aberta sem criar duplicatas
+  - usa a última quantidade comprada como sugestão de reposição
+  - aparece no dashboard, nos diagnósticos de sincronização e nos widgets Android
+  - sincroniza com o Firestore e também faz parte do backup local
 - Lembrete local por data e horário (dia/mês/ano + hora), sem servidor.
 - Widgets de tela inicial (Android), atualizados automaticamente:
-  - `Resumo de Compras` (listas, pendentes, total, última atualização)
-  - `Lista Prioritária` (lista em foco, total e status de orçamento)
+  - `Resumo de Compras` (listas, pendentes, itens para repor, total, voz e despensa)
+  - `Lista Prioritária` (itens pendentes, orçamento, despensa, abrir lista e adicionar por voz)
 - Backup local em JSON:
   - exportar para arquivo (ou área de transferência)
   - importar de arquivo JSON
   - escolher entre mesclar ou substituir listas
-  - inclui listas + histórico mensal de fechamentos
+  - inclui listas + histórico mensal de fechamentos + catálogo + despensa
 
 ## Arquitetura aplicada
 - `app`:
@@ -81,9 +97,11 @@ App Flutter moderno (Material 3) para lista de compras, com foco em uso local/of
   - `utils/time_utils.dart` (formatação de horário para UI)
 - `domain`:
   - `models_and_utils.dart` (entidades e value objects)
+  - `pantry.dart` (entidade e estados da despensa)
   - `classifications.dart` (categorias, filtros e ordenação sem dependência de UI)
 - `application`:
   - `ports.dart` (contratos/interfaces e gateways)
+  - `pantry_inventory_policy.dart` (regras puras de reposição e correspondência)
   - `store_and_services.dart` (`ShoppingListsStore`, orquestração e regras)
 - `data`:
   - `local/storages.dart` (persistência local via `SharedPreferences`, incluindo histórico de fechamentos)
@@ -109,6 +127,7 @@ App Flutter moderno (Material 3) para lista de compras, com foco em uso local/of
 - `mobile_scanner`
 - `timezone`
 - `home_widget`
+- `speech_to_text`
 
 ## Executar (Windows)
 ```powershell
@@ -238,6 +257,7 @@ No `AndroidManifest.xml` foram adicionadas:
 - `RECEIVE_BOOT_COMPLETED`
 - `VIBRATE`
 - `CAMERA`
+- `RECORD_AUDIO`
 
 ## Widgets na tela inicial (Android)
 1. Abra o app e crie/atualize listas.
@@ -247,7 +267,8 @@ No `AndroidManifest.xml` foram adicionadas:
 5. Adicione:
    - `Resumo de Compras`
    - `Lista Prioritária`
-6. Toque no widget para abrir o app.
+6. Use `Adicionar por voz` para abrir diretamente a lista em foco com o
+   microfone, ou `Abrir` para entrar normalmente na lista.
 
 ## Testes e análise
 ```powershell

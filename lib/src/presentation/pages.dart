@@ -1,5 +1,6 @@
 export 'account_pages.dart';
 export 'catalog_products_page.dart';
+export 'pantry_page.dart';
 export 'dashboard_page.dart';
 export 'market_mode_page.dart';
 export 'my_lists_page.dart';

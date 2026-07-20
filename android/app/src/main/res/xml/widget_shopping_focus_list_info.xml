@@ -3,7 +3,7 @@
     android:description="@string/widget_focus_description"
     android:initialLayout="@layout/widget_shopping_focus_list"
     android:minWidth="250dp"
-    android:minHeight="140dp"
+    android:minHeight="170dp"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="0"
     android:widgetCategory="home_screen" />

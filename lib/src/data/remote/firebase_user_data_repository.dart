@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import '../../domain/models_and_utils.dart';
+import '../../domain/pantry.dart';
 
 class FirestoreUserProfile {
   const FirestoreUserProfile({
@@ -183,6 +184,7 @@ class FirestoreUserDataSnapshot {
     required this.lists,
     required this.history,
     required this.catalog,
+    required this.pantry,
     required this.settings,
     this.profile,
   });
@@ -190,11 +192,15 @@ class FirestoreUserDataSnapshot {
   final List<ShoppingListModel> lists;
   final List<CompletedPurchase> history;
   final List<CatalogProduct> catalog;
+  final List<PantryItem> pantry;
   final FirestoreUserAppSettings settings;
   final FirestoreUserProfile? profile;
 
   bool get hasCoreData =>
-      lists.isNotEmpty || history.isNotEmpty || catalog.isNotEmpty;
+      lists.isNotEmpty ||
+      history.isNotEmpty ||
+      catalog.isNotEmpty ||
+      pantry.isNotEmpty;
   bool get hasAnyData =>
       hasCoreData || settings.hasData || (profile?.hasAnyValue ?? false);
 }
@@ -237,6 +243,13 @@ class FirestoreUserDataRepository {
     String uid,
   ) {
     return firestore.collection('users').doc(uid).collection('catalog');
+  }
+
+  CollectionReference<Map<String, dynamic>> _pantryRef(
+    FirebaseFirestore firestore,
+    String uid,
+  ) {
+    return firestore.collection('users').doc(uid).collection('pantry');
   }
 
   DocumentReference<Map<String, dynamic>> _userDocRef(
@@ -303,14 +316,18 @@ class FirestoreUserDataRepository {
           ? _catalogRef(firestore, uid).get()
           : _catalogRef(firestore, uid).get(getOptions),
       getOptions == null
+          ? _pantryRef(firestore, uid).get()
+          : _pantryRef(firestore, uid).get(getOptions),
+      getOptions == null
           ? _settingsDocRef(firestore, uid).get()
           : _settingsDocRef(firestore, uid).get(getOptions),
     ]);
     final listsSnapshot = responses[0] as QuerySnapshot<Map<String, dynamic>>;
     final historySnapshot = responses[1] as QuerySnapshot<Map<String, dynamic>>;
     final catalogSnapshot = responses[2] as QuerySnapshot<Map<String, dynamic>>;
+    final pantrySnapshot = responses[3] as QuerySnapshot<Map<String, dynamic>>;
     final settingsSnapshot =
-        responses[3] as DocumentSnapshot<Map<String, dynamic>>;
+        responses[4] as DocumentSnapshot<Map<String, dynamic>>;
 
     final lists = <ShoppingListModel>[];
     for (final doc in listsSnapshot.docs) {
@@ -333,6 +350,16 @@ class FirestoreUserDataRepository {
       catalog.add(CatalogProduct.fromJson(data));
     }
 
+    final pantry = <PantryItem>[];
+    for (final doc in pantrySnapshot.docs) {
+      final data = doc.data();
+      data.putIfAbsent('id', () => doc.id);
+      final item = PantryItem.fromJson(data);
+      if (item.name.trim().isNotEmpty) {
+        pantry.add(item);
+      }
+    }
+
     final settings = FirestoreUserAppSettings.fromJson(
       settingsSnapshot.data() ?? const <String, dynamic>{},
     );
@@ -344,11 +371,13 @@ class FirestoreUserDataRepository {
     lists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     history.sort((a, b) => b.closedAt.compareTo(a.closedAt));
     catalog.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    pantry.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
 
     return FirestoreUserDataSnapshot(
       lists: List.unmodifiable(lists),
       history: List.unmodifiable(history),
       catalog: List.unmodifiable(catalog),
+      pantry: List.unmodifiable(pantry),
       settings: settings,
       profile: profile,
     );
@@ -359,6 +388,7 @@ class FirestoreUserDataRepository {
     required List<ShoppingListModel> lists,
     required List<CompletedPurchase> history,
     required List<CatalogProduct> catalog,
+    required List<PantryItem> pantry,
     required FirestoreUserAppSettings settings,
     FirestoreUserProfile? profile,
   }) async {
@@ -366,10 +396,12 @@ class FirestoreUserDataRepository {
       final listsCollection = _listsRef(firestore, uid);
       final historyCollection = _historyRef(firestore, uid);
       final catalogCollection = _catalogRef(firestore, uid);
+      final pantryCollection = _pantryRef(firestore, uid);
 
       QuerySnapshot<Map<String, dynamic>>? remoteLists;
       QuerySnapshot<Map<String, dynamic>>? remoteHistory;
       QuerySnapshot<Map<String, dynamic>>? remoteCatalog;
+      QuerySnapshot<Map<String, dynamic>>? remotePantry;
       try {
         // A primeira chamada é sequencial para garantir que o delegate interno
         // do Firestore Web seja inicializado antes das chamadas paralelas.
@@ -378,11 +410,14 @@ class FirestoreUserDataRepository {
         final remoteResponses = await Future.wait<dynamic>([
           historyCollection.get(),
           catalogCollection.get(),
+          pantryCollection.get(),
         ]);
         remoteHistory =
             remoteResponses[0] as QuerySnapshot<Map<String, dynamic>>;
         remoteCatalog =
             remoteResponses[1] as QuerySnapshot<Map<String, dynamic>>;
+        remotePantry =
+            remoteResponses[2] as QuerySnapshot<Map<String, dynamic>>;
       } on FirebaseException catch (error) {
         if (!_isTransientError(error)) {
           rethrow;
@@ -392,11 +427,13 @@ class FirestoreUserDataRepository {
         remoteLists = null;
         remoteHistory = null;
         remoteCatalog = null;
+        remotePantry = null;
       }
 
       final localListIds = lists.map((entry) => entry.id).toSet();
       final localHistoryIds = history.map((entry) => entry.id).toSet();
       final localCatalogIds = catalog.map((entry) => entry.id).toSet();
+      final localPantryIds = pantry.map((entry) => entry.id).toSet();
       final operations = <void Function(WriteBatch batch)>[];
 
       if (remoteLists != null) {
@@ -435,6 +472,19 @@ class FirestoreUserDataRepository {
       for (final entry in catalog) {
         operations.add(
           (batch) => batch.set(catalogCollection.doc(entry.id), entry.toJson()),
+        );
+      }
+
+      if (remotePantry != null) {
+        for (final doc in remotePantry.docs) {
+          if (!localPantryIds.contains(doc.id)) {
+            operations.add((batch) => batch.delete(doc.reference));
+          }
+        }
+      }
+      for (final entry in pantry) {
+        operations.add(
+          (batch) => batch.set(pantryCollection.doc(entry.id), entry.toJson()),
         );
       }
 

@@ -28,6 +28,10 @@
 	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Precisamos acessar sua galeria para atualizar sua foto de perfil.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Usamos o microfone apenas quando você adiciona produtos por voz.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Usamos o reconhecimento de voz para transformar sua fala em itens da lista.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

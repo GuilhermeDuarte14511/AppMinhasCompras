@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../application/ports.dart';
 import '../../domain/models_and_utils.dart';
+import '../../domain/pantry.dart';
 
 class SharedPrefsShoppingListsStorage implements ShoppingListsStorage {
   static const String _storageKey = 'shopping_lists_v2';
@@ -225,6 +226,42 @@ class SharedPrefsPurchaseHistoryStorage implements PurchaseHistoryStorage {
   }
 }
 
+class SharedPrefsPantryStorage implements PantryStorage {
+  static const String _storageKey = 'shopping_pantry_v1';
+
+  @override
+  Future<List<PantryItem>> loadItems() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_storageKey);
+    if (raw == null || raw.isEmpty) {
+      return const <PantryItem>[];
+    }
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) {
+        return const <PantryItem>[];
+      }
+      return decoded
+          .whereType<Map>()
+          .map((entry) => PantryItem.fromJson(Map<String, dynamic>.from(entry)))
+          .where((item) => item.name.trim().isNotEmpty)
+          .toList(growable: false);
+    } catch (_) {
+      return const <PantryItem>[];
+    }
+  }
+
+  @override
+  Future<void> saveItems(List<PantryItem> items) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _storageKey,
+      jsonEncode(items.map((item) => item.toJson()).toList(growable: false)),
+    );
+  }
+}
+
 class InMemoryProductCatalogStorage implements ProductCatalogStorage {
   List<CatalogProduct> _products = const <CatalogProduct>[];
 
@@ -279,5 +316,19 @@ class InMemoryPurchaseHistoryStorage implements PurchaseHistoryStorage {
           ),
         )
         .toList(growable: false);
+  }
+}
+
+class InMemoryPantryStorage implements PantryStorage {
+  List<PantryItem> _items = const <PantryItem>[];
+
+  @override
+  Future<List<PantryItem>> loadItems() async {
+    return _items.map((item) => item.copyWith()).toList(growable: false);
+  }
+
+  @override
+  Future<void> saveItems(List<PantryItem> items) async {
+    _items = items.map((item) => item.copyWith()).toList(growable: false);
   }
 }

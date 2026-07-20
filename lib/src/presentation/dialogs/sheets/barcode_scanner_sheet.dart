@@ -7,6 +7,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/utils/text_utils.dart';
 import '../../utils/app_modal.dart';
+import '../../utils/barcode_scanner_web_compat.dart';
 
 bool shouldStopBarcodeScannerForLifecycle(AppLifecycleState state) {
   return state == AppLifecycleState.inactive;
@@ -26,7 +27,7 @@ Duration barcodeScannerRestartDelay({required bool isWeb}) {
 
 String barcodeScannerRecoveryHint({required bool isWeb}) {
   if (isWeb) {
-    return 'Se a tela ficar preta no navegador, toque em Trocar câmera ou Reabrir câmera. Se continuar, recarregue a página e permita a câmera novamente.';
+    return 'Se a tela ficar preta no iPhone, toque em Reabrir câmera. Se estiver usando o app pela Tela de Início, abra-o em uma aba normal do Safari.';
   }
 
   return 'Escaneamento opcional. Se a tela ficar preta, tente trocar a câmera ou digite manualmente.';
@@ -152,6 +153,7 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
     try {
       final requestedFacing = cameraDirection ?? _lastRequestedFacing;
       await _controller.start(cameraDirection: requestedFacing);
+      await prepareBarcodeScannerWebVideo();
       _lastRequestedFacing = requestedFacing;
       if (mounted && _startError != null) {
         setState(() {

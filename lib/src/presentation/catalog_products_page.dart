@@ -17,7 +17,7 @@ enum _CatalogSortOption { updatedAt, name, usage, price }
 
 enum _CatalogPriceFilter { all, withoutPrice }
 
-enum _CatalogProductAction { edit, updatePrice, delete }
+enum _CatalogProductAction { addToPantry, edit, updatePrice, delete }
 
 class CatalogProductsPage extends StatefulWidget {
   const CatalogProductsPage({super.key, required this.store});
@@ -71,6 +71,17 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
       message: message,
       type: type,
       duration: const Duration(seconds: 4),
+    );
+  }
+
+  Future<void> _addToPantry(CatalogProduct product) async {
+    await widget.store.addCatalogProductToPantry(product);
+    if (!mounted) {
+      return;
+    }
+    _showSnack(
+      '${product.name} foi adicionado à despensa.',
+      type: AppToastType.success,
     );
   }
 
@@ -930,6 +941,10 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
                                                 onSelected: (action) {
                                                   switch (action) {
                                                     case _CatalogProductAction
+                                                        .addToPantry:
+                                                      _addToPantry(product);
+                                                      return;
+                                                    case _CatalogProductAction
                                                         .edit:
                                                       _editCatalogProduct(
                                                         product,
@@ -950,6 +965,13 @@ class _CatalogProductsPageState extends State<CatalogProductsPage> {
                                                   }
                                                 },
                                                 itemBuilder: (context) => const [
+                                                  PopupMenuItem(
+                                                    value: _CatalogProductAction
+                                                        .addToPantry,
+                                                    child: Text(
+                                                      'Adicionar à despensa',
+                                                    ),
+                                                  ),
                                                   PopupMenuItem(
                                                     value: _CatalogProductAction
                                                         .edit,

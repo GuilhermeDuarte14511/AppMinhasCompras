@@ -134,12 +134,14 @@ class MyListsPage extends StatefulWidget {
     required this.backupService,
     this.sharedListsRepository,
     this.currentUserUid,
+    this.voiceRecognitionService,
   });
 
   final ShoppingListsStore store;
   final ShoppingBackupService backupService;
   final SharedListsRepository? sharedListsRepository;
   final String? currentUserUid;
+  final ShoppingVoiceRecognitionService? voiceRecognitionService;
 
   @override
   State<MyListsPage> createState() => _MyListsPageState();
@@ -199,7 +201,10 @@ class _MyListsPageState extends State<MyListsPage> {
     await Navigator.push<void>(
       context,
       buildAppPageRoute(
-        builder: (_) => PurchaseHistoryPage(store: widget.store),
+        builder: (_) => PurchaseHistoryPage(
+          store: widget.store,
+          voiceRecognitionService: widget.voiceRecognitionService,
+        ),
       ),
     );
   }
@@ -212,6 +217,7 @@ class _MyListsPageState extends State<MyListsPage> {
           store: widget.store,
           listId: list.id,
           sharedListsRepository: widget.sharedListsRepository,
+          voiceRecognitionService: widget.voiceRecognitionService,
         ),
       ),
     );

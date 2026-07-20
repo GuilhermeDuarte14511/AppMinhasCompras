@@ -10,16 +10,19 @@ import 'package:intl/intl.dart';
 import '../application/ports.dart';
 import '../application/sign_out_coordinator.dart';
 import '../application/sign_out_policy.dart';
+import '../application/shared_lists_refresh_coordinator.dart';
 import '../application/store_and_services.dart';
 import '../application/sync_diagnostics.dart';
 import '../core/utils/format_utils.dart';
 import '../data/remote/shared_lists_repository.dart';
 import '../domain/models_and_utils.dart';
+import '../domain/pantry.dart';
 import 'account_pages.dart';
 import 'catalog_products_page.dart';
 import 'dialogs_and_sheets.dart';
 import 'launch.dart';
 import 'my_lists_page.dart';
+import 'pantry_page.dart';
 import 'purchase_history_page.dart';
 import 'shared_lists_pages.dart';
 import 'shopping_list_editor_page.dart';
@@ -28,7 +31,7 @@ import 'utils/app_modal.dart';
 import 'utils/app_page_route.dart';
 import 'utils/app_toast.dart';
 
-enum _DashboardMenuAction { options, catalog, signOut }
+enum _DashboardMenuAction { options, catalog, pantry, signOut }
 
 bool _prefersReducedMotion(BuildContext context) =>
     MediaQuery.maybeOf(context)?.disableAnimations ?? false;
@@ -139,9 +142,14 @@ class DashboardPage extends StatefulWidget {
     this.listRecords = 0,
     this.historyRecords = 0,
     this.catalogRecords = 0,
+    this.pantryRecords = 0,
     this.syncDiagnostics,
     this.onSyncNow,
     this.onRefreshSyncDiagnostics,
+    this.voiceRecognitionService,
+    this.homeWidgetLaunchUri,
+    this.homeWidgetActionId = 0,
+    this.onHomeWidgetActionConsumed,
   });
 
   final ShoppingListsStore store;
@@ -167,9 +175,14 @@ class DashboardPage extends StatefulWidget {
   final int listRecords;
   final int historyRecords;
   final int catalogRecords;
+  final int pantryRecords;
   final SyncDiagnosticsSnapshot? syncDiagnostics;
   final Future<void> Function()? onSyncNow;
   final Future<SyncDiagnosticsSnapshot?> Function()? onRefreshSyncDiagnostics;
+  final ShoppingVoiceRecognitionService? voiceRecognitionService;
+  final Uri? homeWidgetLaunchUri;
+  final int homeWidgetActionId;
+  final VoidCallback? onHomeWidgetActionConsumed;
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -180,21 +193,176 @@ class _DashboardPageState extends State<DashboardPage> {
   bool _isSigningOut = false;
   List<SharedShoppingListSummary> _lastSharedLists =
       const <SharedShoppingListSummary>[];
+  String? _lastSharedListsUid;
   Object? _sharedListsLastError;
+  int _handledHomeWidgetActionId = -1;
+  final SharedListsRefreshCoordinator _sharedListsRefreshCoordinator =
+      SharedListsRefreshCoordinator();
+  final SharedListsStreamCache<List<SharedShoppingListSummary>>
+  _sharedListsStreamCache =
+      SharedListsStreamCache<List<SharedShoppingListSummary>>();
 
   @override
   void initState() {
     super.initState();
     _maybeLaunchCreateListShortcut();
+    _maybeHandleHomeWidgetAction();
   }
 
   @override
   void didUpdateWidget(covariant DashboardPage oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!identical(
+      oldWidget.sharedListsRepository,
+      widget.sharedListsRepository,
+    )) {
+      _clearSharedListsStream();
+    }
     if (widget.openCreateListOnStart && !oldWidget.openCreateListOnStart) {
       _handledCreateListShortcut = false;
       _maybeLaunchCreateListShortcut();
     }
+    _maybeHandleHomeWidgetAction();
+  }
+
+  void _clearSharedListsStream() {
+    _sharedListsStreamCache.clear();
+  }
+
+  Stream<List<SharedShoppingListSummary>> _watchSharedLists({
+    required SharedListsRepository repository,
+    required String uid,
+  }) {
+    return _sharedListsStreamCache.resolve(
+      sourceIdentity: repository,
+      userId: uid,
+      revision: _sharedListsRefreshCoordinator.revision,
+      create: () => repository.watchSharedLists(uid),
+    );
+  }
+
+  bool _isAuthenticationError(Object? error) {
+    return error is FirebaseException &&
+        (error.code == 'unauthenticated' || error.code == 'permission-denied');
+  }
+
+  Future<void> _retrySharedLists(User user, Object? error) async {
+    if (_sharedListsRefreshCoordinator.isRefreshing) {
+      return;
+    }
+    final operation = _sharedListsRefreshCoordinator.retry(
+      refreshAuthentication: _isAuthenticationError(error),
+      refreshToken: () async {
+        final currentUser = FirebaseAuth.instance.currentUser ?? user;
+        final token = await currentUser.getIdToken(true);
+        if (token == null || token.trim().isEmpty) {
+          throw FirebaseAuthException(
+            code: 'missing-id-token',
+            message: 'O Firebase não retornou um token de autenticação.',
+          );
+        }
+      },
+    );
+    if (mounted) {
+      setState(() {});
+    }
+    try {
+      await operation;
+      _sharedListsLastError = null;
+      _clearSharedListsStream();
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (refreshError) {
+      if (!mounted) {
+        return;
+      }
+      _showSnack(
+        'Não foi possível atualizar as listas compartilhadas. Verifique a conexão e tente novamente.',
+        type: AppToastType.error,
+      );
+      setState(() {});
+    }
+  }
+
+  void _maybeHandleHomeWidgetAction() {
+    final uri = widget.homeWidgetLaunchUri;
+    final actionId = widget.homeWidgetActionId;
+    if (uri == null || actionId == _handledHomeWidgetActionId) {
+      return;
+    }
+    _handledHomeWidgetActionId = actionId;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      widget.onHomeWidgetActionConsumed?.call();
+      unawaited(_handleHomeWidgetUri(uri));
+    });
+  }
+
+  Future<void> _handleHomeWidgetUri(Uri uri) async {
+    final action = uri.queryParameters['action']?.trim() ?? '';
+    if (action == 'pantry') {
+      await _openPantry();
+      return;
+    }
+    if (action != 'voice' && action != 'open_list') {
+      return;
+    }
+    final requestedListId = uri.queryParameters['listId']?.trim() ?? '';
+    final requestedList = requestedListId.isEmpty
+        ? null
+        : widget.store.findById(requestedListId);
+    final target = requestedList?.isClosed == false
+        ? requestedList
+        : _preferredOpenList();
+
+    if (target == null) {
+      if (action == 'voice') {
+        await _createNewList(startVoiceCapture: true);
+      }
+      return;
+    }
+    await _openListEditor(target, startVoiceCapture: action == 'voice');
+  }
+
+  ShoppingListModel? _preferredOpenList() {
+    final openLists = widget.store.lists
+        .where((list) => !list.isClosed)
+        .toList(growable: false);
+    if (openLists.isEmpty) {
+      return null;
+    }
+    openLists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return openLists.first;
+  }
+
+  Future<void> _openListEditor(
+    ShoppingListModel list, {
+    bool startVoiceCapture = false,
+  }) {
+    return Navigator.push<void>(
+      context,
+      buildAppPageRoute(
+        builder: (_) => ShoppingListEditorPage(
+          store: widget.store,
+          listId: list.id,
+          sharedListsRepository: widget.sharedListsRepository,
+          voiceRecognitionService: widget.voiceRecognitionService,
+          startVoiceCapture: startVoiceCapture,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openVoiceQuickAdd() async {
+    final target = _preferredOpenList();
+    if (target == null) {
+      await _createNewList(startVoiceCapture: true);
+      return;
+    }
+    await _openListEditor(target, startVoiceCapture: true);
   }
 
   void _maybeLaunchCreateListShortcut() {
@@ -224,6 +392,7 @@ class _DashboardPageState extends State<DashboardPage> {
           backupService: widget.backupService,
           sharedListsRepository: sharedRepository,
           currentUserUid: currentUserUid,
+          voiceRecognitionService: widget.voiceRecognitionService,
         ),
       ),
     );
@@ -233,7 +402,10 @@ class _DashboardPageState extends State<DashboardPage> {
     await Navigator.push<void>(
       context,
       buildAppPageRoute(
-        builder: (_) => PurchaseHistoryPage(store: widget.store),
+        builder: (_) => PurchaseHistoryPage(
+          store: widget.store,
+          voiceRecognitionService: widget.voiceRecognitionService,
+        ),
       ),
     );
   }
@@ -270,6 +442,7 @@ class _DashboardPageState extends State<DashboardPage> {
           listRecords: widget.listRecords,
           historyRecords: widget.historyRecords,
           catalogRecords: widget.catalogRecords,
+          pantryRecords: widget.pantryRecords,
           syncDiagnostics: syncDiagnostics,
           onSyncNow: widget.onSyncNow,
           onRefreshSyncDiagnostics: _buildSyncDiagnosticsSnapshot,
@@ -336,7 +509,17 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Future<void> _createNewList({ShoppingListModel? basedOn}) async {
+  Future<void> _openPantry() async {
+    await Navigator.push<void>(
+      context,
+      buildAppPageRoute(builder: (_) => PantryPage(store: widget.store)),
+    );
+  }
+
+  Future<void> _createNewList({
+    ShoppingListModel? basedOn,
+    bool startVoiceCapture = false,
+  }) async {
     final suggested = basedOn == null ? '' : '${basedOn.name} - nova';
     final name = await showListNameDialog(
       context,
@@ -364,6 +547,8 @@ class _DashboardPageState extends State<DashboardPage> {
           store: widget.store,
           listId: created.id,
           sharedListsRepository: widget.sharedListsRepository,
+          voiceRecognitionService: widget.voiceRecognitionService,
+          startVoiceCapture: startVoiceCapture,
         ),
       ),
     );
@@ -387,6 +572,7 @@ class _DashboardPageState extends State<DashboardPage> {
           store: widget.store,
           listId: created.id,
           sharedListsRepository: widget.sharedListsRepository,
+          voiceRecognitionService: widget.voiceRecognitionService,
         ),
       ),
     );
@@ -605,6 +791,128 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
+  Widget _buildSharedListsPanel(SharedListsRepository repository, User? user) {
+    final uid = user?.uid.trim() ?? '';
+    if (uid.isEmpty) {
+      _lastSharedLists = const <SharedShoppingListSummary>[];
+      _lastSharedListsUid = null;
+      return const Card(
+        elevation: 0,
+        child: ListTile(
+          leading: Icon(Icons.lock_outline_rounded),
+          title: Text('Entre para ver listas compartilhadas'),
+          subtitle: Text('Faça login para carregar seus convites e listas.'),
+        ),
+      );
+    }
+    if (_lastSharedListsUid != uid) {
+      _lastSharedLists = const <SharedShoppingListSummary>[];
+      _sharedListsLastError = null;
+      _lastSharedListsUid = uid;
+    }
+
+    return StreamBuilder<List<SharedShoppingListSummary>>(
+      key: ValueKey(
+        'shared_lists_${uid}_${_sharedListsRefreshCoordinator.revision}',
+      ),
+      stream: _watchSharedLists(repository: repository, uid: uid),
+      initialData: _lastSharedListsUid == uid && _lastSharedLists.isNotEmpty
+          ? _lastSharedLists
+          : null,
+      builder: (context, sharedSnapshot) {
+        if (sharedSnapshot.connectionState == ConnectionState.waiting &&
+            !sharedSnapshot.hasData) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 18),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (sharedSnapshot.hasError) {
+          _sharedListsLastError = sharedSnapshot.error;
+          debugPrint(
+            '[share_flow] falha ao observar listas compartilhadas: '
+            '${sharedSnapshot.error.runtimeType}',
+          );
+        } else if (sharedSnapshot.hasData) {
+          _sharedListsLastError = null;
+          _lastSharedLists =
+              sharedSnapshot.data ?? const <SharedShoppingListSummary>[];
+        }
+
+        final sharedLists = sharedSnapshot.data ?? _lastSharedLists;
+        if (sharedLists.isEmpty && _sharedListsLastError != null) {
+          final refreshing = _sharedListsRefreshCoordinator.isRefreshing;
+          return Card(
+            elevation: 0,
+            child: ListTile(
+              leading: const Icon(Icons.sync_problem_rounded),
+              title: const Text(
+                'Não foi possível carregar listas compartilhadas',
+              ),
+              subtitle: const Text(
+                'Verifique a conexão e tente atualizar novamente.',
+              ),
+              trailing: refreshing
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : TextButton(
+                      onPressed: () => unawaited(
+                        _retrySharedLists(user!, _sharedListsLastError),
+                      ),
+                      child: const Text('Atualizar'),
+                    ),
+            ),
+          );
+        }
+        if (sharedLists.isEmpty) {
+          return Card(
+            elevation: 0,
+            child: ListTile(
+              leading: const Icon(Icons.group_off_rounded),
+              title: const Text('Nenhuma lista compartilhada'),
+              subtitle: const Text(
+                'Use "Entrar na lista com código" ou compartilhe uma lista sua.',
+              ),
+              trailing: TextButton(
+                onPressed: _joinSharedListByCode,
+                child: const Text('Entrar'),
+              ),
+            ),
+          );
+        }
+        return Column(
+          children: sharedLists
+              .take(5)
+              .map((shared) {
+                final isOwner = shared.isOwner(uid);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Card(
+                    elevation: 0,
+                    child: ListTile(
+                      onTap: () => _openSharedListEditor(shared.id),
+                      leading: Icon(
+                        isOwner
+                            ? Icons.verified_user_rounded
+                            : Icons.group_rounded,
+                      ),
+                      title: Text(shared.name),
+                      subtitle: Text(
+                        '${formatCountLabel(shared.memberCount, 'membro', 'membros')} - ${isOwner ? 'Dono' : 'Membro'}',
+                      ),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                    ),
+                  ),
+                );
+              })
+              .toList(growable: false),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final lists = widget.store.listsByCreatedAt;
@@ -629,6 +937,14 @@ class _DashboardPageState extends State<DashboardPage> {
         icon: Icons.playlist_add_rounded,
         onTap: _createNewList,
       ),
+      if (widget.voiceRecognitionService != null)
+        _DashboardQuickAction(
+          key: const ValueKey('dash_action_voice'),
+          title: 'Adicionar por voz',
+          subtitle: 'Fale vários itens.',
+          icon: Icons.mic_rounded,
+          onTap: _openVoiceQuickAdd,
+        ),
       _DashboardQuickAction(
         key: const ValueKey('dash_action_lists'),
         title: 'Listas',
@@ -659,6 +975,13 @@ class _DashboardPageState extends State<DashboardPage> {
         onTap: _openCatalog,
       ),
       _DashboardQuickAction(
+        key: const ValueKey('dash_action_pantry'),
+        title: 'Despensa',
+        subtitle: 'Veja o que repor.',
+        icon: Icons.kitchen_rounded,
+        onTap: _openPantry,
+      ),
+      _DashboardQuickAction(
         key: const ValueKey('dash_action_based'),
         title: 'Usar modelo',
         subtitle: 'Copie uma lista.',
@@ -680,6 +1003,9 @@ class _DashboardPageState extends State<DashboardPage> {
                 case _DashboardMenuAction.catalog:
                   _openCatalog();
                   return;
+                case _DashboardMenuAction.pantry:
+                  _openPantry();
+                  return;
                 case _DashboardMenuAction.signOut:
                   unawaited(_requestSignOut());
                   return;
@@ -693,6 +1019,10 @@ class _DashboardPageState extends State<DashboardPage> {
               const PopupMenuItem(
                 value: _DashboardMenuAction.catalog,
                 child: Text('Catálogo de produtos'),
+              ),
+              const PopupMenuItem(
+                value: _DashboardMenuAction.pantry,
+                child: Text('Despensa'),
               ),
               if (widget.onSignOut != null)
                 const PopupMenuItem(
@@ -741,6 +1071,15 @@ class _DashboardPageState extends State<DashboardPage> {
                   delay: const Duration(milliseconds: 40),
                   child: _QuickActionsGrid(actions: quickActions),
                 ),
+                const SizedBox(height: 14),
+                _EntryAnimation(
+                  key: const ValueKey('dash_pantry_strip'),
+                  delay: const Duration(milliseconds: 80),
+                  child: _DashboardPantryStrip(
+                    items: widget.store.pantryItems,
+                    onTap: _openPantry,
+                  ),
+                ),
                 const SizedBox(height: 20),
                 _EntryAnimation(
                   key: const ValueKey('dash_recent_title'),
@@ -775,17 +1114,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         child: _RecentListCard(
                           list: list,
                           onTap: () {
-                            Navigator.push<void>(
-                              context,
-                              buildAppPageRoute(
-                                builder: (_) => ShoppingListEditorPage(
-                                  store: widget.store,
-                                  listId: list.id,
-                                  sharedListsRepository:
-                                      widget.sharedListsRepository,
-                                ),
-                              ),
-                            );
+                            _openListEditor(list);
                           },
                         ),
                       ),
@@ -796,171 +1125,42 @@ class _DashboardPageState extends State<DashboardPage> {
                   _EntryAnimation(
                     key: const ValueKey('dash_shared_title'),
                     delay: const Duration(milliseconds: 210),
-                    child: Text(
-                      'Listas compartilhadas',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Listas compartilhadas',
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed:
+                              authUser == null ||
+                                  _sharedListsRefreshCoordinator.isRefreshing
+                              ? null
+                              : () => unawaited(
+                                  _retrySharedLists(authUser, null),
+                                ),
+                          icon: _sharedListsRefreshCoordinator.isRefreshing
+                              ? const SizedBox.square(
+                                  dimension: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.refresh_rounded, size: 19),
+                          label: Text(
+                            _sharedListsRefreshCoordinator.isRefreshing
+                                ? 'Atualizando'
+                                : 'Atualizar',
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 10),
-                  StreamBuilder<User?>(
-                    stream: FirebaseAuth.instance.idTokenChanges(),
-                    builder: (context, authSnapshot) {
-                      final user = authSnapshot.data ?? authUser;
-                      final uid = user?.uid.trim() ?? '';
-                      if (uid.isEmpty) {
-                        return Card(
-                          elevation: 0,
-                          child: ListTile(
-                            leading: const Icon(Icons.lock_outline_rounded),
-                            title: const Text(
-                              'Entre para ver listas compartilhadas',
-                            ),
-                            subtitle: const Text(
-                              'Faça login para carregar seus convites e listas.',
-                            ),
-                          ),
-                        );
-                      }
-                      return FutureBuilder<String?>(
-                        key: ValueKey('auth_token_$uid'),
-                        future: user!.getIdToken(true),
-                        builder: (context, tokenSnapshot) {
-                          if (tokenSnapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 18),
-                              child: Center(child: CircularProgressIndicator()),
-                            );
-                          }
-                          if (tokenSnapshot.hasError) {
-                            debugPrint(
-                              '[share_flow] falha ao atualizar token de autenticação',
-                            );
-                            return Card(
-                              elevation: 0,
-                              child: ListTile(
-                                leading: const Icon(Icons.sync_problem_rounded),
-                                title: const Text(
-                                  'Não foi possível validar o login',
-                                ),
-                                subtitle: const Text(
-                                  'Tente sair e entrar novamente para atualizar o token.',
-                                ),
-                                trailing: TextButton(
-                                  onPressed: () => setState(() {}),
-                                  child: const Text('Atualizar'),
-                                ),
-                              ),
-                            );
-                          }
-                          return StreamBuilder<List<SharedShoppingListSummary>>(
-                            key: ValueKey('shared_lists_$uid'),
-                            stream: sharedRepository.watchSharedLists(uid),
-                            builder: (context, sharedSnapshot) {
-                              if (sharedSnapshot.connectionState ==
-                                      ConnectionState.waiting &&
-                                  !sharedSnapshot.hasData) {
-                                return const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 18),
-                                  child: Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                );
-                              }
-                              if (sharedSnapshot.hasError) {
-                                _sharedListsLastError = sharedSnapshot.error;
-                                debugPrint(
-                                  '[share_flow] falha ao observar listas compartilhadas',
-                                );
-                              } else if (sharedSnapshot.hasData) {
-                                _sharedListsLastError = null;
-                                _lastSharedLists =
-                                    sharedSnapshot.data ??
-                                    const <SharedShoppingListSummary>[];
-                              }
-                              final sharedLists =
-                                  sharedSnapshot.data ?? _lastSharedLists;
-                              if (sharedLists.isEmpty) {
-                                if (_sharedListsLastError != null) {
-                                  return Card(
-                                    elevation: 0,
-                                    child: ListTile(
-                                      leading: const Icon(
-                                        Icons.sync_problem_rounded,
-                                      ),
-                                      title: const Text(
-                                        'Não foi possível carregar listas compartilhadas',
-                                      ),
-                                      subtitle: const Text(
-                                        'Verifique permissões ou conexão e tente novamente.',
-                                      ),
-                                      trailing: TextButton(
-                                        onPressed: () => setState(() {}),
-                                        child: const Text('Atualizar'),
-                                      ),
-                                    ),
-                                  );
-                                }
-                                return Card(
-                                  elevation: 0,
-                                  child: ListTile(
-                                    leading: const Icon(
-                                      Icons.group_off_rounded,
-                                    ),
-                                    title: const Text(
-                                      'Nenhuma lista compartilhada',
-                                    ),
-                                    subtitle: const Text(
-                                      'Use "Entrar na lista com código" ou compartilhe uma lista sua.',
-                                    ),
-                                    trailing: TextButton(
-                                      onPressed: _joinSharedListByCode,
-                                      child: const Text('Entrar'),
-                                    ),
-                                  ),
-                                );
-                              }
-                              return Column(
-                                children: sharedLists
-                                    .take(5)
-                                    .map((shared) {
-                                      final isOwner = shared.isOwner(uid);
-                                      return Padding(
-                                        padding: const EdgeInsets.only(
-                                          bottom: 10,
-                                        ),
-                                        child: Card(
-                                          elevation: 0,
-                                          child: ListTile(
-                                            onTap: () => _openSharedListEditor(
-                                              shared.id,
-                                            ),
-                                            leading: Icon(
-                                              isOwner
-                                                  ? Icons.verified_user_rounded
-                                                  : Icons.group_rounded,
-                                            ),
-                                            title: Text(shared.name),
-                                            subtitle: Text(
-                                              '${formatCountLabel(shared.memberCount, 'membro', 'membros')} - ${isOwner ? 'Dono' : 'Membro'}',
-                                            ),
-                                            trailing: const Icon(
-                                              Icons.chevron_right_rounded,
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    })
-                                    .toList(growable: false),
-                              );
-                            },
-                          );
-                        },
-                      );
-                    },
-                  ),
+                  _buildSharedListsPanel(sharedRepository, authUser),
                 ],
               ],
             ),
@@ -1407,6 +1607,125 @@ class _SectionHeader extends StatelessWidget {
           const SizedBox(width: 12),
           TextButton(onPressed: onAction, child: Text(actionLabel!)),
         ],
+      ],
+    );
+  }
+}
+
+class _DashboardPantryStrip extends StatelessWidget {
+  const _DashboardPantryStrip({required this.items, required this.onTap});
+
+  final List<PantryItem> items;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final counts = <PantryStockStatus, int>{
+      for (final status in PantryStockStatus.values)
+        status: items.where((item) => item.status == status).length,
+    };
+    final needsRestock =
+        (counts[PantryStockStatus.runningLow] ?? 0) +
+        (counts[PantryStockStatus.outOfStock] ?? 0);
+    return Material(
+      color: colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: AppTokens.radius(AppTokens.radiusXl),
+        side: BorderSide(color: colorScheme.outlineVariant),
+      ),
+      child: InkWell(
+        borderRadius: AppTokens.radius(AppTokens.radiusXl),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+          child: Row(
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colorScheme.primaryContainer,
+                  borderRadius: AppTokens.radius(AppTokens.radiusLg),
+                ),
+                child: SizedBox(
+                  width: 46,
+                  height: 46,
+                  child: Icon(
+                    Icons.kitchen_rounded,
+                    color: colorScheme.onPrimaryContainer,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Despensa',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      items.isEmpty
+                          ? 'Comece com produtos do catálogo.'
+                          : needsRestock == 0
+                          ? 'Tudo em ordem por aqui.'
+                          : formatCountLabel(
+                              needsRestock,
+                              'produto para repor',
+                              'produtos para repor',
+                            ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (items.isNotEmpty) ...[
+                _PantryMiniMetric(
+                  label: 'Tenho',
+                  value: counts[PantryStockStatus.inStock] ?? 0,
+                ),
+                const SizedBox(width: 10),
+                _PantryMiniMetric(label: 'Repor', value: needsRestock),
+              ],
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right_rounded),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PantryMiniMetric extends StatelessWidget {
+  const _PantryMiniMetric({required this.label, required this.value});
+
+  final String label;
+  final int value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '$value',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        Text(
+          label,
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
+        ),
       ],
     );
   }

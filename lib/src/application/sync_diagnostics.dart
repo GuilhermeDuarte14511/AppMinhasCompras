@@ -50,6 +50,7 @@ class SyncDiagnosticsSnapshot {
     required this.listRecords,
     required this.historyRecords,
     required this.catalogRecords,
+    this.pantryRecords = 0,
     required this.sharedListCount,
     required this.autoImportOwnedSharedCatalogs,
     required this.autoImportAllSharedCatalogs,
@@ -78,6 +79,7 @@ class SyncDiagnosticsSnapshot {
   final int listRecords;
   final int historyRecords;
   final int catalogRecords;
+  final int pantryRecords;
   final int sharedListCount;
   final bool autoImportOwnedSharedCatalogs;
   final bool autoImportAllSharedCatalogs;
@@ -106,6 +108,7 @@ class SyncDiagnosticsSnapshot {
     int? listRecords,
     int? historyRecords,
     int? catalogRecords,
+    int? pantryRecords,
     int? sharedListCount,
     bool? autoImportOwnedSharedCatalogs,
     bool? autoImportAllSharedCatalogs,
@@ -137,6 +140,7 @@ class SyncDiagnosticsSnapshot {
       listRecords: listRecords ?? this.listRecords,
       historyRecords: historyRecords ?? this.historyRecords,
       catalogRecords: catalogRecords ?? this.catalogRecords,
+      pantryRecords: pantryRecords ?? this.pantryRecords,
       sharedListCount: sharedListCount ?? this.sharedListCount,
       autoImportOwnedSharedCatalogs:
           autoImportOwnedSharedCatalogs ?? this.autoImportOwnedSharedCatalogs,
@@ -238,6 +242,7 @@ class SyncDiagnosticsSnapshot {
       ..writeln('Listas locais: $listRecords')
       ..writeln('Histórico: $historyRecords')
       ..writeln('Catálogo: $catalogRecords')
+      ..writeln('Despensa: $pantryRecords')
       ..writeln('Listas compartilhadas: $sharedListCount')
       ..writeln(
         'Auto importar catálogo do dono: ${_formatBool(autoImportOwnedSharedCatalogs)}',

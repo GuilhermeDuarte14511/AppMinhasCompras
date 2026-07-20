@@ -1,5 +1,6 @@
 import '../domain/classifications.dart';
 import '../domain/models_and_utils.dart';
+import '../domain/pantry.dart';
 
 abstract class ShoppingListsStorage {
   Future<List<ShoppingListModel>> loadLists();
@@ -17,6 +18,12 @@ abstract class PurchaseHistoryStorage {
   Future<List<CompletedPurchase>> loadHistory();
 
   Future<void> saveHistory(List<CompletedPurchase> history);
+}
+
+abstract class PantryStorage {
+  Future<List<PantryItem>> loadItems();
+
+  Future<void> saveItems(List<PantryItem> items);
 }
 
 abstract class SharedCatalogImportPreferences {
@@ -117,5 +124,36 @@ abstract class ShoppingReminderService {
 }
 
 abstract class ShoppingHomeWidgetService {
-  Future<void> updateFromLists(List<ShoppingListModel> lists);
+  Future<void> updateSnapshot({
+    required List<ShoppingListModel> lists,
+    required List<PantryItem> pantryItems,
+  });
+}
+
+class ShoppingVoiceRecognitionUpdate {
+  const ShoppingVoiceRecognitionUpdate({
+    required this.words,
+    required this.isFinal,
+  });
+
+  final String words;
+  final bool isFinal;
+}
+
+abstract class ShoppingVoiceRecognitionService {
+  bool get isListening;
+
+  Future<bool> initialize({
+    required void Function(String message) onError,
+    required void Function(String status) onStatus,
+  });
+
+  Future<void> startListening({
+    required void Function(ShoppingVoiceRecognitionUpdate update) onResult,
+    String localeId = 'pt_BR',
+  });
+
+  Future<void> stopListening();
+
+  Future<void> cancelListening();
 }

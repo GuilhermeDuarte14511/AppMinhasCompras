@@ -5,9 +5,11 @@ import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../application/ports.dart';
 import '../application/fiscal_receipt_import.dart';
 import '../application/shared_list_sync_policy.dart';
 import '../application/store_and_services.dart';
+import '../application/voice_shopping.dart';
 import '../core/utils/format_utils.dart';
 import '../data/remote/shared_lists_repository.dart';
 import '../domain/classifications.dart';
@@ -427,11 +429,15 @@ class ShoppingListEditorPage extends StatefulWidget {
     required this.store,
     required this.listId,
     this.sharedListsRepository,
+    this.voiceRecognitionService,
+    this.startVoiceCapture = false,
   });
 
   final ShoppingListsStore store;
   final String listId;
   final SharedListsRepository? sharedListsRepository;
+  final ShoppingVoiceRecognitionService? voiceRecognitionService;
+  final bool startVoiceCapture;
 
   @override
   State<ShoppingListEditorPage> createState() => _ShoppingListEditorPageState();
@@ -577,6 +583,13 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     _didShowBudgetWarning = _list.isOverBudget;
     _didShowBudgetNearLimitWarning = false;
     _resolveSharedLink();
+    if (widget.startVoiceCapture && widget.voiceRecognitionService != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          unawaited(_openVoiceQuickAdd());
+        }
+      });
+    }
   }
 
   @override
@@ -1020,6 +1033,58 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     unawaited(widget.store.saveDraftToCatalog(draft));
   }
 
+  Future<void> _openVoiceQuickAdd() async {
+    if (!_ensureEditable()) {
+      return;
+    }
+    final voiceService = widget.voiceRecognitionService;
+    if (voiceService == null) {
+      _showSnack(
+        'A adição por voz não está disponível neste dispositivo.',
+        type: AppToastType.warning,
+      );
+      return;
+    }
+
+    final drafts = await showVoiceQuickAddSheet(
+      context,
+      voiceRecognitionService: voiceService,
+      catalogProducts: widget.store.catalogProducts,
+      currentItems: _list.items,
+    );
+    if (!mounted || drafts == null || drafts.isEmpty) {
+      return;
+    }
+
+    final result = const VoiceDraftListMerger().merge(
+      _list.items,
+      drafts,
+      recordedAt: DateTime.now(),
+    );
+    for (final draft in drafts) {
+      unawaited(widget.store.saveDraftToCatalog(draft));
+    }
+    _updateList(
+      _list.copyWith(items: result.items),
+      message: _voiceMergeMessage(result),
+    );
+  }
+
+  String _voiceMergeMessage(VoiceDraftMergeResult result) {
+    if (result.mergedCount == 0) {
+      return result.createdCount == 1
+          ? 'Produto adicionado por voz.'
+          : '${result.createdCount} produtos adicionados por voz.';
+    }
+    if (result.createdCount == 0) {
+      return result.mergedCount == 1
+          ? 'Quantidade atualizada por voz.'
+          : '${result.mergedCount} quantidades atualizadas por voz.';
+    }
+    return '${result.createdCount} adicionados e '
+        '${result.mergedCount} quantidades atualizadas.';
+  }
+
   ShoppingItem _shoppingItemFromDraft(ShoppingItemDraft draft) {
     return ShoppingItem(
       id: uniqueId(),
@@ -1029,9 +1094,14 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       barcode: draft.barcode,
       category: draft.category,
       isPurchased: draft.isPurchased,
-      priceHistory: [
-        PriceHistoryEntry(price: draft.unitPrice, recordedAt: DateTime.now()),
-      ],
+      priceHistory: draft.unitPrice > 0
+          ? [
+              PriceHistoryEntry(
+                price: draft.unitPrice,
+                recordedAt: DateTime.now(),
+              ),
+            ]
+          : const <PriceHistoryEntry>[],
     );
   }
 
@@ -1920,10 +1990,26 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       ),
       floatingActionButton: _isEditingLocked
           ? null
-          : FloatingActionButton.extended(
-              onPressed: _openItemForm,
-              icon: const Icon(Icons.add_shopping_cart_rounded),
-              label: const Text('Adicionar item'),
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (widget.voiceRecognitionService != null) ...[
+                  FloatingActionButton.small(
+                    heroTag: 'voice-quick-add',
+                    tooltip: 'Adicionar produtos por voz',
+                    onPressed: _openVoiceQuickAdd,
+                    child: const Icon(Icons.mic_rounded),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                FloatingActionButton.extended(
+                  heroTag: 'manual-add-item',
+                  onPressed: _openItemForm,
+                  icon: const Icon(Icons.add_shopping_cart_rounded),
+                  label: const Text('Adicionar item'),
+                ),
+              ],
             ),
       body: AppGradientScene(
         child: SafeArea(

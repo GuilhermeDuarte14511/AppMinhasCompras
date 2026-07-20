@@ -6,8 +6,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -29,6 +31,7 @@ import '../data/repositories/product_catalog_repository.dart';
 import '../data/services/backup_service.dart';
 import '../data/services/home_widget_service.dart';
 import '../data/services/reminder_service.dart';
+import '../data/services/speech_to_text_voice_service.dart';
 import '../domain/models_and_utils.dart';
 import '../presentation/auth_page.dart';
 import '../presentation/launch.dart';
@@ -59,6 +62,7 @@ class ShoppingListApp extends StatefulWidget {
     PurchaseHistoryStorage? historyStorage,
     ProductLookupService? lookupService,
     ShoppingHomeWidgetService? homeWidgetService,
+    ShoppingVoiceRecognitionService? voiceRecognitionService,
     FirebaseFirestore? firestoreInstance,
     SyncOutboxStorage? syncOutboxStorage,
   }) : _storage = storage,
@@ -68,6 +72,7 @@ class ShoppingListApp extends StatefulWidget {
        _historyStorage = historyStorage,
        _lookupService = lookupService,
        _homeWidgetService = homeWidgetService,
+       _voiceRecognitionService = voiceRecognitionService,
        _firestoreInstance = firestoreInstance,
        _syncOutboxStorage = syncOutboxStorage;
 
@@ -78,6 +83,7 @@ class ShoppingListApp extends StatefulWidget {
   final PurchaseHistoryStorage? _historyStorage;
   final ProductLookupService? _lookupService;
   final ShoppingHomeWidgetService? _homeWidgetService;
+  final ShoppingVoiceRecognitionService? _voiceRecognitionService;
   final SyncOutboxStorage? _syncOutboxStorage;
 
   /// Instância pré-inicializada do Firestore (necessária na Web para evitar
@@ -113,11 +119,13 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   late final ShoppingBackupService _backupService;
   late final Future<void> _launchDelay;
   late final SyncOutboxCoordinator _syncOutbox;
+  ShoppingVoiceRecognitionService? _voiceRecognitionService;
   FirestoreUserDataRepository? _cloudRepository;
   SharedListsRepository? _sharedListsRepository;
 
   StreamSubscription<User?>? _authSubscription;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  StreamSubscription<Uri?>? _homeWidgetClickSubscription;
   Timer? _cloudSyncDebounce;
   Timer? _cloudSyncRetryTimer;
   User? _currentUser;
@@ -150,6 +158,8 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   String? _lastSharedSyncError;
   DateTime? _lastCloudSyncSnackAt;
   String? _lastCloudSyncSnackMessage;
+  Uri? _pendingHomeWidgetLaunchUri;
+  int _homeWidgetActionId = 0;
 
   ThemeMode _themeMode = ThemeMode.light;
 
@@ -184,23 +194,37 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         (widget._storage == null
             ? SharedPrefsPurchaseHistoryStorage()
             : InMemoryPurchaseHistoryStorage());
+    final pantryStorage = widget._storage == null
+        ? SharedPrefsPantryStorage()
+        : InMemoryPantryStorage();
     final homeWidgetService =
         widget._homeWidgetService ??
         (widget._storage == null
             ? const AndroidShoppingHomeWidgetService()
             : const NoopShoppingHomeWidgetService());
+    _voiceRecognitionService =
+        widget._voiceRecognitionService ??
+        (widget._storage == null
+            ? SpeechToTextShoppingVoiceRecognitionService()
+            : null);
     _store = ShoppingListsStore(
       widget._storage ?? SharedPrefsShoppingListsStorage(),
       reminderService:
           widget._reminderService ?? const NoopShoppingReminderService(),
       productCatalog: ProductCatalogRepository(catalogStorage),
       historyStorage: historyStorage,
+      pantryStorage: pantryStorage,
       lookupService: widget._lookupService ?? _buildLookupService(),
       homeWidgetService: homeWidgetService,
       sharedCatalogImportPreferences: widget._storage == null
           ? const SharedPrefsSharedCatalogImportPreferences()
           : InMemorySharedCatalogImportPreferences(),
     )..load();
+    if (widget._storage == null &&
+        !kIsWeb &&
+        defaultTargetPlatform == TargetPlatform.android) {
+      unawaited(_initializeHomeWidgetActions());
+    }
     final launchDuration = widget._storage == null
         ? _minimumLaunchDuration
         : Duration.zero;
@@ -278,6 +302,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     WidgetsBinding.instance.removeObserver(this);
     _authSubscription?.cancel();
     _connectivitySubscription?.cancel();
+    _homeWidgetClickSubscription?.cancel();
     _cloudSyncDebounce?.cancel();
     _stopCloudRetryTimer();
     if (widget._storage == null) {
@@ -285,6 +310,39 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     }
     _store.dispose();
     super.dispose();
+  }
+
+  Future<void> _initializeHomeWidgetActions() async {
+    _homeWidgetClickSubscription = HomeWidget.widgetClicked.listen(
+      _queueHomeWidgetAction,
+    );
+    try {
+      final initialUri = await HomeWidget.initiallyLaunchedFromHomeWidget();
+      _queueHomeWidgetAction(initialUri);
+    } on MissingPluginException {
+      // The Android widget plugin is optional on unsupported platforms.
+    } on PlatformException {
+      // Keep normal app startup when the launcher does not return widget data.
+    }
+  }
+
+  void _queueHomeWidgetAction(Uri? uri) {
+    if (uri == null || !mounted) {
+      return;
+    }
+    setState(() {
+      _pendingHomeWidgetLaunchUri = uri;
+      _homeWidgetActionId++;
+    });
+  }
+
+  void _consumeHomeWidgetAction() {
+    if (!mounted || _pendingHomeWidgetLaunchUri == null) {
+      return;
+    }
+    setState(() {
+      _pendingHomeWidgetLaunchUri = null;
+    });
   }
 
   @override
@@ -846,16 +904,17 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       final hasCloudCoreData = snapshot.hasCoreData;
       if (hasCloudCoreData) {
         debugPrint(
-          '[CloudSync][pull] importando snapshot: listas=${snapshot.lists.length} histórico=${snapshot.history.length} catálogo=${snapshot.catalog.length}',
+          '[CloudSync][pull] importando snapshot: listas=${snapshot.lists.length} histórico=${snapshot.history.length} catálogo=${snapshot.catalog.length} despensa=${snapshot.pantry.length}',
         );
         final payload = jsonEncode({
-          'version': 3,
+          'version': 4,
           'exportedAt': DateTime.now().toIso8601String(),
           'lists': snapshot.lists.map((entry) => entry.toJson()).toList(),
           'purchaseHistory': snapshot.history
               .map((entry) => entry.toJson())
               .toList(),
           'catalog': snapshot.catalog.map((entry) => entry.toJson()).toList(),
+          'pantry': snapshot.pantry.map((entry) => entry.toJson()).toList(),
         });
         try {
           _isApplyingCloudSnapshot = true;
@@ -1048,7 +1107,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     }
 
     debugPrint(
-      '[CloudSync][push] iniciando snapshot — listas=${_store.lists.length} histórico=${_store.purchaseHistory.length} catálogo=${_store.catalogProducts.length}',
+      '[CloudSync][push] iniciando snapshot — listas=${_store.lists.length} histórico=${_store.purchaseHistory.length} catálogo=${_store.catalogProducts.length} despensa=${_store.pantryItems.length}',
     );
     final activePush = Completer<void>();
     _activeCloudPush = activePush;
@@ -1078,6 +1137,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
           lists: _store.lists,
           history: _store.purchaseHistory,
           catalog: _store.catalogProducts,
+          pantry: _store.pantryItems,
           settings: FirestoreUserAppSettings(
             themeMode: _themeMode == ThemeMode.dark ? 'dark' : 'light',
             autoImportOwnedSharedCatalogs: _store.autoImportOwnedSharedCatalogs,
@@ -1287,7 +1347,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     final listRecords = _store.lists.length;
     final historyRecords = _store.purchaseHistory.length;
     final catalogRecords = _store.catalogProducts.length;
-    final totalSyncRecords = listRecords + historyRecords + catalogRecords;
+    final pantryRecords = _store.pantryItems.length;
+    final totalSyncRecords =
+        listRecords + historyRecords + catalogRecords + pantryRecords;
     final pendingSyncRecords = (_hasPendingCloudSync || _isPushingCloudSnapshot)
         ? totalSyncRecords
         : 0;
@@ -1313,6 +1375,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       listRecords: listRecords,
       historyRecords: historyRecords,
       catalogRecords: catalogRecords,
+      pantryRecords: pantryRecords,
       sharedListCount: 0,
       autoImportOwnedSharedCatalogs: _store.autoImportOwnedSharedCatalogs,
       autoImportAllSharedCatalogs: _store.autoImportAllSharedCatalogs,
@@ -1959,8 +2022,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
               final listRecords = _store.lists.length;
               final historyRecords = _store.purchaseHistory.length;
               final catalogRecords = _store.catalogProducts.length;
+              final pantryRecords = _store.pantryItems.length;
               final totalSyncRecords =
-                  listRecords + historyRecords + catalogRecords;
+                  listRecords + historyRecords + catalogRecords + pantryRecords;
               final pendingSyncRecords =
                   (_hasPendingCloudSync || _isPushingCloudSnapshot)
                   ? totalSyncRecords
@@ -2036,6 +2100,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
                     listRecords: listRecords,
                     historyRecords: historyRecords,
                     catalogRecords: catalogRecords,
+                    pantryRecords: pantryRecords,
                     syncDiagnostics: _buildSyncDiagnosticsSnapshot(),
                     onSyncNow: _syncNowFromDiagnostics,
                     onRefreshSyncDiagnostics: _refreshSyncDiagnosticsSnapshot,
@@ -2043,6 +2108,10 @@ class _ShoppingListAppState extends State<ShoppingListApp>
                     openCreateListOnStart: _openCreateListAfterOnboarding,
                     onCreateListShortcutConsumed:
                         _consumeOnboardingCreateListShortcut,
+                    voiceRecognitionService: _voiceRecognitionService,
+                    homeWidgetLaunchUri: _pendingHomeWidgetLaunchUri,
+                    homeWidgetActionId: _homeWidgetActionId,
+                    onHomeWidgetActionConsumed: _consumeHomeWidgetAction,
                   ),
                 );
               }
@@ -2061,6 +2130,10 @@ class _ShoppingListAppState extends State<ShoppingListApp>
                   onReplayOnboarding: null,
                   openCreateListOnStart: false,
                   onCreateListShortcutConsumed: null,
+                  voiceRecognitionService: _voiceRecognitionService,
+                  homeWidgetLaunchUri: _pendingHomeWidgetLaunchUri,
+                  homeWidgetActionId: _homeWidgetActionId,
+                  onHomeWidgetActionConsumed: _consumeHomeWidgetAction,
                 ),
               );
             },

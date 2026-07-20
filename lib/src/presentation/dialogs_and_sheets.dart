@@ -15,6 +15,7 @@ import 'utils/time_utils.dart';
 
 export 'dialogs/sheets/barcode_scanner_sheet.dart' show showBarcodeScannerSheet;
 export 'dialogs/sheets/shopping_item_editor_sheet.dart';
+export 'dialogs/sheets/voice_quick_add_sheet.dart';
 export 'dialogs/widgets/brl_currency_input_formatter.dart';
 
 Future<String?> showListNameDialog(

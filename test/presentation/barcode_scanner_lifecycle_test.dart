@@ -31,11 +31,12 @@ void main() {
     expect(barcodeScannerRestartDelay(isWeb: false), Duration.zero);
   });
 
-  test('web scanner recovery hint mentions browser refresh options', () {
+  test('web scanner recovery hint explains the iPhone PWA fallback', () {
     final hint = barcodeScannerRecoveryHint(isWeb: true);
 
-    expect(hint, contains('navegador'));
-    expect(hint, contains('recarregue'));
+    expect(hint, contains('iPhone'));
+    expect(hint, contains('Safari'));
+    expect(hint, contains('Tela de Início'));
   });
 
   test('web scanner opens fullscreen without clipping the camera view', () {

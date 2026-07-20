@@ -158,6 +158,10 @@ class _SyncDiagnosticsPageState extends State<SyncDiagnosticsPage> {
                       value: '${snapshot.catalogRecords}',
                     ),
                     _MetricChip(
+                      label: 'Despensa',
+                      value: '${snapshot.pantryRecords}',
+                    ),
+                    _MetricChip(
                       label: 'Pendentes',
                       value: '${snapshot.safePendingRecords}',
                     ),
