@@ -1,9 +1,8 @@
 import 'dart:math' as math;
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../data/services/firebase_auth_service.dart';
+import '../application/authentication.dart';
 import 'launch.dart';
 import 'theme/app_tokens.dart';
 import 'utils/app_page_route.dart';
@@ -14,10 +13,12 @@ class AuthPage extends StatefulWidget {
     super.key,
     required this.themeMode,
     required this.onThemeModeChanged,
+    required this.authenticationGateway,
   });
 
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
+  final AuthenticationGateway authenticationGateway;
 
   @override
   State<AuthPage> createState() => _AuthPageState();
@@ -27,8 +28,6 @@ class _AuthPageState extends State<AuthPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final FirebaseAuthService _authService = FirebaseAuthService();
-
   bool _isBusy = false;
   bool _isGoogleBusy = false;
   bool _obscurePassword = true;
@@ -53,15 +52,15 @@ class _AuthPageState extends State<AuthPage> {
     });
 
     try {
-      await _authService.signInWithEmail(
+      await widget.authenticationGateway.signInWithEmail(
         email: _emailController.text,
         password: _passwordController.text,
       );
-    } on FirebaseAuthException catch (error) {
+    } on AuthenticationFailure catch (error) {
       if (!mounted) {
         return;
       }
-      _showSnack(_buildAuthErrorMessage(error), type: AppToastType.error);
+      _showSnack(error.userMessage, type: AppToastType.error);
     } catch (error) {
       if (!mounted) {
         return;
@@ -87,12 +86,12 @@ class _AuthPageState extends State<AuthPage> {
       _isGoogleBusy = true;
     });
     try {
-      await _authService.signInWithGoogle();
-    } on FirebaseAuthException catch (error) {
+      await widget.authenticationGateway.signInWithGoogle();
+    } on AuthenticationFailure catch (error) {
       if (!mounted) {
         return;
       }
-      _showSnack(_buildAuthErrorMessage(error), type: AppToastType.error);
+      _showSnack(error.userMessage, type: AppToastType.error);
     } catch (error) {
       if (!mounted) {
         return;
@@ -120,7 +119,7 @@ class _AuthPageState extends State<AuthPage> {
       return;
     }
     try {
-      await _authService.sendPasswordResetEmail(email: email);
+      await widget.authenticationGateway.sendPasswordResetEmail(email: email);
       if (!mounted) {
         return;
       }
@@ -128,11 +127,11 @@ class _AuthPageState extends State<AuthPage> {
         'Se existir conta com esse e-mail, enviamos o link de recuperação. Verifique caixa de entrada, spam e lixo eletrônico.',
         type: AppToastType.success,
       );
-    } on FirebaseAuthException catch (error) {
+    } on AuthenticationFailure catch (error) {
       if (!mounted) {
         return;
       }
-      _showSnack(_buildAuthErrorMessage(error), type: AppToastType.error);
+      _showSnack(error.userMessage, type: AppToastType.error);
     } catch (error) {
       if (!mounted) {
         return;
@@ -149,7 +148,7 @@ class _AuthPageState extends State<AuthPage> {
       context,
       buildAppPageRoute(
         builder: (_) => CreateAccountPage(
-          authService: _authService,
+          authenticationGateway: widget.authenticationGateway,
           onThemeModeChanged: widget.onThemeModeChanged,
         ),
       ),
@@ -158,10 +157,6 @@ class _AuthPageState extends State<AuthPage> {
 
   void _setTheme(ThemeMode mode) {
     widget.onThemeModeChanged(mode);
-  }
-
-  String _buildAuthErrorMessage(FirebaseAuthException error) {
-    return _authService.friendlyError(error);
   }
 
   void _showSnack(String message, {AppToastType type = AppToastType.info}) {
@@ -385,11 +380,11 @@ class _AuthPageState extends State<AuthPage> {
 class CreateAccountPage extends StatefulWidget {
   const CreateAccountPage({
     super.key,
-    required this.authService,
+    required this.authenticationGateway,
     required this.onThemeModeChanged,
   });
 
-  final FirebaseAuthService authService;
+  final AuthenticationGateway authenticationGateway;
   final ValueChanged<ThemeMode> onThemeModeChanged;
 
   @override
@@ -428,7 +423,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
     });
 
     try {
-      await widget.authService.createAccount(
+      await widget.authenticationGateway.createAccount(
         name: _nameController.text,
         email: _emailController.text,
         password: _passwordController.text,
@@ -438,11 +433,11 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
       }
       _showSnack('Conta criada com sucesso.', type: AppToastType.success);
       Navigator.of(context).pop();
-    } on FirebaseAuthException catch (error) {
+    } on AuthenticationFailure catch (error) {
       if (!mounted) {
         return;
       }
-      _showSnack(_buildAuthErrorMessage(error), type: AppToastType.error);
+      _showSnack(error.userMessage, type: AppToastType.error);
     } catch (error) {
       if (!mounted) {
         return;
@@ -462,10 +457,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
 
   void _setTheme(ThemeMode mode) {
     widget.onThemeModeChanged(mode);
-  }
-
-  String _buildAuthErrorMessage(FirebaseAuthException error) {
-    return widget.authService.friendlyError(error);
   }
 
   void _showSnack(String message, {AppToastType type = AppToastType.info}) {

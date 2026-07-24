@@ -26,9 +26,28 @@ void main() {
     );
   });
 
-  test('web scanner recovery uses a clean restart delay', () {
-    expect(barcodeScannerRestartDelay(isWeb: true), greaterThan(Duration.zero));
-    expect(barcodeScannerRestartDelay(isWeb: false), Duration.zero);
+  test('web and iOS scanner recovery release the camera before restart', () {
+    expect(
+      barcodeScannerRestartDelay(
+        isWeb: true,
+        targetPlatform: TargetPlatform.iOS,
+      ),
+      greaterThan(Duration.zero),
+    );
+    expect(
+      barcodeScannerRestartDelay(
+        isWeb: false,
+        targetPlatform: TargetPlatform.iOS,
+      ),
+      greaterThan(Duration.zero),
+    );
+    expect(
+      barcodeScannerRestartDelay(
+        isWeb: false,
+        targetPlatform: TargetPlatform.android,
+      ),
+      Duration.zero,
+    );
   });
 
   test('web scanner recovery hint explains the iPhone PWA fallback', () {
@@ -39,10 +58,53 @@ void main() {
     expect(hint, contains('Tela de Início'));
   });
 
-  test('web scanner opens fullscreen without clipping the camera view', () {
-    expect(shouldUseFullScreenBarcodeScanner(isWeb: true), isTrue);
-    expect(shouldUseFullScreenBarcodeScanner(isWeb: false), isFalse);
+  test('web and iOS scanner open fullscreen without clipping the camera', () {
+    expect(
+      shouldUseFullScreenBarcodeScanner(
+        isWeb: true,
+        targetPlatform: TargetPlatform.android,
+      ),
+      isTrue,
+    );
+    expect(
+      shouldUseFullScreenBarcodeScanner(
+        isWeb: false,
+        targetPlatform: TargetPlatform.iOS,
+      ),
+      isTrue,
+    );
+    expect(
+      shouldUseFullScreenBarcodeScanner(
+        isWeb: false,
+        targetPlatform: TargetPlatform.android,
+      ),
+      isFalse,
+    );
     expect(barcodeScannerViewportRadius(isFullScreen: true), 0);
     expect(barcodeScannerViewportRadius(isFullScreen: false), greaterThan(0));
+  });
+
+  test('iOS and web hard restart recreate the camera session', () {
+    expect(
+      shouldRecreateBarcodeScannerOnRestart(
+        isWeb: true,
+        targetPlatform: TargetPlatform.android,
+      ),
+      isTrue,
+    );
+    expect(
+      shouldRecreateBarcodeScannerOnRestart(
+        isWeb: false,
+        targetPlatform: TargetPlatform.iOS,
+      ),
+      isTrue,
+    );
+    expect(
+      shouldRecreateBarcodeScannerOnRestart(
+        isWeb: false,
+        targetPlatform: TargetPlatform.android,
+      ),
+      isFalse,
+    );
   });
 }

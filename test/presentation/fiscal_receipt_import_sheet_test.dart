@@ -56,10 +56,7 @@ Valor total R\$ 40,00
 
       expect(find.text('2 itens selecionados'), findsOneWidget);
       expect(find.textContaining('Alta 98%'), findsOneWidget);
-      expect(
-        find.textContaining('A soma difere do cupom em'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('A soma difere do cupom em'), findsOneWidget);
 
       await tester.tap(find.text('Desmarcar todos'));
       await tester.pump();
@@ -82,10 +79,7 @@ Valor total R\$ 40,00
 
       expect(find.text('1 item selecionado'), findsOneWidget);
       expect(find.textContaining('Subtotal R\$'), findsOneWidget);
-      expect(
-        find.textContaining('A soma difere do cupom em'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('A soma difere do cupom em'), findsOneWidget);
 
       await tester.tap(find.text('Confirmar compra'));
       await tester.pumpAndSettle();

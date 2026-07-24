@@ -159,6 +159,30 @@ Observações:
 - O app Web usa a mesma base de código Dart, mesmas telas e mesma lógica.
 - O Hosting está configurado para SPA (qualquer rota cai em `index.html`).
 - O conteúdo servido vem de `build/web`.
+- JavaScript, CSS e JSON são revalidados a cada abertura para que correções de
+  câmera não fiquem presas no cache do Safari.
+
+## Validar a câmera no iPhone
+
+O scanner usa tela cheia no iOS, solicita a câmera pelo `Info.plist`, escolhe a
+lente traseira normal e recria a sessão ao tocar em **Tentar novamente**.
+
+### Aplicativo nativo ou TestFlight
+
+1. Gere e distribua um novo build em um Mac com Xcode; a permissão adicionada ao
+   `Info.plist` não chega a uma versão já instalada.
+2. No iPhone, abra **Ajustes > Minhas Compras > Câmera** e deixe o acesso
+   habilitado.
+3. Se a opção de câmera não aparecer, remova a versão antiga e instale o novo
+   build.
+
+### Aplicativo Web instalado pela tela inicial
+
+1. Publique novamente o Hosting com os comandos da seção anterior.
+2. No Safari, abra o endereço publicado e permita o uso da câmera.
+3. Remova o atalho antigo da tela inicial e adicione-o novamente. Isso evita que
+   um service worker antigo continue servindo o scanner anterior.
+4. A câmera Web exige HTTPS e não funciona em uma origem HTTP comum.
 
 ## Configurar o backend Cosmos
 

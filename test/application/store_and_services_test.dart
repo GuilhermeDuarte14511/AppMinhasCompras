@@ -468,9 +468,23 @@ void main() {
     expect(target.pantryItems.single.id, 'pantry-coffee');
     expect(target.pantryItems.single.status, PantryStockStatus.runningLow);
   });
+
+  test(
+    'load failure remains visible instead of becoming an empty success',
+    () async {
+      final store = _createStore(storage: const _FailingShoppingListsStorage());
+
+      await store.load();
+
+      expect(store.isLoading, isFalse);
+      expect(store.loadError, isA<StateError>());
+      expect(store.lists, isEmpty);
+    },
+  );
 }
 
 ShoppingListsStore _createStore({
+  ShoppingListsStorage? storage,
   List<ShoppingListModel> lists = const <ShoppingListModel>[],
   List<CatalogProduct> catalogProducts = const <CatalogProduct>[],
   List<CompletedPurchase> history = const <CompletedPurchase>[],
@@ -478,7 +492,7 @@ ShoppingListsStore _createStore({
   SharedCatalogImportPreferences? sharedCatalogImportPreferences,
 }) {
   return ShoppingListsStore(
-    _MemoryShoppingListsStorage(lists),
+    storage ?? _MemoryShoppingListsStorage(lists),
     reminderService: const NoopShoppingReminderService(),
     productCatalog: ProductCatalogRepository(
       _MemoryProductCatalogStorage(catalogProducts),
@@ -489,6 +503,18 @@ ShoppingListsStore _createStore({
     homeWidgetService: const NoopShoppingHomeWidgetService(),
     sharedCatalogImportPreferences: sharedCatalogImportPreferences,
   );
+}
+
+class _FailingShoppingListsStorage implements ShoppingListsStorage {
+  const _FailingShoppingListsStorage();
+
+  @override
+  Future<List<ShoppingListModel>> loadLists() {
+    throw StateError('corrupted');
+  }
+
+  @override
+  Future<void> saveLists(List<ShoppingListModel> lists) async {}
 }
 
 class _MemoryShoppingListsStorage implements ShoppingListsStorage {

@@ -46,12 +46,14 @@ class ShoppingListsStore extends ChangeNotifier {
   final Set<String> _sharedCatalogImportListIds = <String>{};
   bool _isLoading = true;
   bool _loaded = false;
+  Object? _loadError;
   bool _autoImportOwnedSharedCatalogs = true;
   bool _autoImportAllSharedCatalogs = false;
   bool _listSuggestionsDirty = true;
   List<String> _cachedListSuggestions = const <String>[];
 
   bool get isLoading => _isLoading;
+  Object? get loadError => _loadError;
 
   List<ShoppingListModel> get lists => List.unmodifiable(_lists);
   List<ShoppingListModel> get listsByCreatedAt {
@@ -92,6 +94,7 @@ class ShoppingListsStore extends ChangeNotifier {
     notifyListeners();
 
     try {
+      _loadError = null;
       final loadedLists = await _storage.loadLists();
       final loadedHistory = await _historyStorage.loadHistory();
       final loadedPantry = await _pantryStorage.loadItems();
@@ -123,6 +126,8 @@ class ShoppingListsStore extends ChangeNotifier {
         lists: _lists,
         pantryItems: _pantry,
       );
+    } catch (error) {
+      _loadError = error;
     } finally {
       _loaded = true;
       _isLoading = false;
@@ -783,6 +788,10 @@ class ShoppingListsStore extends ChangeNotifier {
     _sortPantry();
     _invalidateListSuggestionCache();
     await _persistAndNotify();
+    if (_loadError != null) {
+      _loadError = null;
+      notifyListeners();
+    }
     await _reminderService.syncFromLists(_lists, reset: true);
     await _productCatalog.ingestFromLists(normalized);
 

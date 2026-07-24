@@ -64,7 +64,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '281917164496',
     projectId: 'minhascompras-3abbe',
     storageBucket: 'minhascompras-3abbe.firebasestorage.app',
-    iosClientId: '281917164496-6mhg4v7mbi8j81g4v5udufjpi4h6839s.apps.googleusercontent.com',
+    iosClientId:
+        '281917164496-6mhg4v7mbi8j81g4v5udufjpi4h6839s.apps.googleusercontent.com',
     iosBundleId: 'com.example.listaComprasMaterial',
   );
 
@@ -74,7 +75,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '281917164496',
     projectId: 'minhascompras-3abbe',
     storageBucket: 'minhascompras-3abbe.firebasestorage.app',
-    iosClientId: '281917164496-6mhg4v7mbi8j81g4v5udufjpi4h6839s.apps.googleusercontent.com',
+    iosClientId:
+        '281917164496-6mhg4v7mbi8j81g4v5udufjpi4h6839s.apps.googleusercontent.com',
     iosBundleId: 'com.example.listaComprasMaterial',
   );
 

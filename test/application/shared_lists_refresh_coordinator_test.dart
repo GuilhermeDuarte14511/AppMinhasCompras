@@ -119,9 +119,9 @@ void main() {
       final source = Object();
       var createCalls = 0;
 
-    Stream<int> create() {
-      createCalls++;
-      return Stream<int>.fromIterable(const <int>[]);
+      Stream<int> create() {
+        createCalls++;
+        return Stream<int>.fromIterable(const <int>[]);
       }
 
       final first = cache.resolve(

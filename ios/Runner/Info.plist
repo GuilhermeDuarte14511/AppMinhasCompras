@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Lista Compras Material</string>
+	<string>Minhas Compras</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>lista_compras_material</string>
+	<string>MinhasCompras</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -26,8 +26,25 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Usamos a câmera somente para escanear códigos de barras e importar cupons fiscais.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Precisamos acessar sua galeria para atualizar sua foto de perfil.</string>
+	<string>Usamos a galeria somente para selecionar sua foto de perfil ou importar a imagem de um cupom fiscal.</string>
+	<key>GIDClientID</key>
+	<string>281917164496-6mhg4v7mbi8j81g4v5udufjpi4h6839s.apps.googleusercontent.com</string>
+	<key>GIDServerClientID</key>
+	<string>281917164496-q4lb28h9t7gni57k2kqb0co5bjcsenq9.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.281917164496-6mhg4v7mbi8j81g4v5udufjpi4h6839s</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Usamos o microfone apenas quando você adiciona produtos por voz.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

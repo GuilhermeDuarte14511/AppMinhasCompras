@@ -1,11 +1,11 @@
 {
-    "name": "lista_compras_material",
-    "short_name": "lista_compras_material",
+    "name": "Minhas Compras",
+    "short_name": "Compras",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F7FAF9",
+    "theme_color": "#0D7B9A",
+    "description": "Organize listas, preços, despensa e histórico de compras.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

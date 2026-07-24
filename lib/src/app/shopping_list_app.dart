@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../application/authentication.dart';
 import '../application/ports.dart';
 import '../application/shared_list_sync_policy.dart';
 import '../application/store_and_services.dart';
@@ -29,6 +30,7 @@ import '../data/remote/open_food_facts_product_lookup_service.dart';
 import '../data/remote/shared_lists_repository.dart';
 import '../data/repositories/product_catalog_repository.dart';
 import '../data/services/backup_service.dart';
+import '../data/services/firebase_auth_service.dart';
 import '../data/services/home_widget_service.dart';
 import '../data/services/reminder_service.dart';
 import '../data/services/speech_to_text_voice_service.dart';
@@ -65,6 +67,7 @@ class ShoppingListApp extends StatefulWidget {
     ShoppingVoiceRecognitionService? voiceRecognitionService,
     FirebaseFirestore? firestoreInstance,
     SyncOutboxStorage? syncOutboxStorage,
+    AuthenticationGateway? authenticationGateway,
   }) : _storage = storage,
        _backupService = backupService,
        _reminderService = reminderService,
@@ -74,7 +77,8 @@ class ShoppingListApp extends StatefulWidget {
        _homeWidgetService = homeWidgetService,
        _voiceRecognitionService = voiceRecognitionService,
        _firestoreInstance = firestoreInstance,
-       _syncOutboxStorage = syncOutboxStorage;
+       _syncOutboxStorage = syncOutboxStorage,
+       _authenticationGateway = authenticationGateway;
 
   final ShoppingListsStorage? _storage;
   final ShoppingBackupService? _backupService;
@@ -85,6 +89,7 @@ class ShoppingListApp extends StatefulWidget {
   final ShoppingHomeWidgetService? _homeWidgetService;
   final ShoppingVoiceRecognitionService? _voiceRecognitionService;
   final SyncOutboxStorage? _syncOutboxStorage;
+  final AuthenticationGateway? _authenticationGateway;
 
   /// Instância pré-inicializada do Firestore (necessária na Web para evitar
   /// LateInitializationError com databaseId customizado).
@@ -96,7 +101,6 @@ class ShoppingListApp extends StatefulWidget {
 
 class _ShoppingListAppState extends State<ShoppingListApp>
     with WidgetsBindingObserver {
-  static const Duration _minimumLaunchDuration = Duration(milliseconds: 2500);
   static const Duration _cloudSyncDebounceDuration = Duration(
     milliseconds: 900,
   );
@@ -119,6 +123,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   late final ShoppingBackupService _backupService;
   late final Future<void> _launchDelay;
   late final SyncOutboxCoordinator _syncOutbox;
+  AuthenticationGateway? _authenticationGateway;
   ShoppingVoiceRecognitionService? _voiceRecognitionService;
   FirestoreUserDataRepository? _cloudRepository;
   SharedListsRepository? _sharedListsRepository;
@@ -166,6 +171,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   @override
   void initState() {
     super.initState();
+    _authenticationGateway =
+        widget._authenticationGateway ??
+        (widget._storage == null ? FirebaseAuthService() : null);
     WidgetsBinding.instance.addObserver(this);
     // Inicializa os repositórios imediatamente com a instância do Firestore
     // já pronta (passada pelo main.dart), evitando LateInitializationError
@@ -225,10 +233,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         defaultTargetPlatform == TargetPlatform.android) {
       unawaited(_initializeHomeWidgetActions());
     }
-    final launchDuration = widget._storage == null
-        ? _minimumLaunchDuration
-        : Duration.zero;
-    _launchDelay = Future<void>.delayed(launchDuration);
+    _launchDelay = Future<void>.value();
     if (widget._storage == null) {
       unawaited(_restoreThemeMode());
       unawaited(_startConnectivityTracking());
@@ -924,6 +929,11 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         } finally {
           _isApplyingCloudSnapshot = false;
         }
+      } else if (_store.loadError != null) {
+        throw StateError(
+          'Os dados locais precisam de recuperação e não existe um snapshot '
+          'na nuvem para restaurá-los.',
+        );
       }
 
       debugPrint(
@@ -1023,6 +1033,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   void _handleStoreChanged() {
     if (widget._storage != null ||
         _store.isLoading ||
+        _store.loadError != null ||
         _isApplyingCloudSnapshot ||
         !_storeReadyForOutbox ||
         _suppressStoreChangeTracking > 0) {
@@ -1067,6 +1078,10 @@ class _ShoppingListAppState extends State<ShoppingListApp>
 
   Future<void> _pushToCloud(String uid) async {
     if (widget._storage != null) {
+      return;
+    }
+    if (_store.loadError != null) {
+      _lastCloudSyncError = 'recuperação-local-pendente';
       return;
     }
     final repository = _cloudRepository;
@@ -1994,7 +2009,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: _scaffoldMessengerKey,
       title: 'Minhas Compras',
-      supportedLocales: const <Locale>[Locale('pt', 'BR'), Locale('en', 'US')],
+      supportedLocales: const <Locale>[Locale('pt', 'BR')],
       localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -2016,6 +2031,25 @@ class _ShoppingListAppState extends State<ShoppingListApp>
                   stateKey: 'boot-loading',
                   child: LoadingScreen(
                     showReadyHint: launchReady && _store.isLoading,
+                  ),
+                );
+              }
+              if (_store.loadError != null &&
+                  (_authStateResolved && _currentUser != null)) {
+                return _buildHomeTransitionShell(
+                  stateKey: 'local-data-recovery',
+                  child: _LocalDataRecoveryScreen(
+                    error: _store.loadError!,
+                    isSyncing:
+                        _isPullingCloudSnapshot || _isInitialCloudHydration,
+                    onRetry: () {
+                      final uid = _currentUser?.uid.trim() ?? '';
+                      if (uid.isEmpty) {
+                        return;
+                      }
+                      _loadedCloudUid = null;
+                      unawaited(_pullFromCloud(uid, asInitialHydration: true));
+                    },
                   ),
                 );
               }
@@ -2043,6 +2077,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
                     stateKey: 'auth-page',
                     child: AuthPage(
                       themeMode: _themeMode,
+                      authenticationGateway: _authenticationGateway!,
                       onThemeModeChanged: (mode) {
                         unawaited(_setThemeMode(mode));
                       },
@@ -2139,6 +2174,92 @@ class _ShoppingListAppState extends State<ShoppingListApp>
             },
           );
         },
+      ),
+    );
+  }
+}
+
+class _LocalDataRecoveryScreen extends StatelessWidget {
+  const _LocalDataRecoveryScreen({
+    required this.error,
+    required this.isSyncing,
+    required this.onRetry,
+  });
+
+  final Object error;
+  final bool isSyncing;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.health_and_safety_outlined,
+                        size: 42,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Seus dados locais precisam de recuperação',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 12),
+                      SelectableText.rich(
+                        TextSpan(
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          children: [
+                            const TextSpan(
+                              text:
+                                  'O app encontrou dados incompletos e não os '
+                                  'substituiu por uma lista vazia. Tente '
+                                  'restaurar a cópia segura da sua conta. ',
+                            ),
+                            TextSpan(
+                              text: '\n\nDetalhes: $error',
+                              style: TextStyle(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      FilledButton.icon(
+                        onPressed: isSyncing ? null : onRetry,
+                        icon: isSyncing
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.cloud_sync_outlined),
+                        label: Text(
+                          isSyncing ? 'Restaurando...' : 'Restaurar da nuvem',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

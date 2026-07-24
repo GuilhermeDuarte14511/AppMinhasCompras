@@ -2,7 +2,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
-class FirebaseAuthService {
+import '../../application/authentication.dart';
+
+class FirebaseAuthService implements AuthenticationGateway {
   FirebaseAuthService({FirebaseAuth? auth, GoogleSignIn? googleSignIn})
     : _auth = auth ?? FirebaseAuth.instance,
       _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
@@ -15,17 +17,31 @@ class FirebaseAuthService {
   final GoogleSignIn _googleSignIn;
   bool _googleInitialized = false;
 
+  @override
   Future<void> signInWithEmail({
     required String email,
     required String password,
-  }) {
-    return _auth.signInWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
+  }) async {
+    await _guardAuthentication(
+      () => _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      ),
     );
   }
 
+  @override
   Future<void> createAccount({
+    required String name,
+    required String email,
+    required String password,
+  }) {
+    return _guardAuthentication(
+      () => _createAccount(name: name, email: email, password: password),
+    );
+  }
+
+  Future<void> _createAccount({
     required String name,
     required String email,
     required String password,
@@ -42,9 +58,12 @@ class FirebaseAuthService {
     await credential.user?.reload();
   }
 
+  @override
   Future<void> sendPasswordResetEmail({required String email}) {
     final normalizedEmail = email.trim();
-    return _sendPasswordResetEmailInternal(normalizedEmail);
+    return _guardAuthentication(
+      () => _sendPasswordResetEmailInternal(normalizedEmail),
+    );
   }
 
   Future<void> _sendPasswordResetEmailInternal(String normalizedEmail) async {
@@ -52,7 +71,12 @@ class FirebaseAuthService {
     await _auth.sendPasswordResetEmail(email: normalizedEmail);
   }
 
+  @override
   Future<void> signInWithGoogle() async {
+    await _guardAuthentication(_signInWithGoogle);
+  }
+
+  Future<void> _signInWithGoogle() async {
     if (kIsWeb) {
       final provider = GoogleAuthProvider();
       await _auth.signInWithPopup(provider);
@@ -89,28 +113,49 @@ class FirebaseAuthService {
       if (error.code == GoogleSignInExceptionCode.canceled) {
         return;
       }
-      throw FirebaseAuthException(
+      throw AuthenticationFailure(
         code: 'google-sign-in-failed',
-        message:
+        userMessage:
             'Falha no login Google (${error.code.name}). Verifique SHA-1/SHA-256 no Firebase e atualize o google-services.json.',
+        cause: error,
       );
+    } on AuthenticationFailure {
+      rethrow;
+    } on FirebaseAuthException {
+      rethrow;
     } catch (error) {
-      throw FirebaseAuthException(
+      throw AuthenticationFailure(
         code: 'google-sign-in-unexpected',
-        message: 'Erro inesperado no login Google: $error',
+        userMessage:
+            'Erro inesperado no login Google. Verifique a configuração do aplicativo.',
+        cause: error,
       );
     }
   }
 
-  String friendlyError(FirebaseAuthException error) {
-    switch (error.code) {
+  Future<T> _guardAuthentication<T>(Future<T> Function() operation) async {
+    try {
+      return await operation();
+    } on AuthenticationFailure {
+      rethrow;
+    } on FirebaseAuthException catch (error) {
+      throw AuthenticationFailure(
+        code: error.code,
+        userMessage: _friendlyError(error.code),
+        cause: error,
+      );
+    }
+  }
+
+  String _friendlyError(String code) {
+    switch (code) {
       case 'google-sign-in-canceled':
         return 'Login Google cancelado.';
       case 'google-sign-in-failed':
       case 'missing-google-id-token':
         return 'Falha no login Google. Confira SHA-1/SHA-256 no Firebase e atualize o google-services.json.';
       case 'google-sign-in-unexpected':
-        return 'Erro inesperado no login Google. Verifique configuração Firebase do app Android.';
+        return 'Erro inesperado no login Google. Verifique a configuração Firebase do aplicativo.';
       case 'invalid-email':
         return 'E-mail inválido.';
       case 'email-already-in-use':
@@ -133,7 +178,7 @@ class FirebaseAuthService {
       case 'too-many-requests':
         return 'Muitas tentativas. Tente novamente em instantes.';
       default:
-        return 'Falha de autenticação (${error.code}).';
+        return 'Falha de autenticação ($code).';
     }
   }
 }

@@ -1160,11 +1160,11 @@ void main() {
     await _pumpApp(tester);
 
     await _createListFromDashboard(tester, 'Lista A');
-    await tester.pageBack();
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
 
     await _createListFromDashboard(tester, 'Lista B');
-    await tester.pageBack();
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
 
     final myListsByText = find.text('Minhas listas de compras');

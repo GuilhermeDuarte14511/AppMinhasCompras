@@ -13,16 +13,32 @@ bool shouldStopBarcodeScannerForLifecycle(AppLifecycleState state) {
   return state == AppLifecycleState.inactive;
 }
 
-bool shouldUseFullScreenBarcodeScanner({required bool isWeb}) {
-  return isWeb;
+bool shouldUseFullScreenBarcodeScanner({
+  required bool isWeb,
+  required TargetPlatform targetPlatform,
+}) {
+  return isWeb || targetPlatform == TargetPlatform.iOS;
 }
 
 double barcodeScannerViewportRadius({required bool isFullScreen}) {
   return isFullScreen ? 0 : 18;
 }
 
-Duration barcodeScannerRestartDelay({required bool isWeb}) {
-  return isWeb ? const Duration(milliseconds: 250) : Duration.zero;
+Duration barcodeScannerRestartDelay({
+  required bool isWeb,
+  required TargetPlatform targetPlatform,
+}) {
+  if (isWeb || targetPlatform == TargetPlatform.iOS) {
+    return const Duration(milliseconds: 350);
+  }
+  return Duration.zero;
+}
+
+bool shouldRecreateBarcodeScannerOnRestart({
+  required bool isWeb,
+  required TargetPlatform targetPlatform,
+}) {
+  return isWeb || targetPlatform == TargetPlatform.iOS;
 }
 
 String barcodeScannerRecoveryHint({required bool isWeb}) {
@@ -34,7 +50,10 @@ String barcodeScannerRecoveryHint({required bool isWeb}) {
 }
 
 Future<String?> showBarcodeScannerSheet(BuildContext context) {
-  if (shouldUseFullScreenBarcodeScanner(isWeb: kIsWeb)) {
+  if (shouldUseFullScreenBarcodeScanner(
+    isWeb: kIsWeb,
+    targetPlatform: defaultTargetPlatform,
+  )) {
     return Navigator.of(context, rootNavigator: true).push<String>(
       PageRouteBuilder<String>(
         fullscreenDialog: true,
@@ -80,21 +99,57 @@ class BarcodeScannerSheet extends StatefulWidget {
 
 class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
     with WidgetsBindingObserver {
-  final MobileScannerController _controller = MobileScannerController(
-    autoStart: false,
-    detectionSpeed: DetectionSpeed.noDuplicates,
-    facing: CameraFacing.back,
-  );
+  late MobileScannerController _controller;
   StreamSubscription<BarcodeCapture>? _subscription;
   bool _handled = false;
   Object? _startError;
   bool _isStarting = false;
+  bool _isRestarting = false;
   CameraFacing _lastRequestedFacing = CameraFacing.back;
+  int _scannerGeneration = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _controller = _createController();
+    _listenToController();
+    _subscribeToBarcodes();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_startScanner());
+    });
+  }
+
+  MobileScannerController _createController() {
+    return MobileScannerController(
+      autoStart: false,
+      detectionSpeed: DetectionSpeed.noDuplicates,
+      facing: CameraFacing.back,
+      lensType: CameraLensType.normal,
+    );
+  }
+
+  void _listenToController() {
+    _controller.addListener(_handleControllerState);
+  }
+
+  void _handleControllerState() {
+    if (!mounted) {
+      return;
+    }
+    final error = _controller.value.error;
+    if (error == _startError) {
+      return;
+    }
+    setState(() {
+      _startError = error;
+    });
+  }
+
+  void _subscribeToBarcodes() {
+    if (_subscription != null) {
+      return;
+    }
     _subscription = _controller.barcodes.listen(
       _onDetect,
       onError: (Object error) {
@@ -105,19 +160,24 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
         }
       },
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(_startScanner());
-    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _controller.removeListener(_handleControllerState);
     unawaited(_subscription?.cancel());
     _subscription = null;
-    unawaited(_controller.stop());
-    _controller.dispose();
+    unawaited(_disposeController(_controller));
     super.dispose();
+  }
+
+  Future<void> _disposeController(MobileScannerController controller) async {
+    try {
+      await controller.stop();
+    } finally {
+      await controller.dispose();
+    }
   }
 
   @override
@@ -128,12 +188,15 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
 
     switch (state) {
       case AppLifecycleState.resumed:
+        _subscribeToBarcodes();
         unawaited(_startScanner());
       case AppLifecycleState.inactive:
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
         if (shouldStopBarcodeScannerForLifecycle(state)) {
+          unawaited(_subscription?.cancel());
+          _subscription = null;
           unawaited(_controller.stop());
         }
     }
@@ -155,7 +218,10 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
       await _controller.start(cameraDirection: requestedFacing);
       await prepareBarcodeScannerWebVideo();
       _lastRequestedFacing = requestedFacing;
-      if (mounted && _startError != null) {
+      if (mounted &&
+          _controller.value.error == null &&
+          _controller.value.isRunning &&
+          _startError != null) {
         setState(() {
           _startError = null;
         });
@@ -173,15 +239,42 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
   }
 
   Future<void> _restartScanner({CameraFacing? cameraDirection}) async {
-    if (_isStarting) {
+    if (_isStarting || _isRestarting) {
       return;
     }
 
+    _isRestarting = true;
     try {
       await _controller.stop();
-      final delay = barcodeScannerRestartDelay(isWeb: kIsWeb);
+      final targetPlatform = defaultTargetPlatform;
+      final delay = barcodeScannerRestartDelay(
+        isWeb: kIsWeb,
+        targetPlatform: targetPlatform,
+      );
+      final recreateSession = shouldRecreateBarcodeScannerOnRestart(
+        isWeb: kIsWeb,
+        targetPlatform: targetPlatform,
+      );
+      final previousController = _controller;
       if (delay > Duration.zero) {
         await Future<void>.delayed(delay);
+      }
+      if (recreateSession) {
+        previousController.removeListener(_handleControllerState);
+        await _subscription?.cancel();
+        _subscription = null;
+        await _disposeController(previousController);
+        if (!mounted) {
+          return;
+        }
+        _controller = _createController();
+        _listenToController();
+        _subscribeToBarcodes();
+        setState(() {
+          _scannerGeneration++;
+          _startError = null;
+        });
+        await WidgetsBinding.instance.endOfFrame;
       }
       await _startScannerWithDirection(cameraDirection: cameraDirection);
     } catch (error) {
@@ -191,6 +284,8 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
       setState(() {
         _startError = error;
       });
+    } finally {
+      _isRestarting = false;
     }
   }
 
@@ -269,6 +364,19 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
     MobileScannerException error,
   ) {
     final colorScheme = Theme.of(context).colorScheme;
+    final message = switch (error.errorCode) {
+      MobileScannerErrorCode.permissionDenied when kIsWeb =>
+        'A câmera está bloqueada. Libere a permissão deste site no Safari e '
+            'toque em Tentar novamente.',
+      MobileScannerErrorCode.permissionDenied =>
+        'A câmera está bloqueada. Abra Ajustes > Minhas Compras > Câmera, '
+            'libere o acesso e volte ao aplicativo.',
+      MobileScannerErrorCode.unsupported =>
+        'Nenhuma câmera compatível foi encontrada neste aparelho.',
+      _ =>
+        'Não foi possível abrir a câmera. Feche outros aplicativos que usam '
+            'a câmera e tente novamente.',
+    };
     return ColoredBox(
       color: Colors.black,
       child: Center(
@@ -283,12 +391,15 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
                 size: 36,
               ),
               const SizedBox(height: 10),
-              Text(
-                'Não foi possível abrir a câmera. Verifique a permissão do navegador ou digite o código manualmente.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onInverseSurface,
+              Semantics(
+                liveRegion: true,
+                child: SelectableText(
+                  message,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onInverseSurface,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
               FilledButton.tonal(
@@ -312,8 +423,10 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet>
       fit: StackFit.expand,
       children: [
         MobileScanner(
+          key: ValueKey<int>(_scannerGeneration),
           controller: _controller,
           fit: BoxFit.cover,
+          tapToFocus: true,
           placeholderBuilder: _buildScannerPlaceholder,
           errorBuilder: _buildScannerError,
         ),
