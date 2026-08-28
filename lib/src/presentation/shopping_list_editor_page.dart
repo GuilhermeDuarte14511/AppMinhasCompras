@@ -451,6 +451,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   ShoppingCategory? _categoryFilter;
   bool _marketModeEnabled = false;
   bool _summaryCollapsed = true;
+  String? _expandedItemId;
   EditorItemsVisibility _itemsVisibility = EditorItemsVisibility.pending;
   bool _didShowBudgetWarning = false;
   bool _didShowBudgetNearLimitWarning = false;
@@ -2211,6 +2212,15 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
                                 child: EditorShoppingItemCard(
                                   item: item,
                                   readOnly: _isEditingLocked,
+                                  expanded: _expandedItemId == item.id,
+                                  onToggleExpanded: () {
+                                    setState(() {
+                                      _expandedItemId =
+                                          _expandedItemId == item.id
+                                          ? null
+                                          : item.id;
+                                    });
+                                  },
                                   onPurchasedChanged: (value) =>
                                       _togglePurchased(item, value),
                                   onIncrement: () => _changeQuantity(item, 1),

@@ -148,7 +148,7 @@ void main() {
     );
 
     expect(find.text('Arroz'), findsOneWidget);
-    expect(_textContains('Subtotal'), findsOneWidget);
+    expect(_textContains('2 ×'), findsOneWidget);
 
     await _tapItemActionIcon(
       tester,
@@ -167,7 +167,7 @@ void main() {
     await _tapVisibleButton<FilledButton>(tester, 'Salvar item');
 
     expect(find.text('Arroz'), findsOneWidget);
-    expect(_textContains('3 x'), findsOneWidget);
+    expect(_textContains('3 ×'), findsOneWidget);
     expect(_textContains('28,50'), findsWidgets);
   });
 
@@ -235,7 +235,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Arroz'), findsOneWidget);
-    expect(find.text('Comprado'), findsOneWidget);
+    final purchasedCard = find.ancestor(
+      of: find.text('Arroz'),
+      matching: find.byType(Card),
+    );
+    final purchasedCheckbox = find.descendant(
+      of: purchasedCard,
+      matching: find.byType(Checkbox),
+    );
+    expect(tester.widget<Checkbox>(purchasedCheckbox).value, isTrue);
   });
 
   testWidgets('Search and sort products in list editor', (
@@ -264,6 +272,8 @@ void main() {
       unitValueDigits: '800',
     );
 
+    await tester.tap(find.byTooltip('Expandir busca e filtros'));
+    await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).first, 'arr');
     await tester.pumpAndSettle();
 
@@ -358,6 +368,8 @@ void main() {
     await _tapVisibleButton<FilledButton>(tester, 'Adicionar item');
 
     expect(find.text('Lentilha Premium'), findsOneWidget);
+    await tester.tap(find.text('Lentilha Premium'));
+    await tester.pumpAndSettle();
     expect(find.text('7890000009999'), findsOneWidget);
     expect(_textContains('12,34'), findsWidgets);
   });
@@ -1024,7 +1036,7 @@ void main() {
     await _tapVisibleButton<FilledButton>(tester, 'Adicionar item');
 
     expect(find.text('Cafe'), findsOneWidget);
-    expect(_textContains('2 x'), findsOneWidget);
+    expect(_textContains('2 ×'), findsOneWidget);
     expect(_textContains('24,68'), findsWidgets);
   });
 
@@ -1066,7 +1078,12 @@ void main() {
 
     expect(find.text('Banana Prata'), findsOneWidget);
     expect(find.text('Leite Integral'), findsOneWidget);
+    await tester.tap(find.text('Banana Prata'));
+    await tester.pumpAndSettle();
     expect(find.text('7890000001111'), findsOneWidget);
+    await tester.tap(find.text('Leite Integral'));
+    await tester.pumpAndSettle();
+    expect(find.text('7890000001111'), findsNothing);
     expect(find.text('7890000002222'), findsOneWidget);
   });
 
@@ -1220,7 +1237,7 @@ void main() {
 
     await tester.tap(find.byType(Checkbox).first, warnIfMissed: false);
     await tester.pumpAndSettle();
-    expect(_textContains('Comprado'), findsWidgets);
+    expect(_textContains('item comprado oculto'), findsOneWidget);
 
     await _openListEditorMenuAction(tester, 'Fechar compra');
     await tester.tap(find.widgetWithText(FilledButton, 'Fechar compra'));
@@ -1349,11 +1366,37 @@ Future<void> _tapItemActionIcon(
 }) async {
   final itemText = find.text(itemName).first;
   final card = find.ancestor(of: itemText, matching: find.byType(Card)).first;
-  final target = find.descendant(of: card, matching: find.byIcon(icon)).first;
-  final iconButton = tester.widget<IconButton>(
-    find.ancestor(of: target, matching: find.byType(IconButton)).first,
+  final directAction = find.descendant(of: card, matching: find.byIcon(icon));
+
+  if (directAction.evaluate().isNotEmpty) {
+    final iconButtonFinder = find.ancestor(
+      of: directAction.first,
+      matching: find.byType(IconButton),
+    );
+    if (iconButtonFinder.evaluate().isNotEmpty) {
+      tester.widget<IconButton>(iconButtonFinder.first).onPressed?.call();
+    } else {
+      await tester.tap(directAction.first, warnIfMissed: false);
+    }
+    await tester.pumpAndSettle();
+    return;
+  }
+
+  final menuLabel = switch (icon) {
+    Icons.edit_rounded => 'Editar item',
+    Icons.query_stats_rounded => 'Histórico de preço',
+    Icons.delete_outline_rounded => 'Excluir item',
+    _ => throw TestFailure('Ação não mapeada para o ícone $icon.'),
+  };
+  final menuButton = find.descendant(
+    of: card,
+    matching: find.byTooltip('Mais ações'),
   );
-  iconButton.onPressed?.call();
+
+  expect(menuButton, findsOneWidget);
+  await tester.tap(menuButton);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(menuLabel).last);
   await tester.pumpAndSettle();
 }
 
