@@ -1,7 +1,10 @@
 [extend]
 useDefault = true
 
-[[allowlists]]
-description = "Non-secret storage key name; the token value lives in secure storage."
+[allowlist]
+description = "Exact non-secret storage key and synthetic token used only in mock tests."
 regexTarget = "secret"
-regexes = ['''^finance_integration_token_v1$''']
+regexes = [
+  '''^finance_integration_token_v1$''',
+  '''^abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNO12$''',
+]
