@@ -338,7 +338,7 @@ void main() {
       unitValueDigits: '2500',
     );
 
-    expect(_textContains('Excesso'), findsOneWidget);
+    expect(_textContains('Excesso R'), findsOneWidget);
     expect(_textContains('acima do'), findsWidgets);
 
     await _tapItemActionIcon(
