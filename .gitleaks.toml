@@ -1,0 +1,7 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Non-secret storage key name; the token value lives in secure storage."
+regexTarget = "secret"
+regexes = ['''^finance_integration_token_v1$''']
