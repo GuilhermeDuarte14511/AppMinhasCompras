@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lembrete da lista — Minhas Compras</title>
+<!-- Google Fonts: Newsreader & Public Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container": "#f0eee8",
+            "on-tertiary-container": "#f2b6ba",
+            "on-secondary": "#ffffff",
+            "on-primary-fixed": "#002110",
+            "surface-container-high": "#eae8e2",
+            "surface": "#fbf9f3",
+            "primary-fixed-dim": "#a9d0b4",
+            "inverse-surface": "#30312d",
+            "primary-fixed": "#c4eccf",
+            "on-primary-container": "#a7ceb2",
+            "primary": "#1f412d",
+            "on-tertiary-fixed": "#321015",
+            "primary-container": "#365943",
+            "on-secondary-fixed-variant": "#444939",
+            "surface-bright": "#fbf9f3",
+            "on-background": "#1b1c18",
+            "background": "#fbf9f3",
+            "on-secondary-container": "#616655",
+            "on-error-container": "#93000a",
+            "surface-dim": "#dcdad4",
+            "surface-container-low": "#f5f3ed",
+            "on-surface-variant": "#424843",
+            "on-secondary-fixed": "#191d10",
+            "outline": "#727972",
+            "surface-container-lowest": "#ffffff",
+            "inverse-on-surface": "#f3f1eb",
+            "on-error": "#ffffff",
+            "tertiary-container": "#724549",
+            "surface-container-highest": "#e4e2dd",
+            "secondary-fixed": "#e0e5cf",
+            "inverse-primary": "#a9d0b4",
+            "on-primary-fixed-variant": "#2b4e39",
+            "surface-tint": "#43664f",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "tertiary": "#582f33",
+            "on-surface": "#1b1c18",
+            "error": "#ba1a1a",
+            "secondary-container": "#e0e5cf",
+            "surface-variant": "#e4e2dd",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "secondary": "#5b604f",
+            "tertiary-fixed": "#ffdadb",
+            "on-tertiary": "#ffffff",
+            "error-container": "#ffdad6",
+            "on-primary": "#ffffff",
+            "outline-variant": "#c1c8c1",
+            "secondary-fixed-dim": "#c4c9b4"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "2xl": "1rem",
+            "3xl": "1.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      font-family: 'Material Symbols Outlined';
+      font-style: normal;
+      display: inline-block;
+      line-height: 1;
+      text-transform: none;
+      letter-spacing: normal;
+      word-wrap: normal;
+      white-space: nowrap;
+      direction: ltr;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-[#1e201d]/60 font-body text-on-surface antialiased min-h-screen flex items-end justify-center p-0 sm:p-4">
+<!-- Mobile Viewport Mockup (390px wide standard mobile canvas) -->
+<div class="w-full max-w-[390px] bg-surface rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-outline-variant/40 animate-in fade-in slide-in-from-bottom-6 duration-300">
+<!-- Drag Handle -->
+<div class="w-full flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing">
+<div class="w-10 h-1 bg-outline/30 rounded-full"></div>
+</div>
+<!-- Top Dialog App Bar -->
+<div class="flex justify-between items-center w-full px-5 h-14 border-b border-outline-variant/60">
+<div class="flex items-center gap-2">
+<button aria-label="Fechar" class="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors active:opacity-80" type="button">
+<span class="material-symbols-outlined text-[22px]">close</span>
+</button>
+<h1 class="font-headline text-[22px] font-normal tracking-tight text-on-surface">Lembrete da lista</h1>
+</div>
+<button class="text-sm font-medium text-primary hover:text-primary-container transition-colors active:opacity-80 px-2 py-1.5 rounded" type="button">
+        Salvar
+      </button>
+</div>
+<!-- Dialog Content Container -->
+<div class="p-5 flex flex-col gap-5 overflow-y-auto max-h-[707px]">
+<!-- Informative Subtitle / Metadata Statement -->
+<div class="px-1">
+<p class="text-xs leading-relaxed text-on-surface-variant">
+          Notificação local agendada neste aparelho para avisar a hora prevista da compra da lista semanal.
+        </p>
+</div>
+<!-- Main Master Switch Control (Material 3 Ledger Row) -->
+<div class="bg-surface-container-lowest border border-outline-variant/80 rounded-xl p-4 flex items-center justify-between shadow-none">
+<div class="flex flex-col pr-3">
+<span class="font-body text-base font-medium text-on-surface">Ativar lembrete</span>
+<span class="text-xs text-on-surface-variant mt-0.5">Programar alerta sonoro e notificação</span>
+</div>
+<!-- M3 Switch Component -->
+<label class="relative inline-flex items-center cursor-pointer select-none">
+<input checked="" class="sr-only peer" id="reminder-toggle" type="checkbox"/>
+<!-- Track -->
+<div class="w-13 h-7 w-[52px] h-[30px] bg-surface-container-highest border border-outline peer-focus:outline-none rounded-full peer peer-checked:bg-primary peer-checked:border-primary transition-colors"></div>
+<!-- Thumb -->
+<div class="absolute left-[4px] top-[3px] bg-outline w-6 h-6 rounded-full transition-all peer-checked:translate-x-[22px] peer-checked:bg-on-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-xs text-primary hidden peer-checked:block" style="font-variation-settings: 'FILL' 1, 'wght' 700;">check</span>
+</div>
+</label>
+</div>
+<!-- Scheduling Fields Section (Toggled area) -->
+<div class="flex flex-col gap-3.5 transition-all duration-200" id="scheduling-section">
+<!-- Field 1: Date Selection -->
+<div class="flex flex-col gap-1.5">
+<label class="text-xs font-medium text-on-surface-variant px-0.5">Data planejada</label>
+<button class="w-full min-h-[48px] px-3.5 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl flex items-center justify-between text-left hover:border-outline focus:border-primary active:bg-surface-container transition-all" type="button">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]">calendar_today</span>
+<span class="text-sm font-medium text-on-surface tabular-nums">Sábado, 02 de novembro de 2024</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">expand_more</span>
+</button>
+</div>
+<!-- Field 2: Time Selection -->
+<div class="flex flex-col gap-1.5">
+<label class="text-xs font-medium text-on-surface-variant px-0.5">Horário do alerta</label>
+<button class="w-full min-h-[48px] px-3.5 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl flex items-center justify-between text-left hover:border-outline focus:border-primary active:bg-surface-container transition-all" type="button">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]">schedule</span>
+<span class="text-sm font-medium text-on-surface tabular-nums">09:30</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">expand_more</span>
+</button>
+</div>
+<!-- Explanatory Technical Note -->
+<div class="mt-1 p-3 bg-surface-container-low rounded-lg border border-outline-variant/50 flex items-start gap-2.5">
+<span class="material-symbols-outlined text-on-surface-variant text-[18px] shrink-0 mt-0.5">info</span>
+<p class="text-[12px] leading-snug text-on-surface-variant">
+            Notificação local no aparelho. Não requer conexão à internet e não envia convites a terceiros.
+          </p>
+</div>
+</div>
+<!-- Action Cluster -->
+<div class="flex flex-col gap-2 pt-2 border-t border-outline-variant/50">
+<!-- Primary Action: Salvar lembrete -->
+<button class="w-full min-h-[48px] bg-primary text-on-primary font-medium text-sm rounded-lg hover:bg-primary-container active:opacity-90 transition-all flex items-center justify-center shadow-none" type="button">
+          Salvar lembrete
+        </button>
+<!-- Secondary Action: Cancelar -->
+<button class="w-full min-h-[44px] bg-transparent text-on-surface-variant font-medium text-sm rounded-lg hover:bg-surface-container active:opacity-80 transition-colors flex items-center justify-center" type="button">
+          Cancelar
+        </button>
+<!-- Destructive Action: Remover lembrete -->
+<div class="flex justify-center pt-1">
+<button class="inline-flex items-center gap-1.5 py-2 px-3 text-xs font-medium text-tertiary hover:bg-error-container/40 rounded transition-colors active:opacity-80" type="button">
+<span class="material-symbols-outlined text-[16px]">notifications_off</span>
+<span>Remover lembrete</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Safe Area Inset Spacer for Home Indicator -->
+<div class="h-4 w-full bg-surface"></div>
+</div>
+<script>
+    // Lightweight toggle reaction to reflect activated/deactivated UI
+    const toggle = document.getElementById('reminder-toggle');
+    const schedulingSection = document.getElementById('scheduling-section');
+
+    toggle.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        schedulingSection.classList.remove('opacity-40', 'pointer-events-none');
+      } else {
+        schedulingSection.classList.add('opacity-40', 'pointer-events-none');
+      }
+    });
+  </script>
+</body></html>

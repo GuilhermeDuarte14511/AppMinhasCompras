@@ -387,3 +387,39 @@ $response = Invoke-JsonRequest `
 Assert-Status -Response $response -Expected 200 -Case 'solicitante remove o próprio claim'
 
 Write-Output 'Matriz crítica de listas compartilhadas validada no Emulator.'
+
+# Split-payment intent remains owner-scoped and backwards compatible.
+$historyFields = @{
+  id = New-StringValue -Value 'split-history'
+  listId = New-StringValue -Value 'list'
+  listName = New-StringValue -Value 'Mercado'
+  closedAt = New-StringValue -Value '2026-09-07T12:00:00.000'
+  items = @{ arrayValue = @{ values = @() } }
+  budget = @{ nullValue = $null }
+  paymentBalances = @{ arrayValue = @{ values = @() } }
+}
+$historyPath = "$documentsUrl/users/$($owner.uid)/history/split-history"
+$response = Invoke-JsonRequest -Method PATCH -Uri $historyPath -Body @{ fields = $historyFields } -Token $owner.token
+Assert-Status -Response $response -Expected 200 -Case 'histórico legado sem intenção financeira'
+$allocationFields = @{
+  sourceId = New-StringValue -Value 'va-id'
+  sourceKind = New-StringValue -Value 'foodVoucher'
+  sourceName = New-StringValue -Value 'Alelo'
+  amountCents = @{ integerValue = '9600' }
+}
+$historyFields.financeIntent = @{ mapValue = @{ fields = @{
+  connectionId = New-StringValue -Value 'device-connection'
+  categoryId = @{ nullValue = $null }
+  allocations = @{ arrayValue = @{ values = @(@{ mapValue = @{ fields = $allocationFields } }) } }
+} } }
+$response = Invoke-JsonRequest -Method PATCH -Uri $historyPath -Body @{ fields = $historyFields } -Token $owner.token
+Assert-Status -Response $response -Expected 200 -Case 'intenção financeira válida preservada no histórico'
+$response = Invoke-JsonRequest -Method PATCH -Uri $historyPath -Body @{ fields = $historyFields } -Token $member.token
+Assert-Status -Response $response -Expected 403 -Case 'outro usuário não altera intenção financeira'
+$allocationFields.amountCents = @{ integerValue = '-1' }
+$response = Invoke-JsonRequest -Method PATCH -Uri $historyPath -Body @{ fields = $historyFields } -Token $owner.token
+Assert-Status -Response $response -Expected 403 -Case 'intenção financeira rejeita valor negativo'
+$allocationFields.amountCents = @{ integerValue = '9600' }
+$allocationFields.sourceKind = New-StringValue -Value 'arbitrary'
+$response = Invoke-JsonRequest -Method PATCH -Uri $historyPath -Body @{ fields = $historyFields } -Token $owner.token
+Assert-Status -Response $response -Expected 403 -Case 'intenção financeira rejeita tipo desconhecido'

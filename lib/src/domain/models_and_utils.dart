@@ -27,6 +27,7 @@ class ShoppingListModel {
     this.paymentBalances = const [],
     this.isClosed = false,
     this.closedAt,
+    this.deletedAt,
   });
 
   factory ShoppingListModel.empty({required String name}) {
@@ -57,6 +58,7 @@ class ShoppingListModel {
     }
     final rawReminder = json['reminder'];
     final rawClosedAt = json['closedAt'];
+    final rawDeletedAt = json['deletedAt'];
 
     return ShoppingListModel(
       id: (json['id'] as String?) ?? uniqueId(),
@@ -77,6 +79,9 @@ class ShoppingListModel {
       paymentBalances: _parsePaymentBalances(json['paymentBalances']),
       isClosed: (json['isClosed'] as bool?) ?? false,
       closedAt: rawClosedAt is String ? DateTime.tryParse(rawClosedAt) : null,
+      deletedAt: rawDeletedAt is String
+          ? DateTime.tryParse(rawDeletedAt)
+          : null,
     );
   }
 
@@ -90,6 +95,9 @@ class ShoppingListModel {
   final List<PaymentBalance> paymentBalances;
   final bool isClosed;
   final DateTime? closedAt;
+  final DateTime? deletedAt;
+
+  bool get isDeleted => deletedAt != null;
 
   int get totalItems => items.fold<int>(0, (sum, item) => sum + item.quantity);
   int get purchasedItemsCount => items.where((item) => item.isPurchased).length;
@@ -152,6 +160,7 @@ class ShoppingListModel {
           .toList(growable: false),
       isClosed: isClosed,
       closedAt: closedAt,
+      deletedAt: deletedAt,
     );
   }
 
@@ -166,10 +175,12 @@ class ShoppingListModel {
     List<PaymentBalance>? paymentBalances,
     bool? isClosed,
     DateTime? closedAt,
+    DateTime? deletedAt,
     bool clearBudget = false,
     bool clearReminder = false,
     bool clearPaymentBalances = false,
     bool clearClosedAt = false,
+    bool clearDeletedAt = false,
   }) {
     return ShoppingListModel(
       id: id ?? this.id,
@@ -184,6 +195,7 @@ class ShoppingListModel {
           : paymentBalances ?? this.paymentBalances,
       isClosed: isClosed ?? this.isClosed,
       closedAt: clearClosedAt ? null : closedAt ?? this.closedAt,
+      deletedAt: clearDeletedAt ? null : deletedAt ?? this.deletedAt,
     );
   }
 
@@ -201,6 +213,7 @@ class ShoppingListModel {
           .toList(growable: false),
       'isClosed': isClosed,
       'closedAt': closedAt?.toIso8601String(),
+      'deletedAt': deletedAt?.toIso8601String(),
     };
   }
 
@@ -227,11 +240,14 @@ class CompletedPurchase {
     required this.items,
     this.budget,
     this.paymentBalances = const [],
+    this.financeIntent,
+    this.finalTotalCents,
   });
 
   factory CompletedPurchase.fromList(
     ShoppingListModel list, {
     DateTime? closedAt,
+    int? finalTotalCents,
   }) {
     return CompletedPurchase(
       id: uniqueId(),
@@ -240,6 +256,7 @@ class CompletedPurchase {
       closedAt: closedAt ?? DateTime.now(),
       items: list.items.map((item) => item.copyWith()).toList(growable: false),
       budget: list.budget,
+      finalTotalCents: finalTotalCents,
       paymentBalances: list.paymentBalances
           .map((entry) => entry.copyWith())
           .toList(growable: false),
@@ -268,7 +285,13 @@ class CompletedPurchase {
           DateTime.now(),
       items: parsedItems,
       budget: (json['budget'] as num?)?.toDouble(),
+      finalTotalCents: (json['finalTotalCents'] as num?)?.toInt(),
       paymentBalances: _parsePaymentBalances(json['paymentBalances']),
+      financeIntent: json['financeIntent'] is Map
+          ? FinanceCheckoutIntent.fromJson(
+              Map<String, dynamic>.from(json['financeIntent'] as Map),
+            )
+          : null,
     );
   }
 
@@ -279,6 +302,8 @@ class CompletedPurchase {
   final List<ShoppingItem> items;
   final double? budget;
   final List<PaymentBalance> paymentBalances;
+  final FinanceCheckoutIntent? financeIntent;
+  final int? finalTotalCents;
 
   int get totalItems => items.fold<int>(0, (sum, item) => sum + item.quantity);
   int get productsCount => items.length;
@@ -300,8 +325,11 @@ class CompletedPurchase {
       paymentBalances.any((entry) => entry.value > 0);
   double get paymentBalancesTotal =>
       paymentBalances.fold<double>(0, (sum, entry) => sum + entry.value);
-  double get spentValue =>
-      purchasedProductsCount > 0 ? purchasedValue : totalValue;
+  double get spentValue => finalTotalCents != null
+      ? finalTotalCents! / 100
+      : purchasedProductsCount > 0
+      ? purchasedValue
+      : totalValue;
   double get uncoveredSpentAmount {
     var pending = spentValue;
     for (final entry in paymentBalances) {
@@ -340,11 +368,14 @@ class CompletedPurchase {
     List<ShoppingItem>? items,
     double? budget,
     List<PaymentBalance>? paymentBalances,
+    int? finalTotalCents,
     bool clearBudget = false,
     bool clearPaymentBalances = false,
   }) {
     return CompletedPurchase(
       id: id ?? this.id,
+      financeIntent: financeIntent,
+      finalTotalCents: finalTotalCents ?? this.finalTotalCents,
       listId: listId ?? this.listId,
       listName: listName ?? this.listName,
       closedAt: closedAt ?? this.closedAt,
@@ -359,6 +390,8 @@ class CompletedPurchase {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      if (financeIntent != null) 'financeIntent': financeIntent!.toJson(),
+      if (finalTotalCents != null) 'finalTotalCents': finalTotalCents,
       'listId': listId,
       'listName': listName,
       'closedAt': closedAt.toIso8601String(),
@@ -638,10 +671,15 @@ class ReplenishmentSuggestion {
 }
 
 class BudgetEditorResult {
-  const BudgetEditorResult({this.value, this.clear = false});
+  const BudgetEditorResult({
+    this.value,
+    this.clear = false,
+    this.paymentBalances,
+  });
 
   final double? value;
   final bool clear;
+  final List<PaymentBalance>? paymentBalances;
 }
 
 class PaymentBalancesEditorResult {
@@ -659,9 +697,40 @@ class ReminderEditorResult {
 }
 
 class PurchaseCheckoutResult {
-  const PurchaseCheckoutResult({required this.markPendingAsPurchased});
+  const PurchaseCheckoutResult({
+    required this.markPendingAsPurchased,
+    this.sendToFinance = false,
+    this.financeCardId,
+    this.financePaymentSourceId,
+    this.financePaymentSourceKind,
+    this.financeCategoryId,
+    this.financeAllocations = const [],
+    this.reviewedItems = const [],
+    this.finalTotalCents,
+  });
 
   final bool markPendingAsPurchased;
+  final bool sendToFinance;
+  final String? financeCardId;
+  final String? financePaymentSourceId;
+  final String? financePaymentSourceKind;
+  final String? financeCategoryId;
+  final List<FinancePaymentAllocation> financeAllocations;
+  final List<ShoppingItem> reviewedItems;
+  final int? finalTotalCents;
+}
+
+class FinancePaymentAllocation {
+  const FinancePaymentAllocation({
+    required this.sourceId,
+    required this.sourceKind,
+    required this.sourceName,
+    required this.amountCents,
+  });
+  final String sourceId;
+  final String sourceKind;
+  final String sourceName;
+  final int amountCents;
 }
 
 class ShoppingReminderConfig {
@@ -769,6 +838,8 @@ class PriceHistoryEntry {
 enum PaymentBalanceType {
   card('card'),
   debit('debit'),
+  foodVoucher('foodVoucher'),
+  mealVoucher('mealVoucher'),
   pix('pix'),
   voucher('voucher'),
   cash('cash'),
@@ -786,6 +857,10 @@ class PaymentBalanceTypeParser {
         return PaymentBalanceType.card;
       case 'debit':
         return PaymentBalanceType.debit;
+      case 'foodVoucher':
+        return PaymentBalanceType.foodVoucher;
+      case 'mealVoucher':
+        return PaymentBalanceType.mealVoucher;
       case 'pix':
         return PaymentBalanceType.pix;
       case 'voucher':
@@ -802,9 +877,13 @@ extension PaymentBalanceTypeLabel on PaymentBalanceType {
   String get label {
     switch (this) {
       case PaymentBalanceType.card:
-        return 'Cartao';
+        return 'Crédito';
       case PaymentBalanceType.debit:
-        return 'Debito';
+        return 'Débito';
+      case PaymentBalanceType.foodVoucher:
+        return 'VA';
+      case PaymentBalanceType.mealVoucher:
+        return 'VR';
       case PaymentBalanceType.pix:
         return 'Pix';
       case PaymentBalanceType.voucher:
@@ -823,6 +902,8 @@ class PaymentBalance {
     required this.name,
     required this.type,
     required this.amount,
+    this.financeSourceId,
+    this.financeSourceKind,
   });
 
   factory PaymentBalance.fromJson(Map<String, dynamic> json) {
@@ -833,6 +914,8 @@ class PaymentBalance {
           : 'Saldo',
       type: PaymentBalanceTypeParser.fromKey(json['type'] as String?),
       amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      financeSourceId: json['financeSourceId'] as String?,
+      financeSourceKind: json['financeSourceKind'] as String?,
     );
   }
 
@@ -840,6 +923,8 @@ class PaymentBalance {
   final String name;
   final PaymentBalanceType type;
   final double amount;
+  final String? financeSourceId;
+  final String? financeSourceKind;
 
   double get value => max(amount, 0);
 
@@ -848,17 +933,28 @@ class PaymentBalance {
     String? name,
     PaymentBalanceType? type,
     double? amount,
+    String? financeSourceId,
+    String? financeSourceKind,
   }) {
     return PaymentBalance(
       id: id ?? this.id,
       name: name ?? this.name,
       type: type ?? this.type,
       amount: amount ?? this.amount,
+      financeSourceId: financeSourceId ?? this.financeSourceId,
+      financeSourceKind: financeSourceKind ?? this.financeSourceKind,
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {'id': id, 'name': name, 'type': type.key, 'amount': amount};
+    return {
+      'id': id,
+      'name': name,
+      'type': type.key,
+      'amount': amount,
+      'financeSourceId': financeSourceId,
+      'financeSourceKind': financeSourceKind,
+    };
   }
 }
 
@@ -874,4 +970,46 @@ class PaymentUsage {
   final double remaining;
 
   bool get isExhausted => remaining <= 0.0001;
+}
+
+/// Saved with the closing snapshot, before any network request.
+class FinanceCheckoutIntent {
+  const FinanceCheckoutIntent({
+    required this.connectionId,
+    required this.allocations,
+    this.categoryId,
+  });
+  final String connectionId;
+  final List<FinancePaymentAllocation> allocations;
+  final String? categoryId;
+  Map<String, dynamic> toJson() => {
+    'connectionId': connectionId,
+    'categoryId': categoryId,
+    'allocations': allocations
+        .map(
+          (a) => {
+            'sourceId': a.sourceId,
+            'sourceKind': a.sourceKind,
+            'sourceName': a.sourceName,
+            'amountCents': a.amountCents,
+          },
+        )
+        .toList(),
+  };
+  factory FinanceCheckoutIntent.fromJson(Map<String, dynamic> json) =>
+      FinanceCheckoutIntent(
+        connectionId: json['connectionId'] as String,
+        categoryId: json['categoryId'] as String?,
+        allocations: (json['allocations'] as List)
+            .map((raw) {
+              final a = Map<String, dynamic>.from(raw as Map);
+              return FinancePaymentAllocation(
+                sourceId: a['sourceId'] as String,
+                sourceKind: a['sourceKind'] as String,
+                sourceName: a['sourceName'] as String,
+                amountCents: a['amountCents'] as int,
+              );
+            })
+            .toList(growable: false),
+      );
 }

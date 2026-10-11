@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Fechamento — Minhas Compras</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&amp;family=Public+Sans:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "secondary-fixed-dim": "#c4c9b4",
+            "surface-container-low": "#f5f3ed",
+            "on-secondary": "#ffffff",
+            "surface-tint": "#43664f",
+            "inverse-primary": "#a9d0b4",
+            "surface-container": "#f0eee8",
+            "secondary": "#5b604f",
+            "on-primary-container": "#a7ceb2",
+            "inverse-surface": "#30312d",
+            "surface-dim": "#dcdad4",
+            "secondary-fixed": "#e0e5cf",
+            "on-secondary-fixed": "#191d10",
+            "surface-container-lowest": "#ffffff",
+            "on-surface": "#1b1c18",
+            "outline-variant": "#c1c8c1",
+            "on-surface-variant": "#424843",
+            "background": "#fbf9f3",
+            "surface-container-highest": "#e4e2dd",
+            "on-primary": "#ffffff",
+            "on-primary-fixed": "#002110",
+            "tertiary": "#582f33",
+            "secondary-container": "#e0e5cf",
+            "primary-fixed-dim": "#a9d0b4",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "primary-fixed": "#c4eccf",
+            "on-secondary-fixed-variant": "#444939",
+            "surface": "#fbf9f3",
+            "on-error-container": "#93000a",
+            "tertiary-container": "#724549",
+            "on-secondary-container": "#616655",
+            "on-error": "#ffffff",
+            "surface-bright": "#fbf9f3",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "primary": "#1f412d",
+            "error": "#ba1a1a",
+            "surface-variant": "#e4e2dd",
+            "on-tertiary": "#ffffff",
+            "error-container": "#ffdad6",
+            "on-primary-fixed-variant": "#2b4e39",
+            "primary-container": "#365943",
+            "surface-container-high": "#eae8e2",
+            "on-background": "#1b1c18",
+            "on-tertiary-fixed": "#321015",
+            "outline": "#727972",
+            "tertiary-fixed": "#ffdadb",
+            "on-tertiary-container": "#f2b6ba",
+            "inverse-on-surface": "#f3f1eb"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "2xl": "1rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      font-size: 20px;
+      line-height: 1;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body antialiased min-h-screen flex justify-center">
+<!-- Mobile Screen Container -->
+<div class="relative w-full max-w-md min-h-screen bg-surface-container-low flex flex-col justify-end overflow-hidden shadow-2xl">
+<!-- Dimmed Underneath Canvas (Simulated App Canvas in Background) -->
+<div aria-hidden="true" class="absolute inset-0 bg-background pointer-events-none opacity-40 px-4 pt-4">
+<header class="flex justify-between items-center h-14 border-b border-outline-variant">
+<span class="material-symbols-outlined text-secondary">menu</span>
+<span class="font-headline text-2xl text-on-surface">Minhas Compras</span>
+<span class="material-symbols-outlined text-secondary">sync_problem</span>
+</header>
+<div class="mt-6 space-y-4">
+<div class="h-8 bg-surface-container-highest rounded w-3/4"></div>
+<div class="h-4 bg-surface-container rounded w-1/2"></div>
+<div class="h-20 bg-surface-container-lowest rounded border border-outline-variant mt-6"></div>
+</div>
+</div>
+<!-- Scrim / Dimmed Backdrop -->
+<div class="absolute inset-0 bg-black/45 z-10 transition-opacity backdrop-blur-[1px]"></div>
+<!-- Bottom Sheet Modal -->
+<section class="relative z-20 w-full bg-surface-container-lowest rounded-t-2xl shadow-xl flex flex-col max-h-[813px] overflow-hidden border-t border-outline-variant/30">
+<!-- Drag Handle -->
+<div class="pt-3 pb-1 flex justify-center items-center cursor-grab">
+<div class="w-10 h-1 bg-outline-variant rounded-full"></div>
+</div>
+<!-- Modal Header -->
+<header class="px-5 pt-2 pb-4 border-b border-outline-variant flex items-start justify-between">
+<div>
+<h1 class="font-headline text-2xl md:text-[28px] text-on-surface leading-tight font-normal">Conferir compra</h1>
+<p class="font-body text-xs text-secondary mt-0.5">Compras da semana</p>
+</div>
+<button aria-label="Fechar" class="min-w-[48px] min-h-[48px] -mr-2 -mt-2 inline-flex items-center justify-center text-secondary hover:text-on-surface active:scale-95 transition-transform duration-100" type="button">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</header>
+<!-- Scrollable Modal Body Content -->
+<div class="overflow-y-auto px-5 py-4 space-y-6">
+<!-- Section: Valores -->
+<section aria-labelledby="section-valores" class="space-y-3">
+<h2 class="font-label text-xs tracking-wider font-semibold text-secondary" id="section-valores">
+            VALORES
+          </h2>
+<div class="space-y-3.5">
+<!-- Row: Total Calculado -->
+<div class="flex justify-between items-baseline py-1">
+<span class="font-body text-sm text-secondary">Total calculado</span>
+<span class="font-body text-base font-medium text-on-surface tabular-nums">R$ 110,20</span>
+</div>
+<!-- Toggle Row: Alterar valor final -->
+<div class="flex items-center justify-between py-1">
+<label class="font-body text-sm font-medium text-on-surface cursor-pointer select-none" for="toggle-alterar-valor">
+                Alterar valor final
+              </label>
+<!-- Switch toggle -->
+<div class="relative inline-flex items-center cursor-pointer min-h-[48px] px-1">
+<input checked="" class="sr-only peer" id="toggle-alterar-valor" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[14px] after:left-[6px] after:bg-white after:border-outline-variant after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</div>
+</div>
+<!-- Input: Valor final pago -->
+<div class="pt-0.5">
+<label class="block font-body text-xs text-secondary mb-1" for="input-valor-pago">
+                Valor final pago
+              </label>
+<div class="relative rounded-lg border border-outline focus-within:border-primary focus-within:ring-1 focus-within:ring-primary bg-surface-container-lowest">
+<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+<span class="font-body text-sm font-semibold text-on-surface-variant">R$</span>
+</div>
+<input aria-describedby="ajuste-helper" class="block w-full rounded-lg border-0 py-3 pl-10 pr-3 font-body text-base font-medium text-on-surface tabular-nums focus:ring-0 placeholder:text-secondary" id="input-valor-pago" name="valor_final_pago" type="text" value="105,00"/>
+</div>
+</div>
+<!-- Helper Notice Box -->
+<div class="p-3 rounded-lg border border-outline-variant/60 bg-surface-container-low text-xs text-secondary leading-relaxed" id="ajuste-helper">
+              Ajuste de <span class="font-medium text-on-surface tabular-nums">R$ 5,20</span> no valor final. Os preços dos itens permanecem iguais.
+            </div>
+</div>
+</section>
+<!-- Divider line -->
+<hr class="border-t border-outline-variant/50"/>
+<!-- Section: Itens -->
+<section aria-labelledby="section-itens" class="space-y-2">
+<div class="flex items-center justify-between pb-1">
+<h2 class="font-label text-xs tracking-wider font-semibold text-secondary" id="section-itens">
+              ITENS
+            </h2>
+<span class="font-body text-xs text-secondary">3 itens conferidos</span>
+</div>
+<div class="divide-y divide-outline-variant/40">
+<!-- Item 1 -->
+<div class="py-3 flex items-center justify-between gap-3">
+<div class="min-w-0 pr-2">
+<p class="font-body text-sm font-medium text-on-surface leading-tight truncate">
+                  Café especial torrado e moído 250g
+                </p>
+<p class="font-body text-xs text-secondary mt-0.5 tabular-nums">
+                  2 un · R$ 37,80
+                </p>
+</div>
+<button class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-surface-container-high rounded-lg active:scale-95 transition-transform duration-100 shrink-0" type="button">
+<span class="material-symbols-outlined" data-icon="edit">edit</span>
+<span>Corrigir</span>
+</button>
+</div>
+<!-- Item 2 -->
+<div class="py-3 flex items-center justify-between gap-3">
+<div class="min-w-0 pr-2">
+<p class="font-body text-sm font-medium text-on-surface leading-tight truncate">
+                  Azeite de oliva extravirgem 500ml
+                </p>
+<p class="font-body text-xs text-secondary mt-0.5 tabular-nums">
+                  1 un · R$ 38,90
+                </p>
+</div>
+<button class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-surface-container-high rounded-lg active:scale-95 transition-transform duration-100 shrink-0" type="button">
+<span class="material-symbols-outlined" data-icon="edit">edit</span>
+<span>Corrigir</span>
+</button>
+</div>
+<!-- Item 3 -->
+<div class="py-3 flex items-center justify-between gap-3">
+<div class="min-w-0 pr-2">
+<p class="font-body text-sm font-medium text-on-surface leading-tight truncate">
+                  Banana prata madura
+                </p>
+<p class="font-body text-xs text-secondary mt-0.5 tabular-nums">
+                  1,2 kg · R$ 10,20
+                </p>
+</div>
+<button class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-surface-container-high rounded-lg active:scale-95 transition-transform duration-100 shrink-0" type="button">
+<span class="material-symbols-outlined" data-icon="edit">edit</span>
+<span>Corrigir</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Divider line -->
+<hr class="border-t border-outline-variant/50"/>
+<!-- Section: Lançamento financeiro -->
+<section aria-labelledby="section-lancamento" class="space-y-1.5 pb-2">
+<h2 class="font-label text-xs tracking-wider font-semibold text-secondary" id="section-lancamento">
+            LANÇAMENTO FINANCEIRO
+          </h2>
+<div class="flex items-center gap-2 pt-1 text-xs text-secondary">
+<span class="material-symbols-outlined text-secondary text-base shrink-0" data-icon="info">info</span>
+<span>O Minhas Finanças não está conectado.</span>
+</div>
+</section>
+</div>
+<!-- Modal Footer (Actions) -->
+<footer class="p-4 border-t border-outline-variant bg-surface-container-lowest flex flex-col gap-2.5 shrink-0">
+<button class="w-full min-h-[48px] py-3 px-4 bg-primary text-on-primary font-body text-sm font-bold rounded-lg hover:bg-primary-container active:scale-[0.98] transition-transform duration-100 ease-out flex items-center justify-center text-center shadow-none" type="button">
+          Confirmar fechamento
+        </button>
+<button class="w-full min-h-[48px] py-2.5 px-4 bg-transparent text-secondary font-body text-sm font-medium rounded-lg border border-outline-variant hover:bg-surface-container-high active:scale-[0.98] transition-transform duration-100 ease-out flex items-center justify-center text-center" type="button">
+          Cancelar
+        </button>
+</footer>
+</section>
+</div>
+</body></html>

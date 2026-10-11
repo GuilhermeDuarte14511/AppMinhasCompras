@@ -47,7 +47,9 @@ void main() {
     );
 
     expect(find.text('Arroz integral tipo 1 pacote econômico'), findsOneWidget);
-    expect(find.textContaining('Mercearia • 2 ×'), findsOneWidget);
+    expect(find.text('MERCEARIA'), findsOneWidget);
+    expect(find.textContaining('2 ×'), findsOneWidget);
+    expect(find.textContaining('11,90'), findsOneWidget);
     expect(find.textContaining('23,80'), findsOneWidget);
     expect(find.text('7891234567895'), findsNothing);
     expect(find.byTooltip('Diminuir quantidade'), findsNothing);

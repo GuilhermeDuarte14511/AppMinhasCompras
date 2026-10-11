@@ -196,7 +196,7 @@ class VoiceShoppingParser {
   _VoiceQuantityResult _extractQuantity(String source) {
     final match = RegExp(r'^([0-9]+|[a-záàâãéêíóôõúç]+)\s+').firstMatch(source);
     if (match == null) {
-      return _VoiceQuantityResult(cleanedText: source, quantity: 1);
+      return _extractTrailingQuantity(source);
     }
 
     final parsed =
@@ -204,7 +204,7 @@ class VoiceShoppingParser {
         _numberWords[_canonicalVoiceText(match.group(1)!)] ??
         0;
     if (parsed <= 0) {
-      return _VoiceQuantityResult(cleanedText: source, quantity: 1);
+      return _extractTrailingQuantity(source);
     }
 
     var remaining = source.substring(match.end).trim();
@@ -218,6 +218,33 @@ class VoiceShoppingParser {
     return _VoiceQuantityResult(
       cleanedText: remaining,
       quantity: parsed.clamp(1, 999),
+    );
+  }
+
+  _VoiceQuantityResult _extractTrailingQuantity(String source) {
+    final numeric = RegExp(
+      r'^(.+?)\s+(?:x\s*)?(\d{1,2})(?:\s+unidades?)?$',
+    ).firstMatch(source);
+    // Spoken numbers at the end require a unit label so a product's name
+    // (for example, "arroz tipo dois") is not mistaken for a quantity.
+    final match =
+        numeric ??
+        RegExp(
+          r'^(.+?)\s+([a-záàâãéêíóôõúç]+)\s+unidades?$',
+        ).firstMatch(source);
+    if (match == null ||
+        RegExp(r'\b(?:tipo|número|numero|nº)$').hasMatch(match.group(1)!)) {
+      return _VoiceQuantityResult(cleanedText: source, quantity: 1);
+    }
+    final number = _canonicalVoiceText(match.group(2)!);
+    final quantity =
+        int.tryParse(number) ?? _numberWords[number] ?? _tensWords[number] ?? 0;
+    if (quantity == 0) {
+      return _VoiceQuantityResult(cleanedText: source, quantity: 1);
+    }
+    return _VoiceQuantityResult(
+      cleanedText: match.group(1)!.trim(),
+      quantity: quantity,
     );
   }
 
@@ -259,7 +286,13 @@ class VoiceCatalogMatcher {
     final alternatives = candidates.take(4).toList(growable: false);
     final best = candidates.isEmpty ? null : candidates.first;
     if (best == null || best.score < 0.58) {
-      return _unmatched(intent, alternatives: alternatives);
+      return _unmatched(
+        intent,
+        confidence: alternatives.isEmpty
+            ? VoiceCatalogMatchConfidence.none
+            : VoiceCatalogMatchConfidence.ambiguous,
+        alternatives: alternatives,
+      );
     }
 
     final exact =
@@ -276,7 +309,9 @@ class VoiceCatalogMatcher {
 
     final competing = candidates.length > 1 ? candidates[1] : null;
     final clearLead = competing == null || best.score - competing.score >= 0.1;
-    if (best.score >= 0.82 && clearLead) {
+    if (best.score >= 0.82 &&
+        clearLead &&
+        !_requiresVariantReview(intent.name, best.product.name)) {
       return _matched(
         intent,
         best.product,
@@ -352,6 +387,22 @@ class VoiceCatalogMatcher {
     if (spoken.isEmpty || catalog.isEmpty) {
       return 0;
     }
+    // A spoken pasta shape must agree: penne is not interchangeable with
+    // spaghetti. Catalog names may omit the generic word "macarrão".
+    const pastaShapes = {
+      'penne',
+      'espaguete',
+      'spaghetti',
+      'fusilli',
+      'farfalle',
+      'talharim',
+      'rigatoni',
+      'linguine',
+    };
+    final spokenShapes = spoken.where(pastaShapes.contains).toSet();
+    if (spokenShapes.isNotEmpty && !spokenShapes.every(catalog.contains)) {
+      return 0;
+    }
     if (spoken.join(' ') == catalog.join(' ')) {
       return 1;
     }
@@ -365,8 +416,20 @@ class VoiceCatalogMatcher {
     final contained = coverage == 1;
     return max(
       coverage * 0.68 + reverseCoverage * 0.17 + jaccard * 0.15,
-      contained ? 0.88 : 0,
+      contained
+          ? 0.88
+          : spokenShapes.isNotEmpty
+          ? 0.57
+          : 0,
     ).clamp(0, 1).toDouble();
+  }
+
+  bool _requiresVariantReview(String spokenName, String catalogName) {
+    final spoken = _voiceTokens(spokenName);
+    final catalog = _voiceTokens(catalogName);
+    return spoken.length == 1 &&
+        spoken.single == 'leite' &&
+        catalog.contains('condensado');
   }
 
   ShoppingCategory _categoryFor(String name) {

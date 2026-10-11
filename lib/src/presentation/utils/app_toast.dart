@@ -40,8 +40,6 @@ class AppToast {
     VoidCallback? onAction,
   }) {
     final context = messenger.context;
-    final colorScheme = Theme.of(context).colorScheme;
-
     final icon = switch (type) {
       AppToastType.success => Icons.check_circle_rounded,
       AppToastType.warning => Icons.wifi_tethering_error_rounded,
@@ -49,31 +47,11 @@ class AppToast {
       AppToastType.info => Icons.info_rounded,
     };
 
-    final (start, end, border, iconBg) = switch (type) {
-      AppToastType.success => (
-        const Color(0xFF0A7E61),
-        const Color(0xFF13A87E),
-        const Color(0xCC72E2C4),
-        const Color(0x3DFFFFFF),
-      ),
-      AppToastType.warning => (
-        const Color(0xFFB06A00),
-        const Color(0xFFD88908),
-        const Color(0xFFF2C36A),
-        const Color(0x3DFFFFFF),
-      ),
-      AppToastType.error => (
-        const Color.fromARGB(255, 179, 38, 30),
-        const Color(0xFFD43D33),
-        const Color(0xFFF2A29D),
-        const Color(0x38FFFFFF),
-      ),
-      AppToastType.info => (
-        colorScheme.primary,
-        colorScheme.tertiary,
-        colorScheme.primaryContainer.withValues(alpha: 0.95),
-        Colors.white.withValues(alpha: 0.18),
-      ),
+    final background = switch (type) {
+      AppToastType.success => const Color(0xFF365943),
+      AppToastType.warning => const Color(0xFF765527),
+      AppToastType.error => const Color(0xFFA44438),
+      AppToastType.info => const Color(0xFF252923),
     };
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
 
@@ -95,37 +73,13 @@ class AppToast {
           content: DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-              gradient: LinearGradient(
-                colors: [start, end],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              border: Border.all(color: border.withValues(alpha: 0.8)),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x33000000),
-                  blurRadius: 22,
-                  offset: Offset(0, 10),
-                ),
-              ],
+              color: background,
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Row(
                 children: [
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: iconBg,
-                      borderRadius: BorderRadius.circular(AppTokens.radiusSm),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.34),
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(6),
-                      child: Icon(icon, color: Colors.white, size: 18),
-                    ),
-                  ),
+                  Icon(icon, color: Colors.white, size: 20),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(

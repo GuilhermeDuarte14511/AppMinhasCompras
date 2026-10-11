@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Minhas Compras — Entrar</title>
+<!-- Google Fonts: Newsreader (Editorial Serif) & Public Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&amp;family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-surface-variant": "#424843",
+            "inverse-surface": "#30312d",
+            "surface-variant": "#e4e2dd",
+            "primary-fixed-dim": "#a9d0b4",
+            "surface": "#fcfbf7",
+            "on-tertiary-container": "#f2b6ba",
+            "on-primary-fixed": "#002110",
+            "on-error": "#ffffff",
+            "tertiary": "#582f33",
+            "on-secondary-container": "#616655",
+            "tertiary-fixed": "#ffdadb",
+            "secondary-fixed-dim": "#c4c9b4",
+            "secondary": "#5b604f",
+            "on-secondary-fixed": "#191d10",
+            "surface-container": "#f0eee8",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "error": "#ba1a1a",
+            "primary-fixed": "#c4eccf",
+            "primary": "#1f412d",
+            "outline-variant": "#c1c8c1",
+            "background": "#fcfbf7",
+            "surface-container-highest": "#e4e2dd",
+            "secondary-container": "#e0e5cf",
+            "inverse-primary": "#a9d0b4",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "on-secondary-fixed-variant": "#444939",
+            "on-tertiary": "#ffffff",
+            "on-tertiary-fixed": "#321015",
+            "on-primary": "#ffffff",
+            "secondary-fixed": "#e0e5cf",
+            "tertiary-container": "#724549",
+            "on-primary-fixed-variant": "#2b4e39",
+            "on-primary-container": "#a7ceb2",
+            "surface-tint": "#43664f",
+            "error-container": "#ffdad6",
+            "surface-container-low": "#f5f3ed",
+            "inverse-on-surface": "#f3f1eb",
+            "on-secondary": "#ffffff",
+            "primary-container": "#365943",
+            "on-background": "#1b1c18",
+            "surface-dim": "#dcdad4",
+            "surface-container-lowest": "#ffffff",
+            "on-surface": "#1b1c18",
+            "on-error-container": "#93000a",
+            "surface-bright": "#fcfbf7",
+            "surface-container-high": "#eae8e2",
+            "outline": "#727972"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+      background-color: #fcfbf7;
+    }
+  </style>
+</head>
+<body class="bg-[#fcfbf7] text-on-surface font-body antialiased min-h-screen flex flex-col justify-between selection:bg-secondary-container selection:text-on-secondary-fixed">
+<!-- Mobile Container (390px Max Canvas) -->
+<div class="w-full max-w-[390px] mx-auto min-h-screen flex flex-col justify-between px-6 pt-12 pb-8 bg-[#fcfbf7]">
+<!-- Main Form Content -->
+<main class="flex-1 flex flex-col justify-start">
+<!-- Top Brand Identity / Clean Editorial Header -->
+<header class="w-full mb-8 pb-3 border-b border-outline-variant">
+<div class="flex items-center gap-2">
+<span aria-hidden="true" class="material-symbols-outlined text-primary text-xl select-none">menu_book</span>
+<span class="font-headline text-lg tracking-tight font-medium text-on-surface">Minhas Compras</span>
+</div>
+</header>
+<!-- Headline & Simple Editorial Intro -->
+<section class="mb-8">
+<h1 class="font-headline text-3xl sm:text-4xl font-normal text-on-surface tracking-tight mb-2">Entrar</h1>
+<p class="font-body text-sm text-secondary leading-relaxed">
+          Acesse suas listas e planeje as compras da semana.
+        </p>
+</section>
+<!-- Authentication Form -->
+<form class="space-y-5" id="auth-form" onsubmit="event.preventDefault(); simulateAuth();">
+<!-- Campo: E-mail -->
+<div class="space-y-1.5">
+<label class="block font-label text-xs font-semibold text-on-surface" for="email-input">E-mail</label>
+<div class="relative">
+<input class="w-full bg-surface-container-lowest text-on-surface border border-outline-variant rounded-lg px-3.5 py-3 text-sm placeholder:text-outline focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors" id="email-input" name="email" placeholder="seu@email.com" required="" type="email" value="helena.ramos@exemplo.com.br"/>
+</div>
+</div>
+<!-- Campo: Senha -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-baseline">
+<label class="font-label text-xs font-semibold text-on-surface" for="password-input">Senha</label>
+<button class="font-body text-xs text-primary underline underline-offset-4 decoration-outline-variant hover:decoration-primary transition-colors focus:outline-none" id="forgot-password-link" type="button">
+              Recuperar senha
+            </button>
+</div>
+<div class="relative flex items-center">
+<input class="w-full bg-surface-container-lowest text-on-surface border border-outline-variant rounded-lg pl-3.5 pr-11 py-3 text-sm placeholder:text-outline focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors" id="password-input" name="password" placeholder="Sua senha de acesso" required="" type="password" value="mercado2024"/>
+<button aria-label="Alternar exibição de senha" class="absolute right-2 p-1.5 text-secondary hover:text-on-surface transition-colors rounded flex items-center justify-center focus:outline-none" id="toggle-password-btn" onclick="togglePasswordVisibility()" type="button">
+<span aria-hidden="true" class="material-symbols-outlined text-xl select-none" id="password-visibility-icon">visibility_off</span>
+</button>
+</div>
+</div>
+<!-- Ação Principal: Entrar -->
+<div class="pt-3">
+<button class="w-full h-12 bg-primary-container text-on-primary font-body text-sm font-semibold rounded-lg flex items-center justify-center gap-2 hover:bg-primary active:scale-[0.99] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[#fcfbf7]" id="submit-button" type="submit">
+<span id="btn-text">Entrar</span>
+<span class="hidden" id="btn-loader">
+<span class="inline-block w-4 h-4 border-2 border-on-primary border-t-transparent rounded-full animate-spin"></span>
+</span>
+</button>
+</div><div class="relative flex items-center justify-center my-4"><div class="w-full border-t border-[#E2DED4]"></div><span class="absolute bg-[#fcfbf7] px-3 font-body text-xs text-outline">ou continue com</span></div><button class="w-full h-12 bg-surface-container-lowest border border-outline-variant hover:border-primary text-on-surface font-body text-sm font-medium rounded-lg flex items-center justify-center gap-3 transition-colors duration-150 focus:outline-none focus:ring-1 focus:ring-primary" type="button"><svg aria-hidden="true" class="w-4 h-4 flex-shrink-0" viewbox="0 0 24 24"><path d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z" fill="#EA4335"></path><path d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z" fill="#4285F4"></path><path d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15s.7 5.3 1.9 7.7l3.7-2.9z" fill="#FBBC05"></path><path d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.4-6.4-5.2L1.9 16C3.7 20.4 7.5 23 12 23z" fill="#34A853"></path></svg><span>Continuar com Google</span></button>
+</form>
+<!-- Divisor e Ação Secundária: Criar Conta -->
+<div class="mt-8 pt-6 border-t border-outline-variant flex flex-col items-center">
+<p class="font-body text-xs text-secondary mb-3">Ainda não tem conta?</p>
+<button class="w-full h-11 bg-transparent border border-outline-variant text-on-surface hover:border-primary hover:text-primary font-body text-sm font-medium rounded-lg transition-colors duration-150 flex items-center justify-center focus:outline-none focus:ring-1 focus:ring-primary" type="button">
+          Criar conta
+        </button>
+</div>
+</main>
+</div>
+<!-- Micro-interactions Script -->
+<script>
+    function togglePasswordVisibility() {
+      const passwordInput = document.getElementById('password-input');
+      const icon = document.getElementById('password-visibility-icon');
+      
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        icon.textContent = 'visibility';
+      } else {
+        passwordInput.type = 'password';
+        icon.textContent = 'visibility_off';
+      }
+    }
+
+    function simulateAuth() {
+      const submitBtn = document.getElementById('submit-button');
+      const btnText = document.getElementById('btn-text');
+      const btnLoader = document.getElementById('btn-loader');
+
+      // Estado de Carregamento
+      btnText.textContent = 'Autenticando...';
+      btnLoader.classList.remove('hidden');
+      submitBtn.disabled = true;
+      submitBtn.classList.add('opacity-90');
+
+      setTimeout(() => {
+        btnText.textContent = 'Entrar';
+        btnLoader.classList.add('hidden');
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-90');
+      }, 1400);
+    }
+  </script>
+</body></html>

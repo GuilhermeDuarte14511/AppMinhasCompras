@@ -1,10 +1,9 @@
+import 'shared_lists/widgets/shared_lists_overview.dart';
 import 'dart:async';
-import 'dart:math';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 
 import '../application/ports.dart';
@@ -13,31 +12,23 @@ import '../application/sign_out_policy.dart';
 import '../application/shared_lists_refresh_coordinator.dart';
 import '../application/store_and_services.dart';
 import '../application/sync_diagnostics.dart';
-import '../core/utils/format_utils.dart';
 import '../data/remote/shared_lists_repository.dart';
 import '../domain/models_and_utils.dart';
-import '../domain/pantry.dart';
 import 'account_pages.dart';
 import 'catalog_products_page.dart';
 import 'dialogs_and_sheets.dart';
-import 'launch.dart';
+import 'dashboard/dashboard_content.dart';
+import 'dashboard/dashboard_icons.dart';
 import 'my_lists_page.dart';
 import 'pantry_page.dart';
 import 'purchase_history_page.dart';
 import 'shared_lists_pages.dart';
 import 'shopping_list_editor_page.dart';
-import 'theme/app_tokens.dart';
 import 'utils/app_modal.dart';
 import 'utils/app_page_route.dart';
 import 'utils/app_toast.dart';
 
 enum _DashboardMenuAction { options, catalog, pantry, signOut }
-
-bool _prefersReducedMotion(BuildContext context) =>
-    MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-
-Duration _adaptiveMotionDuration(BuildContext context, Duration fallback) =>
-    _prefersReducedMotion(context) ? Duration.zero : fallback;
 
 String _capitalizeText(String value) {
   if (value.isEmpty) {
@@ -98,18 +89,20 @@ Future<ShoppingListModel?> _runSmartReplenishmentFlow(
     return null;
   }
 
-  final name = await showListNameDialog(
+  final setup = await showListSetupDialog(
     context,
     title: 'Nova lista por reposição inteligente',
     confirmLabel: 'Criar lista',
     initialValue: _buildReplenishmentListName(selectedSuggestions.first.source),
   );
-  if (!context.mounted || name == null) {
+  if (!context.mounted || setup == null) {
     return null;
   }
 
   return store.createListFromDrafts(
-    name: name,
+    name: setup.name,
+    budget: setup.budget,
+    paymentBalances: setup.paymentBalances,
     drafts: selectedSuggestions
         .map((suggestion) => suggestion.toDraft())
         .toList(growable: false),
@@ -341,6 +334,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Future<void> _openListEditor(
     ShoppingListModel list, {
     bool startVoiceCapture = false,
+    bool startMarketMode = false,
   }) {
     return Navigator.push<void>(
       context,
@@ -351,6 +345,7 @@ class _DashboardPageState extends State<DashboardPage> {
           sharedListsRepository: widget.sharedListsRepository,
           voiceRecognitionService: widget.voiceRecognitionService,
           startVoiceCapture: startVoiceCapture,
+          startMarketMode: startMarketMode,
         ),
       ),
     );
@@ -521,18 +516,26 @@ class _DashboardPageState extends State<DashboardPage> {
     bool startVoiceCapture = false,
   }) async {
     final suggested = basedOn == null ? '' : '${basedOn.name} - nova';
-    final name = await showListNameDialog(
+    final setup = await showListSetupDialog(
       context,
       title: 'Nova lista de compras',
       confirmLabel: 'Criar lista',
       initialValue: suggested,
+      initialBudget: basedOn?.budget,
+      initialPaymentBalances: basedOn?.paymentBalances ?? const [],
     );
 
-    if (!mounted || name == null) {
+    if (!mounted || setup == null) {
       return;
     }
 
-    final created = await widget.store.createList(name: name, basedOn: basedOn);
+    final created = await widget.store.createList(
+      name: setup.name,
+      basedOn: basedOn,
+      budget: setup.budget,
+      clearBudget: setup.budget == null,
+      paymentBalances: setup.paymentBalances,
+    );
 
     if (!mounted) {
       return;
@@ -796,13 +799,11 @@ class _DashboardPageState extends State<DashboardPage> {
     if (uid.isEmpty) {
       _lastSharedLists = const <SharedShoppingListSummary>[];
       _lastSharedListsUid = null;
-      return const Card(
-        elevation: 0,
-        child: ListTile(
-          leading: Icon(Icons.lock_outline_rounded),
-          title: Text('Entre para ver listas compartilhadas'),
-          subtitle: Text('Faça login para carregar seus convites e listas.'),
-        ),
+      return SharedListsOverview(
+        lists: const [],
+        currentUid: '',
+        onJoin: _joinSharedListByCode,
+        onOpen: _openSharedListEditor,
       );
     }
     if (_lastSharedListsUid != uid) {
@@ -822,9 +823,12 @@ class _DashboardPageState extends State<DashboardPage> {
       builder: (context, sharedSnapshot) {
         if (sharedSnapshot.connectionState == ConnectionState.waiting &&
             !sharedSnapshot.hasData) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 18),
-            child: Center(child: CircularProgressIndicator()),
+          return SharedListsOverview(
+            lists: const [],
+            currentUid: uid,
+            onJoin: _joinSharedListByCode,
+            onOpen: _openSharedListEditor,
+            loading: true,
           );
         }
         if (sharedSnapshot.hasError) {
@@ -839,75 +843,22 @@ class _DashboardPageState extends State<DashboardPage> {
               sharedSnapshot.data ?? const <SharedShoppingListSummary>[];
         }
 
-        final sharedLists = sharedSnapshot.data ?? _lastSharedLists;
-        if (sharedLists.isEmpty && _sharedListsLastError != null) {
-          final refreshing = _sharedListsRefreshCoordinator.isRefreshing;
-          return Card(
-            elevation: 0,
-            child: ListTile(
-              leading: const Icon(Icons.sync_problem_rounded),
-              title: const Text(
-                'Não foi possível carregar listas compartilhadas',
+        final sharedLists = (sharedSnapshot.data ?? _lastSharedLists).where(
+          (list) =>
+              !list.isOwner(uid) ||
+              !widget.store.isListPermanentlyDeleted(
+                list.sourceLocalListId ?? '',
               ),
-              subtitle: const Text(
-                'Verifique a conexão e tente atualizar novamente.',
-              ),
-              trailing: refreshing
-                  ? const SizedBox.square(
-                      dimension: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : TextButton(
-                      onPressed: () => unawaited(
-                        _retrySharedLists(user!, _sharedListsLastError),
-                      ),
-                      child: const Text('Atualizar'),
-                    ),
-            ),
-          );
-        }
-        if (sharedLists.isEmpty) {
-          return Card(
-            elevation: 0,
-            child: ListTile(
-              leading: const Icon(Icons.group_off_rounded),
-              title: const Text('Nenhuma lista compartilhada'),
-              subtitle: const Text(
-                'Use "Entrar na lista com código" ou compartilhe uma lista sua.',
-              ),
-              trailing: TextButton(
-                onPressed: _joinSharedListByCode,
-                child: const Text('Entrar'),
-              ),
-            ),
-          );
-        }
-        return Column(
-          children: sharedLists
-              .take(5)
-              .map((shared) {
-                final isOwner = shared.isOwner(uid);
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Card(
-                    elevation: 0,
-                    child: ListTile(
-                      onTap: () => _openSharedListEditor(shared.id),
-                      leading: Icon(
-                        isOwner
-                            ? Icons.verified_user_rounded
-                            : Icons.group_rounded,
-                      ),
-                      title: Text(shared.name),
-                      subtitle: Text(
-                        '${formatCountLabel(shared.memberCount, 'membro', 'membros')} - ${isOwner ? 'Dono' : 'Membro'}',
-                      ),
-                      trailing: const Icon(Icons.chevron_right_rounded),
-                    ),
-                  ),
-                );
-              })
-              .toList(growable: false),
+        );
+        return SharedListsOverview(
+          lists: sharedLists.take(5).toList(growable: false),
+          currentUid: uid,
+          onJoin: _joinSharedListByCode,
+          onOpen: _openSharedListEditor,
+          hasError: _sharedListsLastError != null,
+          refreshing: _sharedListsRefreshCoordinator.isRefreshing,
+          onRetry: () =>
+              unawaited(_retrySharedLists(user!, _sharedListsLastError)),
         );
       },
     );
@@ -916,1216 +867,228 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     final lists = widget.store.listsByCreatedAt;
-    final totalCatalogProducts = widget.store.catalogProducts.length;
-    final openListsCount = lists.where((list) => !list.isClosed).length;
-    final closedListsCount = lists.where((list) => list.isClosed).length;
-    final pendingValue = lists.fold<double>(
-      0,
-      (total, list) => total + list.pendingValue,
-    );
     final sharedRepository = widget.sharedListsRepository;
     final authUser = sharedRepository == null
         ? null
         : FirebaseAuth.instance.currentUser;
     final canUseSharing = sharedRepository != null;
-    final smartSuggestions = widget.store.suggestReplenishmentItems(limit: 5);
-    final quickActions = <_DashboardQuickAction>[
-      _DashboardQuickAction(
+    final quickActions = <DashboardShortcut>[
+      DashboardShortcut(
         key: const ValueKey('dash_action_new'),
         title: 'Nova lista',
         subtitle: 'Comece do zero.',
-        icon: Icons.playlist_add_rounded,
+        icon: DashboardIcons.add,
         onTap: _createNewList,
       ),
       if (widget.voiceRecognitionService != null)
-        _DashboardQuickAction(
+        DashboardShortcut(
           key: const ValueKey('dash_action_voice'),
           title: 'Adicionar por voz',
           subtitle: 'Fale vários itens.',
-          icon: Icons.mic_rounded,
+          icon: DashboardIcons.voice,
           onTap: _openVoiceQuickAdd,
         ),
-      _DashboardQuickAction(
+      DashboardShortcut(
         key: const ValueKey('dash_action_lists'),
-        title: 'Listas',
-        subtitle: 'Abra e edite.',
-        icon: Icons.inventory_2_rounded,
+        title: 'Minhas listas',
+        subtitle: '${lists.where((list) => !list.isClosed).length} ativas',
+        icon: DashboardIcons.lists,
         onTap: _openMyLists,
       ),
       if (canUseSharing)
-        _DashboardQuickAction(
+        DashboardShortcut(
           key: const ValueKey('dash_action_join_code'),
           title: 'Entrar com código',
           subtitle: 'Acesse uma lista.',
-          icon: Icons.group_add_rounded,
+          icon: DashboardIcons.join,
           onTap: _joinSharedListByCode,
         ),
-      _DashboardQuickAction(
+      DashboardShortcut(
         key: const ValueKey('dash_action_history'),
-        title: 'Histórico',
-        subtitle: 'Veja gastos.',
-        icon: Icons.event_note_rounded,
+        title: 'Histórico mensal',
+        subtitle: 'Compras finalizadas',
+        icon: DashboardIcons.history,
         onTap: _openPurchaseHistory,
       ),
-      _DashboardQuickAction(
+      DashboardShortcut(
         key: const ValueKey('dash_action_template'),
         title: 'Catálogo',
-        subtitle: 'Produtos salvos.',
-        icon: Icons.local_offer_rounded,
+        subtitle: '${widget.store.catalogProducts.length} produtos cadastrados',
+        icon: DashboardIcons.catalog,
         onTap: _openCatalog,
       ),
-      _DashboardQuickAction(
+      DashboardShortcut(
         key: const ValueKey('dash_action_pantry'),
         title: 'Despensa',
         subtitle: 'Veja o que repor.',
-        icon: Icons.kitchen_rounded,
+        icon: DashboardIcons.pantry,
         onTap: _openPantry,
       ),
-      _DashboardQuickAction(
+      DashboardShortcut(
         key: const ValueKey('dash_action_based'),
         title: 'Usar modelo',
         subtitle: 'Copie uma lista.',
-        icon: Icons.copy_all_rounded,
+        icon: DashboardIcons.copy,
         onTap: _createBasedOnOld,
       ),
     ];
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Minhas Compras'),
-        actions: [
-          PopupMenuButton<_DashboardMenuAction>(
-            onSelected: (action) {
-              switch (action) {
-                case _DashboardMenuAction.options:
-                  _openOptions();
-                  return;
-                case _DashboardMenuAction.catalog:
-                  _openCatalog();
-                  return;
-                case _DashboardMenuAction.pantry:
-                  _openPantry();
-                  return;
-                case _DashboardMenuAction.signOut:
-                  unawaited(_requestSignOut());
-                  return;
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: _DashboardMenuAction.options,
-                child: Text('Opções'),
-              ),
-              const PopupMenuItem(
-                value: _DashboardMenuAction.catalog,
-                child: Text('Catálogo de produtos'),
-              ),
-              const PopupMenuItem(
-                value: _DashboardMenuAction.pantry,
-                child: Text('Despensa'),
-              ),
-              if (widget.onSignOut != null)
-                const PopupMenuItem(
-                  value: _DashboardMenuAction.signOut,
-                  child: Text('Sair'),
-                ),
-            ],
-          ),
-        ],
-      ),
-      body: AppGradientScene(
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _EntryAnimation(
-                  key: const ValueKey('dash_summary'),
-                  delay: Duration.zero,
-                  child: _HomeSummaryCard(
-                    totalLists: lists.length,
-                    totalCatalogProducts: totalCatalogProducts,
-                    openListsCount: openListsCount,
-                    closedListsCount: closedListsCount,
-                    pendingValue: pendingValue,
-                    onCreateList: _createNewList,
-                    onOpenLists: _openMyLists,
-                    onOpenHistory: _openPurchaseHistory,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                if (smartSuggestions.isNotEmpty) ...[
-                  _EntryAnimation(
-                    key: const ValueKey('dash_smart_replenishment_card'),
-                    delay: const Duration(milliseconds: 20),
-                    child: _SmartReplenishmentCard(
-                      suggestions: smartSuggestions,
-                      onTap: _createSmartReplenishmentList,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                ],
-                _EntryAnimation(
-                  key: const ValueKey('dash_actions_grid'),
-                  delay: const Duration(milliseconds: 40),
-                  child: _QuickActionsGrid(actions: quickActions),
-                ),
-                const SizedBox(height: 14),
-                _EntryAnimation(
-                  key: const ValueKey('dash_pantry_strip'),
-                  delay: const Duration(milliseconds: 80),
-                  child: _DashboardPantryStrip(
-                    items: widget.store.pantryItems,
-                    onTap: _openPantry,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                _EntryAnimation(
-                  key: const ValueKey('dash_recent_title'),
-                  delay: const Duration(milliseconds: 160),
-                  child: _SectionHeader(
-                    title: 'Listas recentes',
-                    subtitle: lists.isEmpty
-                        ? 'Crie sua primeira lista para começar.'
-                        : 'Abra rapidamente suas ultimas listas salvas.',
-                    actionLabel: lists.isEmpty ? null : 'Ver todas',
-                    onAction: lists.isEmpty ? null : _openMyLists,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                if (lists.isEmpty)
-                  _EntryAnimation(
-                    key: const ValueKey('dash_recent_empty'),
-                    delay: const Duration(milliseconds: 190),
-                    child: const _EmptyRecentListsCard(),
-                  )
-                else
-                  ...lists.take(3).toList().asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final list = entry.value;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _EntryAnimation(
-                        key: ValueKey('dash_recent_${list.id}'),
-                        delay: Duration(
-                          milliseconds: 190 + min(120, index * 35),
-                        ),
-                        child: _RecentListCard(
-                          list: list,
-                          onTap: () {
-                            _openListEditor(list);
-                          },
-                        ),
-                      ),
-                    );
-                  }),
-                if (canUseSharing) ...[
-                  const SizedBox(height: 14),
-                  _EntryAnimation(
-                    key: const ValueKey('dash_shared_title'),
-                    delay: const Duration(milliseconds: 210),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Listas compartilhadas',
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.w800),
-                          ),
-                        ),
-                        TextButton.icon(
-                          onPressed:
-                              authUser == null ||
-                                  _sharedListsRefreshCoordinator.isRefreshing
-                              ? null
-                              : () => unawaited(
-                                  _retrySharedLists(authUser, null),
-                                ),
-                          icon: _sharedListsRefreshCoordinator.isRefreshing
-                              ? const SizedBox.square(
-                                  dimension: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.refresh_rounded, size: 19),
-                          label: Text(
-                            _sharedListsRefreshCoordinator.isRefreshing
-                                ? 'Atualizando'
-                                : 'Atualizar',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _buildSharedListsPanel(sharedRepository, authUser),
-                ],
-              ],
+    final theme = dashboardTheme(Theme.of(context));
+    return Theme(
+      data: theme,
+      child: Builder(
+        builder: (context) => Scaffold(
+          appBar: AppBar(
+            title: const Text(
+              'Minhas Compras',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _createNewList,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Nova lista'),
-      ),
-    );
-  }
-}
-
-class _HomeSummaryCard extends StatelessWidget {
-  const _HomeSummaryCard({
-    required this.totalLists,
-    required this.totalCatalogProducts,
-    required this.openListsCount,
-    required this.closedListsCount,
-    required this.pendingValue,
-    required this.onCreateList,
-    required this.onOpenLists,
-    required this.onOpenHistory,
-  });
-
-  final int totalLists;
-  final int totalCatalogProducts;
-  final int openListsCount;
-  final int closedListsCount;
-  final double pendingValue;
-  final VoidCallback onCreateList;
-  final VoidCallback onOpenLists;
-  final VoidCallback onOpenHistory;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Semantics(
-      container: true,
-      label:
-          'Resumo das compras. $openListsCount listas abertas e ${formatCurrency(pendingValue)} pendente.',
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          borderRadius: BorderRadius.circular(AppTokens.radiusXl),
-          border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Resumo das compras',
-                          style: textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w900,
-                            color: colorScheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          totalLists == 0
-                              ? 'Crie uma lista para acompanhar itens e valores.'
-                              : 'Veja o que falta comprar e abra suas listas rápido.',
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  FilledButton.icon(
-                    onPressed: onCreateList,
-                    icon: const Icon(Icons.add_rounded),
-                    label: const Text('Nova lista'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _SummaryPill(
-                    icon: Icons.pending_actions_rounded,
-                    label: 'Pendente',
-                    value: formatCurrency(pendingValue),
-                  ),
-                  _SummaryPill(
-                    icon: Icons.radio_button_checked_rounded,
-                    label: 'Abertas',
-                    value: '$openListsCount',
-                  ),
-                  _SummaryPill(
-                    icon: Icons.lock_rounded,
-                    label: 'Fechadas',
-                    value: '$closedListsCount',
-                  ),
-                  _SummaryPill(
-                    icon: Icons.list_alt_rounded,
-                    label: 'Listas',
-                    value: '$totalLists',
-                  ),
-                  _SummaryPill(
-                    icon: Icons.shopping_basket_rounded,
-                    label: 'Produtos',
-                    value: '$totalCatalogProducts',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _QuickSummaryActionChip(
-                    icon: Icons.inventory_2_rounded,
-                    label: 'Ver listas',
-                    onTap: onOpenLists,
-                  ),
-                  _QuickSummaryActionChip(
-                    icon: Icons.event_note_rounded,
-                    label: 'Histórico',
-                    onTap: onOpenHistory,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SmartReplenishmentCard extends StatelessWidget {
-  const _SmartReplenishmentCard({
-    required this.suggestions,
-    required this.onTap,
-  });
-
-  final List<ReplenishmentSuggestion> suggestions;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final estimatedTotal = suggestions.fold<double>(
-      0,
-      (sum, suggestion) => sum + suggestion.estimatedTotal,
-    );
-    final recurringCount = suggestions
-        .where(
-          (suggestion) =>
-              suggestion.source == ReplenishmentSuggestionSource.recurring,
-        )
-        .length;
-
-    return Semantics(
-      container: true,
-      button: true,
-      label: 'Criar lista por reposição inteligente',
-      value: 'Previsto: ${formatCurrency(estimatedTotal)}',
-      hint: 'Toque para revisar os itens sugeridos.',
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppTokens.radiusXl),
-          onTap: () {
-            Feedback.forTap(context);
-            onTap();
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-                      ),
-                      child: const Padding(
-                        padding: EdgeInsets.all(11),
-                        child: Icon(Icons.auto_awesome_rounded),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Próxima compra sugerida',
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w800),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            recurringCount > 0
-                                ? 'Baseada nos itens que você repete.'
-                                : 'Comece com produtos do seu catálogo.',
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: colorScheme.onSurfaceVariant),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    return Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: suggestions
-                          .take(3)
-                          .map(
-                            (suggestion) => _PillLabel(
-                              icon:
-                                  suggestion.source ==
-                                      ReplenishmentSuggestionSource.recurring
-                                  ? Icons.repeat_rounded
-                                  : Icons.shopping_bag_rounded,
-                              text: suggestion.name,
-                              maxWidth: constraints.maxWidth,
-                            ),
-                          )
-                          .toList(growable: false),
-                    );
-                  },
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Previsto: ${formatCurrency(estimatedTotal)}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    FilledButton.icon(
-                      onPressed: onTap,
-                      icon: const Icon(Icons.playlist_add_check_rounded),
-                      label: const Text('Criar lista'),
-                    ),
-                  ],
-                ),
-                if (suggestions.length > 3) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    '+${suggestions.length - 3} itens sugeridos',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ],
+            titleSpacing: 4,
+            leading: IconButton(
+              tooltip: 'Minhas listas',
+              onPressed: _openMyLists,
+              icon: const Icon(DashboardIcons.book),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SummaryPill extends StatelessWidget {
-  const _SummaryPill({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Semantics(
-      label: '$label: $value',
-      readOnly: true,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-          border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.52),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 17),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(1),
+              child: Divider(
+                height: 1,
+                color: Theme.of(context).colorScheme.outlineVariant,
               ),
-              const SizedBox(width: 6),
-              AnimatedSwitcher(
-                duration: _adaptiveMotionDuration(
-                  context,
-                  AppTokens.motionMedium,
+            ),
+            actions: [
+              if (widget.showCloudSyncStatus)
+                IconButton(
+                  tooltip: widget.isCloudSyncing
+                      ? 'Sincronizando'
+                      : !widget.hasInternetConnection
+                      ? 'Sem internet'
+                      : widget.hasPendingCloudSync
+                      ? 'Alterações pendentes'
+                      : 'Sincronizado',
+                  onPressed: _openOptions,
+                  icon: Icon(
+                    widget.isCloudSyncing
+                        ? DashboardIcons.sync
+                        : !widget.hasInternetConnection
+                        ? DashboardIcons.offline
+                        : widget.hasPendingCloudSync
+                        ? DashboardIcons.upload
+                        : DashboardIcons.synced,
+                  ),
                 ),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, animation) {
-                  final slide = Tween<Offset>(
-                    begin: const Offset(0, 0.1),
-                    end: Offset.zero,
-                  ).animate(animation);
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(position: slide, child: child),
-                  );
+              PopupMenuButton<_DashboardMenuAction>(
+                tooltip: 'Perfil e ajustes',
+                icon: const Icon(DashboardIcons.profile),
+                onSelected: (action) {
+                  switch (action) {
+                    case _DashboardMenuAction.options:
+                      _openOptions();
+                      return;
+                    case _DashboardMenuAction.catalog:
+                      _openCatalog();
+                      return;
+                    case _DashboardMenuAction.pantry:
+                      _openPantry();
+                      return;
+                    case _DashboardMenuAction.signOut:
+                      unawaited(_requestSignOut());
+                      return;
+                  }
                 },
-                child: Text(
-                  value,
-                  key: ValueKey('$label|$value'),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurface,
-                    fontWeight: FontWeight.w800,
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: _DashboardMenuAction.options,
+                    child: Text('Opções'),
                   ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickSummaryActionChip extends StatelessWidget {
-  const _QuickSummaryActionChip({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Semantics(
-      button: true,
-      label: label,
-      child: ActionChip(
-        avatar: Icon(icon, size: 16),
-        label: Text(label),
-        onPressed: () {
-          Feedback.forTap(context);
-          onTap();
-        },
-        visualDensity: VisualDensity.compact,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-          side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.4),
-          ),
-        ),
-        backgroundColor: colorScheme.surface,
-      ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({
-    required this.title,
-    required this.subtitle,
-    this.actionLabel,
-    this.onAction,
-  });
-
-  final String title;
-  final String subtitle;
-  final String? actionLabel;
-  final VoidCallback? onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (actionLabel != null && onAction != null) ...[
-          const SizedBox(width: 12),
-          TextButton(onPressed: onAction, child: Text(actionLabel!)),
-        ],
-      ],
-    );
-  }
-}
-
-class _DashboardPantryStrip extends StatelessWidget {
-  const _DashboardPantryStrip({required this.items, required this.onTap});
-
-  final List<PantryItem> items;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final counts = <PantryStockStatus, int>{
-      for (final status in PantryStockStatus.values)
-        status: items.where((item) => item.status == status).length,
-    };
-    final needsRestock =
-        (counts[PantryStockStatus.runningLow] ?? 0) +
-        (counts[PantryStockStatus.outOfStock] ?? 0);
-    return Material(
-      color: colorScheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: AppTokens.radius(AppTokens.radiusXl),
-        side: BorderSide(color: colorScheme.outlineVariant),
-      ),
-      child: InkWell(
-        borderRadius: AppTokens.radius(AppTokens.radiusXl),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-          child: Row(
-            children: [
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer,
-                  borderRadius: AppTokens.radius(AppTokens.radiusLg),
-                ),
-                child: SizedBox(
-                  width: 46,
-                  height: 46,
-                  child: Icon(
-                    Icons.kitchen_rounded,
-                    color: colorScheme.onPrimaryContainer,
+                  const PopupMenuItem(
+                    value: _DashboardMenuAction.catalog,
+                    child: Text('Catálogo de produtos'),
                   ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Despensa',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      items.isEmpty
-                          ? 'Comece com produtos do catálogo.'
-                          : needsRestock == 0
-                          ? 'Tudo em ordem por aqui.'
-                          : formatCountLabel(
-                              needsRestock,
-                              'produto para repor',
-                              'produtos para repor',
-                            ),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (items.isNotEmpty) ...[
-                _PantryMiniMetric(
-                  label: 'Tenho',
-                  value: counts[PantryStockStatus.inStock] ?? 0,
-                ),
-                const SizedBox(width: 10),
-                _PantryMiniMetric(label: 'Repor', value: needsRestock),
-              ],
-              const SizedBox(width: 4),
-              const Icon(Icons.chevron_right_rounded),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PantryMiniMetric extends StatelessWidget {
-  const _PantryMiniMetric({required this.label, required this.value});
-
-  final String label;
-  final int value;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          '$value',
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        Text(
-          label,
-          style: Theme.of(
-            context,
-          ).textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
-        ),
-      ],
-    );
-  }
-}
-
-class _DashboardQuickAction {
-  const _DashboardQuickAction({
-    required this.key,
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.onTap,
-  });
-
-  final Key key;
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final VoidCallback onTap;
-}
-
-class _QuickActionsGrid extends StatelessWidget {
-  const _QuickActionsGrid({required this.actions});
-
-  final List<_DashboardQuickAction> actions;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 560 ? 3 : 2;
-        const spacing = 10.0;
-        final itemWidth =
-            (constraints.maxWidth - (spacing * (columns - 1))) / columns;
-
-        return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
-          children: [
-            for (final action in actions)
-              SizedBox(
-                width: itemWidth,
-                child: _QuickActionTile(
-                  key: action.key,
-                  title: action.title,
-                  subtitle: action.subtitle,
-                  icon: action.icon,
-                  onTap: action.onTap,
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _QuickActionTile extends StatelessWidget {
-  const _QuickActionTile({
-    super.key,
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.onTap,
-  });
-
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Semantics(
-      button: true,
-      label: title,
-      hint: subtitle,
-      child: Card(
-        elevation: 0,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () {
-            Feedback.forTap(context);
-            onTap();
-          },
-          child: SizedBox(
-            height: 106,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(9),
-                      child: Icon(icon, size: 20),
-                    ),
+                  const PopupMenuItem(
+                    value: _DashboardMenuAction.pantry,
+                    child: Text('Despensa'),
                   ),
-                  const Spacer(),
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
+                  if (widget.onSignOut != null)
+                    const PopupMenuItem(
+                      value: _DashboardMenuAction.signOut,
+                      child: Text('Sair'),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
                 ],
               ),
+            ],
+          ),
+
+          body: SafeArea(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 390),
+                child: DashboardContent(
+                  lists: lists,
+                  catalogCount: widget.store.catalogProducts.length,
+                  pantry: widget.store.pantryItems,
+                  suggestions: widget.store.suggestReplenishmentItems(limit: 5),
+                  shortcuts: quickActions,
+                  onCreate: _createNewList,
+                  onLists: _openMyLists,
+                  onReplenish: _createSmartReplenishmentList,
+                  onPantry: _openPantry,
+                  activeList: _preferredOpenList(),
+                  onOpenList: (list) => _openListEditor(list),
+                  onContinue: (list) => _openListEditor(
+                    list,
+                    startMarketMode: list.items.isNotEmpty,
+                  ),
+                  sharedSection: !canUseSharing
+                      ? null
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Listas compartilhadas',
+                                    style: theme.textTheme.titleMedium,
+                                  ),
+                                ),
+                                TextButton.icon(
+                                  onPressed:
+                                      authUser == null ||
+                                          _sharedListsRefreshCoordinator
+                                              .isRefreshing
+                                      ? null
+                                      : () => unawaited(
+                                          _retrySharedLists(authUser, null),
+                                        ),
+                                  icon:
+                                      _sharedListsRefreshCoordinator
+                                          .isRefreshing
+                                      ? const SizedBox.square(
+                                          dimension: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(Icons.refresh, size: 18),
+                                  label: Text(
+                                    _sharedListsRefreshCoordinator.isRefreshing
+                                        ? 'Atualizando'
+                                        : 'Atualizar',
+                                  ),
+                                ),
+                              ],
+                            ),
+                            _buildSharedListsPanel(sharedRepository, authUser),
+                          ],
+                        ),
+                ),
+              ),
             ),
           ),
         ),
       ),
     );
-  }
-}
-
-class _RecentListCard extends StatelessWidget {
-  const _RecentListCard({required this.list, required this.onTap});
-
-  final ShoppingListModel list;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final lineItemsCount = list.items.length;
-    final purchasedCount = list.purchasedItemsCount;
-    final progress = lineItemsCount == 0
-        ? 0.0
-        : purchasedCount / lineItemsCount;
-    final backgroundColor = list.isClosed
-        ? colorScheme.surfaceContainerLow
-        : colorScheme.surface;
-    final borderColor = list.isClosed
-        ? colorScheme.outline.withValues(alpha: 0.5)
-        : colorScheme.outlineVariant.withValues(alpha: 0.54);
-
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      color: Colors.transparent,
-      elevation: 0,
-      child: AnimatedContainer(
-        duration: _adaptiveMotionDuration(
-          context,
-          const Duration(milliseconds: 220),
-        ),
-        curve: Curves.easeOutCubic,
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(AppTokens.radiusXl),
-          border: Border.all(color: borderColor),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppTokens.radiusXl),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        list.name,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        _PillLabel(
-                          icon: list.isClosed
-                              ? Icons.lock_rounded
-                              : Icons.radio_button_checked_rounded,
-                          text: list.isClosed ? 'Fechada' : 'Ativa',
-                          backgroundColor: list.isClosed
-                              ? colorScheme.surfaceContainerHighest
-                              : colorScheme.primaryContainer,
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          formatShortDate(list.updatedAt),
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: colorScheme.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  lineItemsCount == 0
-                      ? 'Sem itens adicionados ainda.'
-                      : list.isClosed
-                      ? purchasedCount == 1
-                            ? 'Compra finalizada com 1 item comprado.'
-                            : 'Compra finalizada com $purchasedCount itens comprados.'
-                      : '$purchasedCount de ${formatItemCount(lineItemsCount)} já foram comprados.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 7,
-                    color: list.isClosed
-                        ? colorScheme.tertiary
-                        : colorScheme.primary,
-                    backgroundColor: colorScheme.surfaceContainerHighest,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _PillLabel(
-                      icon: Icons.shopping_basket_rounded,
-                      text: '${list.totalItems} itens',
-                    ),
-                    _PillLabel(
-                      icon: Icons.check_circle_outline_rounded,
-                      text: '$purchasedCount/$lineItemsCount comprados',
-                    ),
-                    _PillLabel(
-                      icon: Icons.attach_money_rounded,
-                      text: formatCurrency(list.totalValue),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PillLabel extends StatelessWidget {
-  const _PillLabel({
-    required this.icon,
-    required this.text,
-    this.backgroundColor,
-    this.maxWidth,
-  });
-
-  final IconData icon;
-  final String text;
-  final Color? backgroundColor;
-  final double? maxWidth;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final bg = backgroundColor ?? colorScheme.surfaceContainerHighest;
-    final fg = colorScheme.onSurface;
-    final textStyle = Theme.of(
-      context,
-    ).textTheme.labelMedium?.copyWith(color: fg, fontWeight: FontWeight.w700);
-    final label = Semantics(
-      label: text,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Row(
-          mainAxisSize: maxWidth == null ? MainAxisSize.min : MainAxisSize.max,
-          children: [
-            Icon(icon, size: 16, color: fg),
-            const SizedBox(width: 5),
-            if (maxWidth == null)
-              Text(
-                text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: textStyle,
-              )
-            else
-              Expanded(
-                child: Text(
-                  text,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: textStyle,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-    final pill = DecoratedBox(
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: label,
-    );
-
-    if (maxWidth == null) {
-      return pill;
-    }
-
-    return SizedBox(
-      width: maxWidth,
-      child: Tooltip(
-        message: text,
-        waitDuration: const Duration(milliseconds: 450),
-        child: pill,
-      ),
-    );
-  }
-}
-
-class _EmptyRecentListsCard extends StatelessWidget {
-  const _EmptyRecentListsCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-              ),
-              child: const Padding(
-                padding: EdgeInsets.all(10),
-                child: Icon(Icons.inventory_2_rounded),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Nenhuma lista recente ainda. Crie a primeira para começar.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EntryAnimation extends StatelessWidget {
-  const _EntryAnimation({super.key, required this.child, required this.delay});
-
-  final Widget child;
-  final Duration delay;
-
-  @override
-  Widget build(BuildContext context) {
-    if (_prefersReducedMotion(context)) {
-      return child;
-    }
-    return child
-        .animate(delay: delay)
-        .fadeIn(duration: AppTokens.motionMedium, curve: Curves.easeOutCubic)
-        .slideY(
-          begin: 0.04,
-          end: 0,
-          duration: AppTokens.motionMedium,
-          curve: Curves.easeOutCubic,
-        )
-        .scaleXY(
-          begin: 0.985,
-          end: 1,
-          duration: AppTokens.motionMedium,
-          curve: Curves.easeOutBack,
-        );
   }
 }

@@ -3,7 +3,7 @@ import 'package:lista_compras_material/src/application/shared_list_sync_policy.d
 
 void main() {
   test(
-    'owned shared mirror pulls from shared even when local copy looks newer',
+    'owned shared mirror preserves a newer local copy',
     () {
       final action = resolveOwnedSharedListMirrorAction(
         hasSourceLocalListId: true,
@@ -12,7 +12,7 @@ void main() {
         sharedUpdatedAt: DateTime(2026, 6, 19),
       );
 
-      expect(action, SharedListMirrorAction.pullSharedToLocal);
+      expect(action, SharedListMirrorAction.skip);
     },
   );
 

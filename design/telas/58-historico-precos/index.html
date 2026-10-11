@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=390, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Histórico de Preços — Minhas Compras</title>
+<!-- Google Fonts: Newsreader (Editorial Serif) & Public Sans (Body/Controls) -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "on-primary-fixed-variant": "#2b4e39",
+            "on-tertiary-container": "#f2b6ba",
+            "surface-container-low": "#f5f3ed",
+            "on-background": "#1b1c18",
+            "on-primary-container": "#a7ceb2",
+            "surface-container": "#f0eee8",
+            "error-container": "#ffdad6",
+            "surface-container-lowest": "#ffffff",
+            "tertiary-fixed": "#ffdadb",
+            "on-secondary": "#ffffff",
+            "on-secondary-fixed": "#191d10",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "secondary-container": "#e0e5cf",
+            "on-tertiary-fixed": "#321015",
+            "on-primary-fixed": "#002110",
+            "on-error": "#ffffff",
+            "error": "#ba1a1a",
+            "tertiary-container": "#724549",
+            "tertiary": "#582f33",
+            "secondary": "#5b604f",
+            "surface-container-highest": "#e4e2dd",
+            "on-surface-variant": "#424843",
+            "on-primary": "#ffffff",
+            "inverse-on-surface": "#f3f1eb",
+            "surface-bright": "#fbf9f3",
+            "secondary-fixed-dim": "#c4c9b4",
+            "primary-fixed": "#c4eccf",
+            "outline-variant": "#c1c8c1",
+            "on-secondary-fixed-variant": "#444939",
+            "primary-fixed-dim": "#a9d0b4",
+            "surface-dim": "#dcdad4",
+            "primary": "#1f412d",
+            "on-secondary-container": "#616655",
+            "on-tertiary": "#ffffff",
+            "surface": "#fbf9f3",
+            "secondary-fixed": "#e0e5cf",
+            "surface-tint": "#43664f",
+            "surface-container-high": "#eae8e2",
+            "outline": "#727972",
+            "on-error-container": "#93000a",
+            "on-surface": "#1b1c18",
+            "surface-variant": "#e4e2dd",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "inverse-surface": "#30312d",
+            "background": "#fbf9f3",
+            "inverse-primary": "#a9d0b4",
+            "primary-container": "#365943"
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "2xl": "1rem",
+            "full": "9999px"
+          },
+          fontFamily: {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      line-height: 1;
+      text-transform: none;
+      letter-spacing: normal;
+      word-wrap: normal;
+      white-space: nowrap;
+      direction: ltr;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface antialiased flex items-center justify-center min-h-screen p-0 m-0">
+<!-- Mobile Viewport Mockup (390px x 844px) -->
+<div class="relative w-[390px] h-[844px] overflow-hidden shadow-2xl flex flex-col justify-end bg-surface">
+<!-- Background Simulated Screen (Minhas Compras: Lista de Mercado Detalhada) -->
+<div class="absolute inset-0 z-0 flex flex-col pointer-events-none select-none filter blur-[2px] opacity-75">
+<!-- Top Bar App Background -->
+<header class="h-14 px-4 flex items-center justify-between border-b border-outline-variant bg-surface">
+<span class="material-symbols-outlined text-primary text-2xl">menu</span>
+<span class="font-display font-medium text-2xl tracking-tight text-on-surface">Minhas Compras</span>
+<span class="material-symbols-outlined text-on-surface-variant text-2xl">search</span>
+</header>
+<!-- Resumo tipográfico simulado -->
+<div class="px-5 py-4 border-b border-outline-variant bg-surface-container-low flex justify-between items-baseline">
+<div>
+<span class="text-xs font-label text-secondary uppercase tracking-wider block">Total Previsto</span>
+<span class="font-display text-2xl text-on-surface font-normal">R$ 142,30</span>
+</div>
+<span class="text-xs font-body text-secondary">6 de 12 itens</span>
+</div>
+<!-- Itens de lista no fundo -->
+<div class="p-4 space-y-3">
+<div class="py-3 border-b border-outline-variant flex justify-between items-start">
+<div>
+<p class="font-body text-base font-medium text-on-surface">Leite integral pasteurizado 1L</p>
+<p class="text-xs text-secondary">2 unidades • R$ 5,80 cada</p>
+</div>
+<span class="font-body text-base text-on-surface tabular-nums">R$ 11,60</span>
+</div>
+<div class="py-3 border-b border-outline-variant flex justify-between items-start bg-secondary-container/20 -mx-4 px-4">
+<div>
+<p class="font-body text-base font-semibold text-primary">Café especial torrado e moído 250g</p>
+<p class="text-xs text-secondary">1 pacote • Selecionado</p>
+</div>
+<span class="font-body text-base font-semibold text-primary tabular-nums">R$ 24,90</span>
+</div>
+<div class="py-3 border-b border-outline-variant flex justify-between items-start">
+<div>
+<p class="font-body text-base font-medium text-on-surface">Queijo minas padrão 500g</p>
+<p class="text-xs text-secondary">1 peça</p>
+</div>
+<span class="font-body text-base text-on-surface tabular-nums">R$ 32,50</span>
+</div>
+</div>
+</div>
+<!-- Scrim Escuro Translúcido -->
+<div class="absolute inset-0 z-10 bg-black/55 transition-opacity duration-200"></div>
+<!-- Modal Bottom Sheet: EditorPriceHistorySheet -->
+<section aria-labelledby="sheet-title" aria-modal="true" class="relative z-20 w-full bg-surface-container-lowest rounded-t-2xl border-t border-x border-outline-variant shadow-lg flex flex-col max-h-[85%] pb-4 transition-all ease-out pb-8" role="dialog">
+<!-- Drag Handle Centralizado -->
+<div class="w-full flex items-center justify-center pt-3 pb-1">
+<div aria-hidden="true" class="w-9 h-1 rounded-full bg-outline-variant"></div>
+</div>
+<!-- Cabeçalho do Bottom Sheet -->
+<header class="px-5 pt-2 pb-3.5 border-b border-outline-variant">
+<div class="flex items-start justify-between">
+<div class="flex-1 pr-3">
+<h2 class="font-display font-medium text-2xl tracking-tight text-on-surface leading-tight" id="sheet-title">
+              Histórico de preços
+            </h2>
+<p class="font-body text-sm font-normal text-secondary mt-0.5 leading-snug">
+              Café especial torrado e moído 250g
+            </p>
+</div>
+<!-- Botão Fechar com área de toque de 48dp -->
+<button aria-label="Fechar histórico de preços" class="w-12 h-12 -mr-2 -mt-1 flex items-center justify-center rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors duration-150 active:bg-surface-container-high" type="button">
+<span class="material-symbols-outlined text-[22px]" data-icon="close">close</span>
+</button>
+</div>
+</header>
+<!-- Lista de Registros Contábeis (Estilo Caderno Editorial) -->
+<div class="px-5 py-1 divide-y divide-outline-variant overflow-y-auto"><!-- Registro 1 (Mais recente) -->
+<article class="py-3.5 flex items-center justify-between">
+<div class="flex-1">
+<div class="flex items-baseline space-x-2">
+<span class="font-body text-lg font-semibold text-on-surface tabular-nums tracking-tight">
+                R$ 24,90
+              </span>
+<span class="text-[11px] font-body font-medium text-tertiary-container bg-error-container/60 px-2 py-0.5 rounded-full inline-flex items-center tabular-nums">
+                +R$ 6,00
+              </span>
+</div>
+<time class="font-body text-xs text-secondary mt-1 block" datetime="2024-10-28T09:15">
+              28 de outubro de 2024, 09:15
+            </time>
+</div>
+</article>
+<!-- Registro 2 -->
+<article class="py-3.5 flex items-center justify-between">
+<div class="flex-1">
+<div class="flex items-baseline space-x-2">
+<span class="font-body text-lg font-medium text-on-surface tabular-nums tracking-tight">
+                R$ 18,90
+              </span>
+<span class="text-[11px] font-body font-medium text-primary bg-primary-fixed/50 px-2 py-0.5 rounded-full inline-flex items-center tabular-nums">
+                −R$ 1,50
+              </span>
+</div>
+<time class="font-body text-xs text-secondary mt-1 block" datetime="2024-10-14T16:40">
+              14 de outubro de 2024, 16:40
+            </time>
+</div>
+</article>
+<!-- Registro 3 -->
+<article class="py-3.5 flex items-center justify-between">
+<div class="flex-1">
+<div class="flex items-baseline space-x-2">
+<span class="font-body text-lg font-medium text-on-surface tabular-nums tracking-tight">
+                R$ 20,40
+              </span>
+<span class="text-[11px] font-body font-medium text-tertiary-container bg-error-container/60 px-2 py-0.5 rounded-full inline-flex items-center tabular-nums">
+                +R$ 2,90
+              </span>
+</div>
+<time class="font-body text-xs text-secondary mt-1 block" datetime="2024-09-22T11:05">
+              22 de setembro de 2024, 11:05
+            </time>
+</div>
+</article>
+<!-- Registro 4 (Inicial) -->
+<article class="py-3.5 flex items-center justify-between">
+<div class="flex-1">
+<div class="flex items-baseline space-x-2">
+<span class="font-body text-lg font-medium text-on-surface tabular-nums tracking-tight">
+                R$ 17,50
+              </span>
+<span class="text-[11px] font-body font-medium text-secondary bg-surface-container px-2 py-0.5 rounded-full inline-flex items-center">
+                Inicial
+              </span>
+</div>
+<time class="font-body text-xs text-secondary mt-1 block" datetime="2024-08-05T10:20">
+              05 de agosto de 2024, 10:20
+            </time>
+</div>
+</article></div>
+<!-- Rodapé do Modal (Apenas Ação de Fechar) -->
+</section>
+</div>
+</body></html>

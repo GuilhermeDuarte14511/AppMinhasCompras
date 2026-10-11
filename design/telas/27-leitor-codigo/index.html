@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Leitor de código — Minhas Compras</title>
+<!-- Google Fonts: Newsreader & Public Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&amp;family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "secondary-container": "#e0e5cf",
+            "primary-fixed": "#c4eccf",
+            "on-error-container": "#93000a",
+            "surface-dim": "#dcdad4",
+            "outline": "#727972",
+            "error": "#ba1a1a",
+            "secondary-fixed": "#e0e5cf",
+            "tertiary-container": "#724549",
+            "tertiary-fixed": "#ffdadb",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "primary": "#1f412d",
+            "on-primary-fixed-variant": "#2b4e39",
+            "surface-variant": "#e4e2dd",
+            "on-primary-fixed": "#002110",
+            "surface-container-low": "#f5f3ed",
+            "on-primary": "#ffffff",
+            "tertiary": "#582f33",
+            "surface-container-high": "#eae8e2",
+            "on-secondary": "#ffffff",
+            "on-secondary-fixed": "#191d10",
+            "inverse-surface": "#30312d",
+            "primary-fixed-dim": "#a9d0b4",
+            "on-tertiary-fixed": "#321015",
+            "on-error": "#ffffff",
+            "outline-variant": "#c1c8c1",
+            "surface-bright": "#fbf9f3",
+            "inverse-primary": "#a9d0b4",
+            "on-surface-variant": "#424843",
+            "surface": "#fbf9f3",
+            "inverse-on-surface": "#f3f1eb",
+            "on-tertiary-container": "#f2b6ba",
+            "secondary-fixed-dim": "#c4c9b4",
+            "on-secondary-fixed-variant": "#444939",
+            "on-tertiary": "#ffffff",
+            "surface-tint": "#43664f",
+            "primary-container": "#365943",
+            "on-primary-container": "#a7ceb2",
+            "error-container": "#ffdad6",
+            "secondary": "#5b604f",
+            "background": "#fbf9f3",
+            "surface-container-lowest": "#ffffff",
+            "on-surface": "#1b1c18",
+            "on-background": "#1b1c18",
+            "on-secondary-container": "#616655",
+            "surface-container-highest": "#e4e2dd",
+            "surface-container": "#f0eee8",
+            "tertiary-fixed-dim": "#f4b7bb"
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          fontFamily: {
+            headline: ["Newsreader", "serif"],
+            display: ["Newsreader", "serif"],
+            body: ["Public Sans", "sans-serif"],
+            label: ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: 400;
+      font-style: normal;
+      font-size: 24px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-tabular {
+      font-variant-numeric: tabular-nums;
+    }
+    /* EAN Scanner guide line animation */
+    @keyframes scanMotion {
+      0%, 100% { top: 22%; opacity: 0.35; }
+      50% { top: 78%; opacity: 0.95; }
+    }
+    .scanner-active-beam {
+      animation: scanMotion 2.4s ease-in-out infinite;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface-dim min-h-screen text-on-surface font-body antialiased flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4">
+<!-- Mobile Sheet Container (Max 390px, editorial sheet styling) -->
+<main class="w-full max-w-[390px] bg-surface rounded-t-2xl sm:rounded-2xl shadow-lg border border-outline-variant flex flex-col overflow-hidden transition-all duration-200">
+<!-- Top Handle for Sheet Drag Context -->
+<div class="w-full flex justify-center pt-2.5 pb-1 bg-surface">
+<div class="w-10 h-1 rounded-full bg-outline-variant"></div>
+</div>
+<!-- TopAppBar Component (from Shared Components JSON with precise mappings) -->
+<header class="bg-surface docked full-width top-0 border-b border-outline-variant flat no shadows flex justify-between items-center w-full px-4 h-14 max-w-full">
+<!-- Leading Button -->
+<button aria-label="Fechar" class="w-12 h-12 flex items-center justify-center rounded-lg text-on-surface hover:bg-surface-container-high active:opacity-80 transition-colors duration-150" type="button">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+<!-- Headline -->
+<h1 class="font-headline text-2xl font-normal leading-tight text-on-surface text-center flex-1">
+        Leitor de código
+      </h1>
+<!-- Trailing Button -->
+<div class="w-12 h-12"></div></header>
+<!-- Context subtitle -->
+<div class="px-5 pt-3 pb-2 text-center border-b border-outline-variant/60 bg-surface-container-lowest">
+<p class="text-[13px] leading-relaxed text-on-surface-variant font-normal">
+        Aponte a câmera para o código de barras do item
+      </p>
+</div>
+<!-- Scrollable Content Canvas -->
+<div class="px-5 py-4 overflow-y-auto max-h-[724px] space-y-4"><!-- Viewfinder Section (Camera Reticle & Framing) -->
+<section aria-labelledby="viewfinder-title" class="space-y-2">
+<h2 class="sr-only" id="viewfinder-title">Área do leitor</h2>
+<div class="relative w-full aspect-[4/3] bg-inverse-surface rounded-lg overflow-hidden border border-outline-variant flex items-center justify-center shadow-inner">
+<!-- Mock active camera preview with barcode silhouette -->
+<div class="absolute inset-0 opacity-20 flex items-center justify-center select-none pointer-events-none">
+<div class="flex items-center gap-1.5 h-28 w-4/5 justify-center">
+<div class="w-1.5 h-full bg-surface-bright"></div>
+<div class="w-0.5 h-full bg-surface-bright"></div>
+<div class="w-2.5 h-full bg-surface-bright"></div>
+<div class="w-1 h-full bg-surface-bright"></div>
+<div class="w-3 h-full bg-surface-bright"></div>
+<div class="w-0.5 h-full bg-surface-bright"></div>
+<div class="w-2 h-full bg-surface-bright"></div>
+<div class="w-1.5 h-full bg-surface-bright"></div>
+<div class="w-3 h-full bg-surface-bright"></div>
+<div class="w-0.5 h-full bg-surface-bright"></div>
+<div class="w-2 h-full bg-surface-bright"></div>
+</div>
+</div>
+<!-- Targeting Frame (Accounting clean corners) -->
+<div class="relative w-[78%] h-[68%] border border-surface-bright/20 rounded">
+<div class="absolute -top-[1px] -left-[1px] w-4 h-4 border-t-2 border-l-2 border-primary-fixed"></div>
+<div class="absolute -top-[1px] -right-[1px] w-4 h-4 border-t-2 border-r-2 border-primary-fixed"></div>
+<div class="absolute -bottom-[1px] -left-[1px] w-4 h-4 border-b-2 border-l-2 border-primary-fixed"></div>
+<div class="absolute -bottom-[1px] -right-[1px] w-4 h-4 border-b-2 border-r-2 border-primary-fixed"></div>
+<!-- Optical scanning line -->
+<div class="absolute left-1 right-1 h-[2px] bg-primary-fixed-dim shadow-[0_0_8px_#c4eccf] scanner-active-beam"></div>
+<!-- Status badge inside camera view -->
+<div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-inverse-surface/80 border border-outline/30 px-2.5 py-0.5 rounded text-[11px] text-inverse-on-surface tracking-wide">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed animate-pulse"></span>
+<span>Câmera ativa</span>
+</div>
+</div>
+</div>
+<p class="text-center text-xs text-on-surface-variant font-medium tracking-normal pt-0.5">
+    Centralize o código de barras na área demarcada
+  </p>
+</section>
+<!-- Status / Hint de permissão e funcionamento da câmera -->
+<div class="border border-outline-variant bg-surface-container-lowest rounded-lg p-3 flex items-start gap-2.5">
+<span class="material-symbols-outlined text-primary text-[20px] mt-0.5 shrink-0" data-icon="check_circle">check_circle</span>
+<p class="text-xs text-on-surface-variant leading-snug flex-1">
+    Acesso à câmera concedido e em funcionamento para leitura de códigos
+  </p>
+</div>
+<!-- Ações canônicas de suporte -->
+<div class="space-y-2 pt-2 pb-2">
+<button class="w-full h-12 bg-transparent hover:bg-surface-container border border-outline text-on-surface font-medium text-sm rounded-lg flex items-center justify-center gap-2 transition-colors duration-150 active:bg-surface-container-high" type="button">
+<span class="material-symbols-outlined text-[20px]" data-icon="refresh">refresh</span>
+<span>Reabrir câmera</span>
+</button>
+<button class="w-full h-12 bg-primary hover:bg-primary-container text-on-primary font-medium text-sm rounded-lg flex items-center justify-center gap-2 transition-colors duration-150 active:opacity-90" type="button">
+<span class="material-symbols-outlined text-[20px]" data-icon="keyboard">keyboard</span>
+<span>Digitar manualmente</span>
+</button>
+</div></div>
+<!-- Editorial footer indicator without global navigation -->
+</main>
+<script>
+    // Lightweight toggle for flash button interaction state
+    const flashBtn = document.getElementById('btn-flash');
+    let flashOn = false;
+    if (flashBtn) {
+      flashBtn.addEventListener('click', () => {
+        flashOn = !flashOn;
+        const icon = flashBtn.querySelector('span');
+        if (icon) {
+          icon.textContent = flashOn ? 'flash_off' : 'flash_on';
+          icon.setAttribute('data-icon', flashOn ? 'flash_off' : 'flash_on');
+        }
+        flashBtn.classList.toggle('text-primary-container', flashOn);
+      });
+    }
+  </script>
+</body></html>

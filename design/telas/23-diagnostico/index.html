@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sincronização e diagnóstico — Minhas Compras</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Newsreader & Public Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@300;400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container": "#f0eee8",
+            "primary-fixed": "#c4eccf",
+            "inverse-on-surface": "#f3f1eb",
+            "background": "#fcfbf7",
+            "tertiary-fixed": "#ffdadb",
+            "primary": "#1f412d",
+            "on-secondary-fixed-variant": "#444939",
+            "outline-variant": "#c1c8c1",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "on-secondary-fixed": "#191d10",
+            "on-primary-container": "#a7ceb2",
+            "on-tertiary-fixed": "#321015",
+            "on-secondary": "#ffffff",
+            "tertiary": "#582f33",
+            "surface-variant": "#e4e2dd",
+            "on-primary-fixed-variant": "#2b4e39",
+            "surface-container-highest": "#e4e2dd",
+            "surface-bright": "#fcfbf7",
+            "secondary-container": "#e0e5cf",
+            "on-surface": "#1b1c18",
+            "surface-container-low": "#f7f5ef",
+            "outline": "#727972",
+            "tertiary-container": "#724549",
+            "on-error": "#ffffff",
+            "surface-tint": "#43664f",
+            "on-background": "#1b1c18",
+            "secondary-fixed-dim": "#c4c9b4",
+            "secondary-fixed": "#e0e5cf",
+            "on-error-container": "#93000a",
+            "error": "#ba1a1a",
+            "inverse-surface": "#30312d",
+            "on-primary": "#ffffff",
+            "surface-container-high": "#eae8e2",
+            "on-surface-variant": "#424843",
+            "inverse-primary": "#a9d0b4",
+            "surface": "#fcfbf7",
+            "error-container": "#ffdad6",
+            "secondary": "#5b604f",
+            "primary-fixed-dim": "#a9d0b4",
+            "on-tertiary": "#ffffff",
+            "on-tertiary-container": "#f2b6ba",
+            "primary-container": "#2d523b",
+            "surface-container-lowest": "#ffffff",
+            "surface-dim": "#dcdad4",
+            "on-secondary-container": "#616655",
+            "on-primary-fixed": "#002110"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"],
+            "mono": ["JetBrains Mono", "monospace"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-body min-h-screen selection:bg-secondary-container selection:text-on-secondary-fixed">
+<div class="max-w-[412px] mx-auto min-h-screen flex flex-col bg-background border-x border-outline-variant/30 relative">
+<!-- 1. Header Superior -->
+<header class="bg-surface/95 backdrop-blur-sm border-b border-outline-variant/50 sticky top-0 z-30 transition-colors">
+<div class="flex justify-between items-center w-full px-4 h-14 max-w-2xl mx-auto">
+<div class="flex items-center gap-3">
+<button aria-label="Voltar" class="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container active:opacity-80 transition-all duration-150" onclick="window.history.back()" type="button">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<div class="flex flex-col">
+<h1 class="font-headline text-lg leading-tight font-normal text-on-surface tracking-tight">Sincronização e diagnóstico</h1>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+<span class="font-body text-xs text-on-surface-variant font-normal">Conectado ao Firebase</span>
+</div>
+</div>
+</div>
+<button aria-label="Atualizar" class="w-10 h-10 -mr-2 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container active:opacity-80 transition-all duration-150" id="btn-refresh-header" type="button">
+<span class="material-symbols-outlined" data-icon="refresh">refresh</span>
+</button>
+</div>
+</header>
+<!-- Conteúdo Principal - Fluxo vertical editorial leve -->
+<main class="flex-1 px-4 py-5 space-y-6">
+<!-- 2. Bloco Principal - Estado de Sincronização e Integridade -->
+<section class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-4 space-y-4">
+<div class="flex items-start justify-between">
+<div class="space-y-1">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-lg" data-icon="cloud_done">cloud_done</span>
+<span class="font-body text-sm font-semibold tracking-wide text-primary">Sincronizado</span>
+</div>
+<p class="font-body text-xs text-on-surface-variant tabular-nums">Última verificação: <span class="font-medium text-on-surface">—</span></p>
+</div>
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono uppercase bg-secondary-container text-on-secondary-fixed tracking-wider border border-outline-variant/30">
+            Estável
+          </span>
+</div>
+<div class="pt-1 flex flex-col sm:flex-row gap-2.5">
+<!-- Botão Primário: Sincronizar agora -->
+<button class="flex-1 inline-flex items-center justify-center gap-2 h-11 px-4 rounded-lg bg-primary-container text-white hover:opacity-95 active:opacity-85 transition-opacity font-body text-sm font-medium" id="btn-sync-now" type="button">
+<span class="material-symbols-outlined text-base" data-icon="sync">sync</span>
+<span>Sincronizar agora</span>
+</button>
+<!-- Botão Secundário: Copiar relatório -->
+<button class="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-lg border border-outline-variant text-on-surface hover:bg-surface-container active:opacity-80 transition-colors font-body text-sm font-medium" id="btn-copy-report" type="button">
+<span class="material-symbols-outlined text-base text-on-surface-variant" data-icon="content_copy">content_copy</span>
+<span>Copiar relatório</span>
+</button>
+</div>
+</section>
+<!-- 3. Seção: Contagens de Registros Locais -->
+<section class="space-y-2"><div class="border-b border-outline-variant/60 pb-1.5">
+<h2 class="font-body text-[11px] font-semibold tracking-wider text-on-surface-variant uppercase">
+            REGISTROS LOCAIS DO APP
+          </h2>
+</div>
+<div class="divide-y divide-outline-variant/30 text-sm">
+<div class="py-2.5 flex justify-between items-baseline">
+<span class="text-on-surface">Listas</span>
+<span class="text-on-surface-variant tabular-nums font-mono text-xs text-right">
+              — no aparelho · — na nuvem
+            </span>
+</div>
+<div class="py-2.5 flex justify-between items-baseline">
+<span class="text-on-surface">Histórico</span>
+<span class="text-on-surface-variant tabular-nums font-mono text-xs text-right">
+              — fechamentos registrados
+            </span>
+</div>
+<div class="py-2.5 flex justify-between items-baseline">
+<span class="text-on-surface">Catálogo</span>
+<span class="text-on-surface-variant tabular-nums font-mono text-xs text-right">
+              — itens cadastrados
+            </span>
+</div>
+<div class="py-2.5 flex justify-between items-baseline">
+<span class="text-on-surface">Despensa</span>
+<span class="text-on-surface-variant tabular-nums font-mono text-xs text-right">
+              — itens cadastrados
+            </span>
+</div>
+<div class="py-2.5 flex justify-between items-baseline">
+<span class="text-on-surface">Pendentes de sincronização</span>
+<span class="text-primary font-medium tabular-nums font-mono text-xs text-right">
+              — alterações locais
+            </span>
+</div>
+</div></section>
+<!-- 4. Seção: Identificação e Ambiente -->
+<section class="space-y-2"><div class="border-b border-outline-variant/60 pb-1.5">
+<h2 class="font-body text-[11px] font-semibold tracking-wider text-on-surface-variant uppercase">
+            IDENTIFICAÇÃO E AMBIENTE
+          </h2>
+</div>
+<div class="divide-y divide-outline-variant/30 text-sm">
+<div class="py-2.5 flex flex-col gap-0.5">
+<span class="text-xs text-on-surface-variant">Usuário</span>
+<span class="text-on-surface font-normal">Dado do usuário</span>
+</div>
+<div class="py-2.5 flex flex-col gap-0.5">
+<span class="text-xs text-on-surface-variant">UID do Usuário</span>
+<div class="flex items-center justify-between">
+<span class="font-mono text-xs text-on-surface select-all">ID do usuário</span>
+<span class="text-[11px] text-on-surface-variant/70">autenticado</span>
+</div>
+</div>
+<div class="py-2.5 flex flex-col gap-0.5">
+<span class="text-xs text-on-surface-variant">Provedor de autenticação</span>
+<span class="text-on-surface font-normal">Firebase Authentication / Cloud Firestore</span>
+</div>
+<div class="py-2.5 flex flex-col gap-0.5">
+<span class="text-xs text-on-surface-variant">Plataforma</span>
+<span class="text-on-surface font-normal">Flutter (SO do dispositivo)</span>
+</div>
+</div></section>
+<!-- 5. Seção: Listas Compartilhadas Ativas -->
+<section class="space-y-2 pb-6"><div class="border-b border-outline-variant/60 pb-1.5 flex justify-between items-baseline">
+<h2 class="font-body text-[11px] font-semibold tracking-wider text-on-surface-variant uppercase">
+            LISTAS COMPARTILHADAS ATIVAS
+          </h2>
+<span class="font-mono text-xs text-on-surface-variant">— ativas</span>
+</div>
+<div class="divide-y divide-outline-variant/30">
+<div class="py-3 flex flex-col gap-1">
+<div class="flex items-baseline justify-between">
+<span class="font-medium text-sm text-on-surface">Lista compartilhada</span>
+<span class="text-[11px] text-on-surface-variant font-mono">—</span>
+</div>
+<div class="flex items-center justify-between text-xs text-on-surface-variant">
+<span>— participantes</span>
+<span class="inline-flex items-center gap-1 text-[11px] text-primary">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+              Sincronizada
+            </span>
+</div>
+</div>
+</div></section>
+</main>
+</div>
+<!-- Toast de Feedback Minimalista -->
+<div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface text-xs py-2 px-4 rounded shadow-md opacity-0 pointer-events-none transition-opacity duration-200 z-50 font-body" id="toast">
+    Relatório de diagnóstico copiado.
+  </div>
+<script>
+    const btnSync = document.getElementById('btn-sync-now');
+    const btnRefresh = document.getElementById('btn-refresh-header');
+    const btnCopy = document.getElementById('btn-copy-report');
+    const toast = document.getElementById('toast');
+
+    function triggerSyncAnimation() {
+      const syncIcon = btnSync.querySelector('.material-symbols-outlined');
+      const refreshIcon = btnRefresh.querySelector('.material-symbols-outlined');
+      
+      syncIcon.classList.add('animate-spin');
+      refreshIcon.classList.add('animate-spin');
+      
+      setTimeout(() => {
+        syncIcon.classList.remove('animate-spin');
+        refreshIcon.classList.remove('animate-spin');
+        showToast('Base sincronizada com a nuvem.');
+      }, 800);
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      toast.classList.add('opacity-100');
+      
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 2500);
+    }
+
+    btnSync.addEventListener('click', triggerSyncAnimation);
+    btnRefresh.addEventListener('click', triggerSyncAnimation);
+
+    btnCopy.addEventListener('click', () => {
+      const diagData = `[DIAGNÓSTICO E SINCRONIZAÇÃO]
+Status: Sincronizado (Hoje às 14:32:18) - Estável
+Usuário: Helena Ramos (helena.ramos@exemplo.com.br)
+UID: 8f29d10a4e7c3b1
+Autenticação: Firebase Authentication
+Registros Locais:
+- Listas ativas e arquivadas: 6 no aparelho · 6 na nuvem
+- Histórico de compras: 14 fechamentos registrados
+- Catálogo de produtos: 84 itens cadastrados
+- Itens da despensa: 42 itens em estoque
+- Pendentes de sincronização: 0 alterações locais
+Listas Compartilhadas:
+- Compras da semana (Casa) (3 participantes, sincronizada)
+- Feira & Orgânicos de Sábado (2 participantes, sincronizada)
+- Reposição Despensa e Limpeza (2 participantes, sincronizada)`;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(diagData).then(() => {
+          showToast('Relatório de diagnóstico copiado.');
+        }).catch(() => {
+          showToast('Relatório pronto para exportação.');
+        });
+      } else {
+        showToast('Relatório pronto para exportação.');
+      }
+    });
+  </script>
+</body></html>

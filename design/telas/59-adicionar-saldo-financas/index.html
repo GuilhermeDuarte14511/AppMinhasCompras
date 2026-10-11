@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Minhas Compras — Adicionar Saldo</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&amp;family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-variant": "#e4e2dd",
+            "outline": "#727972",
+            "secondary-fixed-dim": "#c4c9b4",
+            "primary": "#1f412d",
+            "on-primary-fixed": "#002110",
+            "on-error-container": "#93000a",
+            "on-primary": "#ffffff",
+            "surface-container-highest": "#e4e2dd",
+            "surface-tint": "#43664f",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "surface": "#fbf9f3",
+            "tertiary-container": "#724549",
+            "on-tertiary": "#ffffff",
+            "tertiary": "#582f33",
+            "on-primary-fixed-variant": "#2b4e39",
+            "surface-container-lowest": "#ffffff",
+            "surface-container": "#f0eee8",
+            "secondary": "#5b604f",
+            "surface-container-high": "#eae8e2",
+            "inverse-primary": "#a9d0b4",
+            "surface-container-low": "#f5f3ed",
+            "secondary-container": "#e0e5cf",
+            "primary-fixed-dim": "#a9d0b4",
+            "on-surface-variant": "#424843",
+            "inverse-surface": "#30312d",
+            "on-error": "#ffffff",
+            "tertiary-fixed": "#ffdadb",
+            "on-tertiary-container": "#f2b6ba",
+            "on-secondary-fixed-variant": "#444939",
+            "on-secondary-container": "#616655",
+            "inverse-on-surface": "#f3f1eb",
+            "on-tertiary-fixed": "#321015",
+            "on-background": "#1b1c18",
+            "surface-dim": "#dcdad4",
+            "surface-bright": "#fbf9f3",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "primary-fixed": "#c4eccf",
+            "outline-variant": "#c1c8c1",
+            "background": "#fbf9f3",
+            "on-primary-container": "#a7ceb2",
+            "error": "#ba1a1a",
+            "on-surface": "#1b1c18",
+            "on-secondary": "#ffffff",
+            "primary-container": "#365943",
+            "error-container": "#ffdad6",
+            "secondary-fixed": "#e0e5cf",
+            "on-secondary-fixed": "#191d10"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "2xl": "1rem",
+            "3xl": "1.5rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      font-size: 20px;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .material-symbols-outlined.fill-icon {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    /* Mobile canvas viewport wrapper */
+    body {
+      background-color: #121310;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      font-family: 'Public Sans', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .device-viewport {
+      width: 390px;
+      height: 844px;
+      position: relative;
+      overflow: hidden;
+      background-color: #fbf9f3;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body>
+<!-- Screen Container (390 x 844) -->
+<main class="device-viewport flex flex-col justify-end text-on-surface">
+<!-- BACKGROUND: Simulated Active Screen 'Minhas Compras' (Underlying App) -->
+<div aria-hidden="true" class="absolute inset-0 flex flex-col pointer-events-none select-none bg-surface">
+<!-- Status bar placeholder -->
+<div class="w-full h-11 px-7 pt-3 flex justify-between items-center text-xs font-semibold text-on-surface tracking-tight">
+<span>09:41</span>
+<div class="flex items-center space-x-1.5">
+<span class="material-symbols-outlined text-[14px]">signal_cellular_4_bar</span>
+<span class="material-symbols-outlined text-[14px]">wifi</span>
+<span class="material-symbols-outlined text-[14px]">battery_full</span>
+</div>
+</div>
+<!-- App Header Mock -->
+<div class="flex justify-between items-center px-4 h-14 border-b border-outline-variant/40">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-on-surface-variant">arrow_back</span>
+<span class="font-headline text-lg font-normal text-on-surface">Mercado Semanal</span>
+</div>
+<span class="text-xs px-2.5 py-1 bg-surface-container-high rounded text-secondary font-medium">Modo Compra</span>
+</div>
+<!-- Background List Content -->
+<div class="p-5 space-y-4 opacity-50">
+<div class="border-b border-outline-variant/30 pb-3">
+<div class="text-xs font-medium text-secondary">ORÇAMENTO TOTAL</div>
+<div class="text-2xl font-headline text-on-surface">R$ 480,00</div>
+</div>
+<div class="space-y-3 pt-2">
+<div class="flex items-center justify-between p-3 bg-surface-container-lowest rounded-lg border border-outline-variant/30">
+<div class="flex items-center space-x-3">
+<span class="w-5 h-5 rounded border border-outline-variant"></span>
+<span class="text-sm font-normal">Café Especial 500g</span>
+</div>
+<span class="text-sm font-medium tabular-nums">R$ 24,90</span>
+</div>
+<div class="flex items-center justify-between p-3 bg-surface-container-lowest rounded-lg border border-outline-variant/30">
+<div class="flex items-center space-x-3">
+<span class="w-5 h-5 rounded border border-outline-variant"></span>
+<span class="text-sm font-normal">Azeite Extra Virgem</span>
+</div>
+<span class="text-sm font-medium tabular-nums">R$ 42,50</span>
+</div>
+<div class="flex items-center justify-between p-3 bg-surface-container-lowest rounded-lg border border-outline-variant/30">
+<div class="flex items-center space-x-3">
+<span class="w-5 h-5 rounded border border-outline-variant"></span>
+<span class="text-sm font-normal">Leite Integral (6 un)</span>
+</div>
+<span class="text-sm font-medium tabular-nums">R$ 31,80</span>
+</div>
+</div>
+</div>
+</div>
+<!-- SCRIM / OVERLAY (bg-stone-900/60 with backdrop-blur-sm) -->
+<div aria-label="Fechar modal" class="absolute inset-0 bg-[#1b1c18]/65 backdrop-blur-[2px] transition-opacity z-10"></div>
+<!-- MODAL BOTTOM SHEET: _PaymentSourcePickerSheet (~80% height = ~675px) -->
+<div class="relative z-20 w-full h-[675px] bg-[#fbfaf7] rounded-t-3xl shadow-2xl flex flex-col justify-between border-t border-outline-variant/30">
+<!-- Top Section (Drag Handle, Header, Contents) -->
+<div class="flex flex-col flex-1 overflow-y-auto">
+<!-- Drag Handle -->
+<div class="w-full flex justify-center pt-3 pb-1">
+<div class="w-10 h-1.5 rounded-full bg-stone-300"></div>
+</div>
+<!-- Sheet Header -->
+<header class="px-5 pt-2 pb-3.5 flex items-start justify-between border-b border-outline-variant/35">
+<div class="flex flex-col space-y-0.5">
+<h1 class="font-headline text-2xl font-normal text-on-surface tracking-tight">Adicionar saldo</h1>
+<p class="font-body text-xs text-on-surface-variant/80">Meios do Minhas Finanças</p>
+</div>
+<!-- Close Button (>=48dp touch target) -->
+<button aria-label="Fechar modal" class="w-12 h-12 -mr-2 -mt-1 flex items-center justify-center text-on-surface-variant hover:text-on-surface active:opacity-70 transition-opacity" type="button">
+<span class="material-symbols-outlined text-[22px]">close</span>
+</button>
+</header>
+<!-- Main Form Body -->
+<div class="px-5 pt-5 pb-4 flex flex-col space-y-5">
+<!-- SEÇÃO 1: FONTES SINCRONIZADAS -->
+<section aria-labelledby="sync-sources-title" class="space-y-2.5">
+<div class="flex items-center justify-between">
+<h2 class="text-[11px] font-semibold text-secondary tracking-wider uppercase" id="sync-sources-title">
+                Fontes sincronizadas
+              </h2>
+<div class="flex items-center space-x-1 text-[11px] text-secondary font-medium">
+<span class="material-symbols-outlined text-[13px] text-primary">sync</span>
+<span>Atualizado</span>
+</div>
+</div>
+<!-- Radio Card 1: Selecionada -->
+<label class="group relative flex items-start p-3.5 bg-surface-container-lowest border-2 border-primary rounded-xl cursor-pointer shadow-sm transition-all">
+<input checked="" class="sr-only" name="payment_source" type="radio" value="bb_4092"/>
+<!-- Custom Radio Indicator (Active) -->
+<div class="flex-shrink-0 mt-0.5 mr-3 w-5 h-5 rounded-full border-2 border-primary flex items-center justify-center bg-primary">
+<div class="w-2 h-2 rounded-full bg-white"></div>
+</div>
+<!-- Content Details -->
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-1">
+<p class="text-sm font-medium text-on-surface leading-tight truncate">
+                    Conta corrente • Banco Brasil
+                  </p>
+<span class="text-xs text-secondary tabular-nums flex-shrink-0">final 4092</span>
+</div>
+<div class="mt-1 flex items-center text-xs text-primary font-medium tabular-nums">
+<span>Disponível R$ 1.850,50</span>
+</div>
+</div>
+</label>
+<!-- Radio Card 2: Não Selecionada -->
+<label class="group relative flex items-start p-3.5 bg-surface-container-lowest border border-outline-variant/60 hover:border-outline-variant rounded-xl cursor-pointer transition-all">
+<input class="sr-only" name="payment_source" type="radio" value="alelo_8831"/>
+<!-- Custom Radio Indicator (Inactive) -->
+<div class="flex-shrink-0 mt-0.5 mr-3 w-5 h-5 rounded-full border border-outline-variant bg-surface flex items-center justify-center group-hover:border-secondary transition-colors">
+<div class="w-2 h-2 rounded-full bg-transparent"></div>
+</div>
+<!-- Content Details -->
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-1">
+<p class="text-sm font-normal text-on-surface leading-tight truncate">
+                    Cartão de benefício • Alelo Refeição
+                  </p>
+<span class="text-xs text-secondary tabular-nums flex-shrink-0">final 8831</span>
+</div>
+<div class="mt-1 flex items-center text-xs text-secondary tabular-nums">
+<span>Disponível R$ 412,80</span>
+</div>
+</div>
+</label>
+<!-- Ação: Criar no Finanças (Tracejado sutil) -->
+<button class="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 border border-dashed border-outline-variant rounded-xl text-xs font-medium text-secondary hover:text-on-surface hover:border-secondary transition-colors active:opacity-70" type="button">
+<span class="material-symbols-outlined text-[17px] text-primary">add_circle</span>
+<span>+ Criar no Finanças</span>
+</button>
+</section>
+<!-- SEÇÃO 2: VALOR RESERVADO PARA ESTA LISTA -->
+<section aria-labelledby="budget-amount-title" class="space-y-2">
+<label class="block text-[11px] font-semibold text-secondary tracking-wider uppercase" for="allocated-amount" id="budget-amount-title">
+              Valor reservado para esta lista
+            </label>
+<div class="relative rounded-lg">
+<input class="w-full bg-surface-container-lowest/80 border border-outline-variant/80 rounded-lg px-4 py-3 text-base font-medium text-on-surface tabular-nums focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all" id="allocated-amount" name="allocated_amount" type="text" value="R$ 250,00"/>
+</div>
+<p class="text-[12px] leading-relaxed text-on-surface-variant font-normal pt-0.5">
+              O abatimento de saldo é projetado no orçamento da lista ativa com base na fonte selecionada.
+            </p>
+</section>
+</div>
+</div>
+<!-- Rodapé com Ações Empilhadas (Material 3 Touch Target >= 48dp) -->
+<footer class="p-5 pt-3 bg-[#fbfaf7] border-t border-outline-variant/30 flex flex-col space-y-2.5">
+<!-- Botão Primário -->
+<button class="w-full h-12 bg-primary hover:bg-primary-container text-on-primary font-medium text-sm rounded-xl flex items-center justify-center transition-colors active:opacity-85 shadow-none" type="button">
+          Usar nesta lista
+        </button>
+<!-- Botão Secundário -->
+<button class="w-full h-12 bg-transparent border border-outline-variant/70 hover:border-outline text-on-surface font-medium text-sm rounded-xl flex items-center justify-center transition-colors active:opacity-80" type="button">
+          Adicionar manualmente
+        </button>
+<!-- Home Indicator space -->
+<div class="w-full flex justify-center pt-1">
+<div class="w-32 h-1 bg-stone-300 rounded-full"></div>
+</div>
+</footer>
+</div>
+</main>
+<!-- Interactive feedback micro-interaction -->
+<script>
+    document.querySelectorAll('label input[type="radio"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        document.querySelectorAll('label input[type="radio"]').forEach(other => {
+          const parent = other.closest('label');
+          const indicator = parent.querySelector('div:first-child');
+          const innerDot = indicator.querySelector('div');
+          
+          if (other.checked) {
+            parent.classList.remove('border-outline-variant/60', 'hover:border-outline-variant');
+            parent.classList.add('border-primary', 'border-2');
+            indicator.classList.remove('border-outline-variant', 'bg-surface');
+            indicator.classList.add('border-primary', 'bg-primary');
+            innerDot.classList.remove('bg-transparent');
+            innerDot.classList.add('bg-white');
+          } else {
+            parent.classList.remove('border-primary', 'border-2');
+            parent.classList.add('border-outline-variant/60', 'hover:border-outline-variant');
+            indicator.classList.remove('border-primary', 'bg-primary');
+            indicator.classList.add('border-outline-variant', 'bg-surface');
+            innerDot.classList.remove('bg-white');
+            innerDot.classList.add('bg-transparent');
+          }
+        });
+      });
+    });
+  </script>
+</body></html>

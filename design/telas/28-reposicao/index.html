@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Reposição inteligente — Minhas Compras</title>
+<!-- Google Fonts: Newsreader (Editorial Serif) & Public Sans (Body/Tabular) -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-error-container": "#93000a",
+            "surface-container": "#f0eee8",
+            "surface": "#fbf9f3",
+            "on-tertiary-container": "#f2b6ba",
+            "surface-container-high": "#eae8e2",
+            "on-primary-fixed-variant": "#2b4e39",
+            "primary-fixed-dim": "#a9d0b4",
+            "error": "#ba1a1a",
+            "surface-container-highest": "#e4e2dd",
+            "primary": "#1f412d",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "on-secondary-fixed": "#191d10",
+            "on-secondary": "#ffffff",
+            "inverse-surface": "#30312d",
+            "surface-container-lowest": "#ffffff",
+            "on-tertiary-fixed": "#321015",
+            "on-surface-variant": "#424843",
+            "primary-container": "#365943",
+            "secondary": "#5b604f",
+            "on-tertiary": "#ffffff",
+            "on-secondary-container": "#616655",
+            "on-primary": "#ffffff",
+            "tertiary-fixed": "#ffdadb",
+            "on-surface": "#1b1c18",
+            "surface-container-low": "#f5f3ed",
+            "outline": "#727972",
+            "on-primary-fixed": "#002110",
+            "on-primary-container": "#a7ceb2",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "inverse-primary": "#a9d0b4",
+            "surface-tint": "#43664f",
+            "secondary-fixed": "#e0e5cf",
+            "secondary-container": "#e0e5cf",
+            "tertiary": "#582f33",
+            "on-background": "#1b1c18",
+            "on-secondary-fixed-variant": "#444939",
+            "secondary-fixed-dim": "#c4c9b4",
+            "tertiary-container": "#724549",
+            "error-container": "#ffdad6",
+            "surface-bright": "#fbf9f3",
+            "outline-variant": "#c1c8c1",
+            "surface-dim": "#dcdad4",
+            "inverse-on-surface": "#f3f1eb",
+            "primary-fixed": "#c4eccf",
+            "background": "#fbf9f3",
+            "on-error": "#ffffff",
+            "surface-variant": "#e4e2dd"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    /* Material Icon sizing helper */
+    .material-symbols-outlined {
+      font-size: 22px;
+      line-height: 1;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body antialiased flex justify-center items-center min-h-screen p-0 sm:p-4 select-none">
+<!-- Mobile Simulator Frame (390px width standard) -->
+<div class="relative w-full max-w-[390px] h-[844px] bg-surface overflow-hidden shadow-2xl sm:rounded-[32px] border border-outline-variant flex flex-col justify-end">
+<!-- Ambient Parent Screen Backdrop (App Context Underneath) -->
+<div class="absolute inset-0 bg-surface flex flex-col pointer-events-none opacity-40">
+<!-- Faux Top Bar on App Underneath -->
+<div class="px-5 pt-12 pb-4 flex justify-between items-center border-b border-outline-variant">
+<span class="font-headline text-2xl text-on-surface">Minhas listas</span>
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="more_vert">more_vert</span>
+</div>
+<!-- Background List Silhouette -->
+<div class="p-5 space-y-4">
+<div class="h-20 bg-surface-container-low rounded-lg p-4 border border-outline-variant">
+<div class="h-4 w-32 bg-outline-variant rounded mb-2"></div>
+<div class="h-3 w-20 bg-surface-container-high rounded"></div>
+</div>
+<div class="h-20 bg-surface-container-low rounded-lg p-4 border border-outline-variant">
+<div class="h-4 w-40 bg-outline-variant rounded mb-2"></div>
+<div class="h-3 w-24 bg-surface-container-high rounded"></div>
+</div>
+<div class="h-20 bg-surface-container-low rounded-lg p-4 border border-outline-variant">
+<div class="h-4 w-28 bg-outline-variant rounded mb-2"></div>
+<div class="h-3 w-16 bg-surface-container-high rounded"></div>
+</div>
+</div>
+</div>
+<!-- Scrim / Dimmer Overlay -->
+<div class="absolute inset-0 bg-on-surface/40 backdrop-blur-[1px] transition-opacity z-10"></div>
+<!-- Bottom Sheet Modal (ReplenishmentSuggestionsSheet) -->
+<div class="relative z-20 w-full bg-surface-bright rounded-t-[20px] shadow-2xl border-t border-outline-variant flex flex-col max-h-[92%] transition-all">
+<!-- Drag Handle -->
+<div class="w-full flex justify-center pt-3 pb-1">
+<div class="w-10 h-1 bg-outline-variant rounded-full"></div>
+</div>
+<!-- Header: Shared Component Implementation (TopAppBar type: small contextual) -->
+<header class="flex justify-between items-center w-full px-5 py-3 border-b border-outline-variant">
+<div class="flex items-center gap-3">
+<button aria-label="Fechar reposição" class="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high active:scale-[0.98] transition-colors" type="button">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+<div>
+<h1 class="font-headline text-2xl font-normal text-on-surface leading-tight tracking-tight">Reposição inteligente</h1>
+<p class="font-body text-xs text-on-surface-variant mt-0.5">Sugestões baseadas no histórico e catálogo</p>
+</div>
+</div>
+<button class="text-xs font-medium text-primary hover:bg-surface-container-high px-2 py-1.5 rounded active:scale-[0.98] transition-all" type="button">
+          Ajuda
+        </button>
+</header>
+<!-- Selection & Monetary Summary Strip (Faixa Contábil) -->
+<div class="bg-surface-container-low px-5 py-2.5 flex items-center justify-between border-b border-outline-variant">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="font-body text-xs font-semibold text-on-surface" id="selected-counter">4 de 6 selecionados</span>
+</div>
+<div class="text-right">
+<span class="text-[11px] text-on-surface-variant block leading-none">Subtotal estimado</span>
+<span class="font-body text-sm font-semibold tabular-nums text-primary leading-tight mt-0.5 block" id="subtotal-display">R$ 100,59</span>
+</div>
+</div>
+<!-- Item List (Editorial Table Structure with Clean Dividers) -->
+<div class="overflow-y-auto px-5 divide-y divide-outline-variant flex-1 focus:outline-none">
+<!-- Item 1: Checked -->
+<label class="py-3 flex items-start gap-3.5 cursor-pointer min-h-[56px] select-none hover:bg-surface-container-low/50 -mx-5 px-5 transition-colors">
+<div class="pt-0.5">
+<input checked="" class="item-checkbox w-5 h-5 rounded text-primary focus:ring-primary focus:ring-offset-0 border-outline bg-surface-bright transition cursor-pointer" data-price="24.90" type="checkbox"/>
+</div>
+<div class="flex-1 min-w-0 pr-1">
+<div class="font-body text-sm text-on-surface font-medium leading-snug">Café torrado e moído 500g</div>
+<div class="font-body text-xs text-on-surface-variant mt-0.5">1 un</div>
+</div>
+<div class="text-right whitespace-nowrap pt-0.5">
+<span class="font-body text-sm text-on-surface font-medium tabular-nums">R$ 24,90</span>
+</div>
+</label>
+<!-- Item 2: Checked -->
+<label class="py-3 flex items-start gap-3.5 cursor-pointer min-h-[56px] select-none hover:bg-surface-container-low/50 -mx-5 px-5 transition-colors">
+<div class="pt-0.5">
+<input checked="" class="item-checkbox w-5 h-5 rounded text-primary focus:ring-primary focus:ring-offset-0 border-outline bg-surface-bright transition cursor-pointer" data-price="38.90" type="checkbox"/>
+</div>
+<div class="flex-1 min-w-0 pr-1">
+<div class="font-body text-sm text-on-surface font-medium leading-snug">Azeite de oliva extravirgem 500ml</div>
+<div class="font-body text-xs text-on-surface-variant mt-0.5">1 un</div>
+</div>
+<div class="text-right whitespace-nowrap pt-0.5">
+<span class="font-body text-sm text-on-surface font-medium tabular-nums">R$ 38,90</span>
+</div>
+</label>
+<!-- Item 3: Checked -->
+<label class="py-3 flex items-start gap-3.5 cursor-pointer min-h-[56px] select-none hover:bg-surface-container-low/50 -mx-5 px-5 transition-colors">
+<div class="pt-0.5">
+<input checked="" class="item-checkbox w-5 h-5 rounded text-primary focus:ring-primary focus:ring-offset-0 border-outline bg-surface-bright transition cursor-pointer" data-price="13.78" type="checkbox"/>
+</div>
+<div class="flex-1 min-w-0 pr-1">
+<div class="font-body text-sm text-on-surface font-medium leading-snug">Leite integral pasteurizado tipo A 1L</div>
+<div class="font-body text-xs text-on-surface-variant mt-0.5">2 un</div>
+</div>
+<div class="text-right whitespace-nowrap pt-0.5">
+<span class="font-body text-sm text-on-surface font-medium tabular-nums">R$ 13,78</span>
+</div>
+</label>
+<!-- Item 4: Unchecked -->
+<label class="py-3 flex items-start gap-3.5 cursor-pointer min-h-[56px] select-none hover:bg-surface-container-low/50 -mx-5 px-5 transition-colors">
+<div class="pt-0.5">
+<input class="item-checkbox w-5 h-5 rounded text-primary focus:ring-primary focus:ring-offset-0 border-outline bg-surface-bright transition cursor-pointer" data-price="29.90" type="checkbox"/>
+</div>
+<div class="flex-1 min-w-0 pr-1">
+<div class="font-body text-sm text-on-surface font-medium leading-snug">Arroz agulhinha tipo 1 5kg</div>
+<div class="font-body text-xs text-on-surface-variant mt-0.5">1 pct</div>
+</div>
+<div class="text-right whitespace-nowrap pt-0.5">
+<span class="font-body text-sm text-on-surface font-medium tabular-nums">R$ 29,90</span>
+</div>
+</label>
+<!-- Item 5: Checked -->
+<label class="py-3 flex items-start gap-3.5 cursor-pointer min-h-[56px] select-none hover:bg-surface-container-low/50 -mx-5 px-5 transition-colors">
+<div class="pt-0.5">
+<input checked="" class="item-checkbox w-5 h-5 rounded text-primary focus:ring-primary focus:ring-offset-0 border-outline bg-surface-bright transition cursor-pointer" data-price="23.01" type="checkbox"/>
+</div>
+<div class="flex-1 min-w-0 pr-1">
+<div class="font-body text-sm text-on-surface font-medium leading-snug">Ovos caipiras vermelhos</div>
+<div class="font-body text-xs text-on-surface-variant mt-0.5">1 estojo (10 un)</div>
+</div>
+<div class="text-right whitespace-nowrap pt-0.5">
+<span class="font-body text-sm text-on-surface font-medium tabular-nums">R$ 23,01</span>
+</div>
+</label>
+<!-- Item 6: Unchecked -->
+<label class="py-3 flex items-start gap-3.5 cursor-pointer min-h-[56px] select-none hover:bg-surface-container-low/50 -mx-5 px-5 transition-colors">
+<div class="pt-0.5">
+<input class="item-checkbox w-5 h-5 rounded text-primary focus:ring-primary focus:ring-offset-0 border-outline bg-surface-bright transition cursor-pointer" data-price="3.29" type="checkbox"/>
+</div>
+<div class="flex-1 min-w-0 pr-1">
+<div class="font-body text-sm text-on-surface font-medium leading-snug">Detergente biodegradável neutro 500ml</div>
+<div class="font-body text-xs text-on-surface-variant mt-0.5">1 un</div>
+</div>
+<div class="text-right whitespace-nowrap pt-0.5">
+<span class="font-body text-sm text-on-surface font-medium tabular-nums">R$ 3,29</span>
+</div>
+</label>
+</div>
+<!-- Docked Actions Footer -->
+<footer class="p-4 bg-surface-bright border-t border-outline-variant flex items-center gap-3">
+<button class="w-1/3 min-h-[48px] px-4 py-2.5 rounded-lg border border-outline-variant text-on-surface text-sm font-medium hover:bg-surface-container-low active:scale-[0.98] transition-all text-center" type="button">
+          Cancelar
+        </button>
+<button class="flex-1 min-h-[48px] px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-container text-on-primary text-sm font-medium flex items-center justify-center gap-2 active:scale-[0.98] transition-all" id="submit-button" type="button">
+<span class="material-symbols-outlined" data-icon="playlist_add">playlist_add</span>
+<span id="submit-label">Criar lista (4)</span>
+</button>
+</footer>
+</div>
+</div>
+<!-- Interactive State Calculator -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const checkboxes = document.querySelectorAll('.item-checkbox');
+      const counterEl = document.getElementById('selected-counter');
+      const subtotalEl = document.getElementById('subtotal-display');
+      const submitLabelEl = document.getElementById('submit-label');
+      const submitBtn = document.getElementById('submit-button');
+
+      function updateSummary() {
+        let count = 0;
+        let total = 0;
+
+        checkboxes.forEach(cb => {
+          if (cb.checked) {
+            count++;
+            const price = parseFloat(cb.dataset.price) || 0;
+            total += price;
+          }
+        });
+
+        const totalFormatted = total.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+
+        counterEl.textContent = `${count} de ${checkboxes.length} selecionados`;
+        subtotalEl.textContent = `R$ ${totalFormatted}`;
+        submitLabelEl.textContent = `Criar lista (${count})`;
+
+        if (count === 0) {
+          submitBtn.classList.add('opacity-50', 'pointer-events-none');
+        } else {
+          submitBtn.classList.remove('opacity-50', 'pointer-events-none');
+        }
+      }
+
+      checkboxes.forEach(cb => {
+        cb.addEventListener('change', updateSummary);
+      });
+
+      // Initial execution
+      updateSummary();
+    });
+  </script>
+</body></html>

@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../application/sync_diagnostics.dart';
-import 'launch.dart';
-import 'theme/app_tokens.dart';
+import 'theme/editorial_workspace_theme.dart';
 import 'utils/app_toast.dart';
 
 class SyncDiagnosticsPage extends StatefulWidget {
@@ -101,159 +100,174 @@ class _SyncDiagnosticsPageState extends State<SyncDiagnosticsPage> {
 
   @override
   Widget build(BuildContext context) {
+    return Theme(
+      data: editorialWorkspaceTheme(Theme.of(context)),
+      child: Builder(builder: _buildEditorialPage),
+    );
+  }
+
+  Widget _buildEditorialPage(BuildContext context) {
     final snapshot = _snapshot;
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Sincronização e diagnóstico')),
-      body: AppGradientScene(
-        child: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: [
-              _StatusPanel(snapshot: snapshot),
-              const SizedBox(height: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  FilledButton.icon(
-                    onPressed: _isRunningSync ? null : _runSyncNow,
-                    icon: _isRunningSync
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.sync_rounded),
-                    label: Text(
-                      _isRunningSync ? 'Sincronizando...' : 'Sincronizar agora',
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: _copyReport,
-                    icon: const Icon(Icons.copy_rounded),
-                    label: const Text('Copiar relatório'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              _SectionTitle(
-                title: 'Dados locais',
-                subtitle: 'Resumo do que está salvo neste aparelho.',
-              ),
-              _DiagnosticsPanel(
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _MetricChip(
-                      label: 'Listas',
-                      value: '${snapshot.listRecords}',
-                    ),
-                    _MetricChip(
-                      label: 'Histórico',
-                      value: '${snapshot.historyRecords}',
-                    ),
-                    _MetricChip(
-                      label: 'Catálogo',
-                      value: '${snapshot.catalogRecords}',
-                    ),
-                    _MetricChip(
-                      label: 'Despensa',
-                      value: '${snapshot.pantryRecords}',
-                    ),
-                    _MetricChip(
-                      label: 'Pendentes',
-                      value: '${snapshot.safePendingRecords}',
-                    ),
-                  ],
+      appBar: AppBar(
+        titleSpacing: 0,
+        title: Text(
+          'Sincronização e diagnóstico',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Atualizar sincronização',
+            onPressed: _isRunningSync ? null : _runSyncNow,
+            icon: const Icon(Icons.refresh, size: 22),
+          ),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Divider(height: 1, color: colors.outlineVariant),
+        ),
+      ),
+      body: SafeArea(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+              children: [
+                _StatusPanel(
+                  snapshot: snapshot,
+                  isRunning: _isRunningSync,
+                  onSync: _runSyncNow,
+                  onCopy: _copyReport,
                 ),
-              ),
-              const SizedBox(height: 14),
-              _SectionTitle(
-                title: 'Configurações',
-                subtitle: 'Preferências que afetam importação e sync.',
-              ),
-              _DiagnosticsPanel(
-                child: Column(
-                  children: [
-                    _InfoRow(
-                      icon: Icons.inventory_2_rounded,
-                      label: 'Catálogo do dono',
-                      value: _onOff(snapshot.autoImportOwnedSharedCatalogs),
-                    ),
-                    const Divider(height: 18),
-                    _InfoRow(
-                      icon: Icons.group_rounded,
-                      label: 'Importar todas compartilhadas',
-                      value: _onOff(snapshot.autoImportAllSharedCatalogs),
-                    ),
-                    const Divider(height: 18),
-                    _InfoRow(
-                      icon: Icons.fact_check_rounded,
-                      label: 'Listas com importação',
-                      value: '${snapshot.enabledSharedCatalogImportCount}',
-                    ),
-                  ],
+                const _SectionTitle(title: 'Registros locais do app'),
+                _LedgerRow(
+                  label: 'Listas',
+                  value: '${snapshot.listRecords} no aparelho',
                 ),
-              ),
-              const SizedBox(height: 14),
-              _SectionTitle(
-                title: 'Conta e ambiente',
-                subtitle: 'Informações úteis para suporte.',
-              ),
-              _DiagnosticsPanel(
-                child: Column(
-                  children: [
-                    _InfoRow(
-                      icon: Icons.person_rounded,
-                      label: 'Usuário',
-                      value: _fallback(snapshot.userName, 'Sem nome'),
-                    ),
-                    const Divider(height: 18),
-                    _InfoRow(
-                      icon: Icons.badge_rounded,
-                      label: 'UID',
-                      value: _fallback(snapshot.userUid, 'Sem UID'),
-                    ),
-                    const Divider(height: 18),
-                    _InfoRow(
-                      icon: Icons.cloud_rounded,
-                      label: 'Firebase',
-                      value: _fallback(snapshot.projectId, 'Indisponível'),
-                    ),
-                    const Divider(height: 18),
-                    _InfoRow(
-                      icon: Icons.devices_rounded,
-                      label: 'Plataforma',
-                      value: snapshot.platformLabel,
-                    ),
-                  ],
+                _LedgerRow(
+                  label: 'Histórico',
+                  value: '${snapshot.historyRecords} registros',
                 ),
-              ),
-              const SizedBox(height: 14),
-              _SectionTitle(
-                title: 'Listas compartilhadas',
-                subtitle: 'Estado das listas que podem impactar catálogo.',
-              ),
-              if (snapshot.sharedLists.isEmpty)
-                const _DiagnosticsPanel(
-                  child: ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.group_off_rounded),
-                    title: Text('Nenhuma lista compartilhada carregada'),
-                    subtitle: Text(
-                      'Entre em uma lista ou aguarde o carregamento do sync.',
-                    ),
+                _LedgerRow(
+                  label: 'Catálogo',
+                  value: '${snapshot.catalogRecords} itens',
+                ),
+                _LedgerRow(
+                  label: 'Despensa',
+                  value: '${snapshot.pantryRecords} itens',
+                ),
+                _LedgerRow(
+                  label: 'Pendentes de sincronização',
+                  value: '${snapshot.safePendingRecords} registros',
+                ),
+                _LedgerRow(
+                  label: 'Sincronizados',
+                  value:
+                      '${snapshot.syncedRecords} de ${snapshot.safeTotalRecords}',
+                ),
+                const _SectionTitle(title: 'Identificação e ambiente'),
+                _LedgerRow(
+                  label: 'Usuário',
+                  value: _fallback(snapshot.userName, 'Sem nome'),
+                  stacked: true,
+                ),
+                _LedgerRow(
+                  label: 'E-mail',
+                  value: _fallback(snapshot.userEmail, 'Sem e-mail'),
+                  stacked: true,
+                ),
+                _LedgerRow(
+                  label: 'UID do usuário',
+                  value: _fallback(snapshot.userUid, 'Sem UID'),
+                  stacked: true,
+                ),
+                _LedgerRow(
+                  label: 'Provedor de autenticação',
+                  value: _fallback(snapshot.providerId, 'Indisponível'),
+                  stacked: true,
+                ),
+                _LedgerRow(
+                  label: 'Projeto Firebase',
+                  value: _fallback(snapshot.projectId, 'Indisponível'),
+                  stacked: true,
+                ),
+                _LedgerRow(
+                  label: 'Plataforma',
+                  value: snapshot.platformLabel,
+                  stacked: true,
+                ),
+                _LedgerRow(
+                  label: 'Versão do app',
+                  value: snapshot.appVersion,
+                  stacked: true,
+                ),
+                const _SectionTitle(title: 'Sincronização'),
+                _LedgerRow(
+                  label: 'Internet',
+                  value: snapshot.hasInternetConnection ? 'Online' : 'Offline',
+                ),
+                _LedgerRow(
+                  label: 'Alterações locais pendentes',
+                  value: snapshot.hasPendingCloudSync ? 'Sim' : 'Não',
+                ),
+                _LedgerRow(
+                  label: 'Sincronização na nuvem',
+                  value: snapshot.isCloudSyncing ? 'Em andamento' : 'Inativa',
+                ),
+                _LedgerRow(
+                  label: 'Carregamento da nuvem',
+                  value: snapshot.isPullingCloudSnapshot
+                      ? 'Em andamento'
+                      : 'Inativo',
+                ),
+                _LedgerRow(
+                  label: 'Espelhamento de listas',
+                  value: snapshot.isMirroringSharedLists
+                      ? 'Em andamento'
+                      : 'Inativo',
+                ),
+                _LedgerRow(
+                  label: 'Último sync na nuvem',
+                  value: _date(snapshot.lastCloudSyncAt),
+                  stacked: true,
+                ),
+                _LedgerRow(
+                  label: 'Último sync compartilhadas',
+                  value: _date(snapshot.lastSharedSyncAt),
+                  stacked: true,
+                ),
+                const _SectionTitle(title: 'Configurações de importação'),
+                _LedgerRow(
+                  label: 'Catálogo do dono',
+                  value: _onOff(snapshot.autoImportOwnedSharedCatalogs),
+                ),
+                _LedgerRow(
+                  label: 'Importar todas compartilhadas',
+                  value: _onOff(snapshot.autoImportAllSharedCatalogs),
+                ),
+                _LedgerRow(
+                  label: 'Listas com importação',
+                  value: '${snapshot.enabledSharedCatalogImportCount}',
+                ),
+                const _SectionTitle(title: 'Listas compartilhadas'),
+                _LedgerRow(
+                  label: 'Total carregado',
+                  value: '${snapshot.sharedListCount}',
+                ),
+                if (snapshot.sharedLists.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Text('Nenhuma lista compartilhada carregada'),
+                  )
+                else
+                  ...snapshot.sharedLists.map(
+                    (entry) => _SharedListDiagnosticRow(entry: entry),
                   ),
-                )
-              else
-                ...snapshot.sharedLists.map(
-                  (entry) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _SharedListDiagnosticCard(entry: entry),
-                  ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -264,153 +278,243 @@ class _SyncDiagnosticsPageState extends State<SyncDiagnosticsPage> {
 
   String _fallback(String? value, String fallback) {
     final trimmed = value?.trim();
-    if (trimmed == null || trimmed.isEmpty) {
-      return fallback;
-    }
-    return trimmed;
+    return trimmed == null || trimmed.isEmpty ? fallback : trimmed;
   }
 }
 
-class _StatusPanel extends StatelessWidget {
-  const _StatusPanel({required this.snapshot});
+String _date(DateTime? value) {
+  if (value == null) {
+    return 'Nunca';
+  }
+  final local = value.toLocal();
+  String two(int v) => v.toString().padLeft(2, '0');
+  return '${two(local.day)}/${two(local.month)}/${local.year} às ${two(local.hour)}:${two(local.minute)}';
+}
 
+class _StatusPanel extends StatelessWidget {
+  const _StatusPanel({
+    required this.snapshot,
+    required this.isRunning,
+    required this.onSync,
+    required this.onCopy,
+  });
   final SyncDiagnosticsSnapshot snapshot;
+  final bool isRunning;
+  final VoidCallback onSync;
+  final VoidCallback onCopy;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final presentation = _statusPresentation(context, snapshot.status);
-    final textTheme = Theme.of(context).textTheme;
-    return _DiagnosticsPanel(
-      borderColor: presentation.color.withValues(alpha: 0.45),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: presentation.color.withValues(alpha: 0.14),
-                foregroundColor: presentation.color,
-                child: Icon(presentation.icon),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  snapshot.statusTitle,
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final (icon, color) = switch (snapshot.status) {
+      SyncDiagnosticStatus.synced => (
+        Icons.cloud_done_outlined,
+        colors.primary,
+      ),
+      SyncDiagnosticStatus.syncing => (Icons.sync, colors.primary),
+      SyncDiagnosticStatus.attention => (
+        Icons.sync_problem_outlined,
+        colors.error,
+      ),
+      SyncDiagnosticStatus.offline => (Icons.cloud_off_outlined, colors.error),
+      SyncDiagnosticStatus.notConfigured => (
+        Icons.lock_outline,
+        colors.onSurfaceVariant,
+      ),
+    };
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        border: Border.all(color: colors.outlineVariant),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 20, color: color),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    snapshot.statusTitle,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(snapshot.statusDescription, style: theme.textTheme.bodySmall),
+            const SizedBox(height: 8),
+            Text(
+              'Última verificação: ${_date(snapshot.generatedAt)}',
+              style: theme.textTheme.bodySmall,
+            ),
+            if (snapshot.lastError != null) ...[
+              const SizedBox(height: 12),
+              _InlineWarning(message: 'Último erro: ${snapshot.lastError}'),
             ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            snapshot.statusDescription,
-            style: textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onSurfaceVariant,
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+              onPressed: isRunning ? null : onSync,
+              icon: isRunning
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.sync, size: 18),
+              label: Text(isRunning ? 'Sincronizando...' : 'Sincronizar agora'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+              onPressed: onCopy,
+              icon: const Icon(Icons.content_copy, size: 18),
+              label: const Text('Copiar relatório'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title});
+  final String title;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 24, bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            header: true,
+            child: Text(
+              title.toUpperCase(),
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: .8,
+              ),
             ),
           ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _MetricChip(
-                label: 'Sincronizados',
-                value: '${snapshot.syncedRecords}',
-              ),
-              _MetricChip(
-                label: 'Total',
-                value: '${snapshot.safeTotalRecords}',
-              ),
-              _MetricChip(
-                label: 'Compartilhadas',
-                value: '${snapshot.sharedListCount}',
-              ),
-            ],
-          ),
-          if (snapshot.lastError != null) ...[
-            const SizedBox(height: 12),
-            _InlineWarning(message: 'Último erro: ${snapshot.lastError}'),
-          ],
+          const SizedBox(height: 8),
+          Divider(height: 1, color: theme.colorScheme.outlineVariant),
         ],
       ),
     );
   }
+}
 
-  _StatusPresentation _statusPresentation(
-    BuildContext context,
-    SyncDiagnosticStatus status,
-  ) {
-    final colorScheme = Theme.of(context).colorScheme;
-    switch (status) {
-      case SyncDiagnosticStatus.synced:
-        return _StatusPresentation(
-          icon: Icons.cloud_done_rounded,
-          color: colorScheme.tertiary,
-        );
-      case SyncDiagnosticStatus.syncing:
-        return _StatusPresentation(
-          icon: Icons.sync_rounded,
-          color: colorScheme.primary,
-        );
-      case SyncDiagnosticStatus.attention:
-        return _StatusPresentation(
-          icon: Icons.sync_problem_rounded,
-          color: colorScheme.primary,
-        );
-      case SyncDiagnosticStatus.offline:
-        return _StatusPresentation(
-          icon: Icons.cloud_off_rounded,
-          color: colorScheme.error,
-        );
-      case SyncDiagnosticStatus.notConfigured:
-        return _StatusPresentation(
-          icon: Icons.lock_outline_rounded,
-          color: colorScheme.onSurfaceVariant,
-        );
-    }
+class _LedgerRow extends StatelessWidget {
+  const _LedgerRow({
+    required this.label,
+    required this.value,
+    this.stacked = false,
+  });
+  final String label;
+  final String value;
+  final bool stacked;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final text = theme.textTheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: .35),
+          ),
+        ),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final vertical =
+              stacked ||
+              constraints.maxWidth < 300 ||
+              MediaQuery.textScalerOf(context).scale(1) > 1.2;
+          if (vertical) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: text.bodySmall),
+                const SizedBox(height: 4),
+                Text(value, style: text.bodyMedium),
+              ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: text.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  value,
+                  textAlign: TextAlign.end,
+                  style: text.bodySmall,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 }
 
-class _SharedListDiagnosticCard extends StatelessWidget {
-  const _SharedListDiagnosticCard({required this.entry});
-
+class _SharedListDiagnosticRow extends StatelessWidget {
+  const _SharedListDiagnosticRow({required this.entry});
   final SharedListDiagnosticEntry entry;
-
   @override
   Widget build(BuildContext context) {
-    return _DiagnosticsPanel(
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(
-              entry.isOwner ? Icons.verified_user_rounded : Icons.group_rounded,
+          Text(
+            entry.name,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
             ),
-            title: Text(entry.name),
-            subtitle: Text(entry.roleLabel),
           ),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _MetricChip(label: 'Membros', value: '${entry.memberCount}'),
-              _MetricChip(label: 'Itens', value: '${entry.itemCount}'),
-              _MetricChip(
-                label: 'Catálogo',
-                value: entry.isCatalogImportEnabled ? 'Ligado' : 'Desligado',
-              ),
-              _MetricChip(
-                label: 'Espelho local',
-                value: entry.isMirroredLocally ? 'Sim' : 'Não',
-              ),
-            ],
+          const SizedBox(height: 4),
+          Text(
+            '${entry.roleLabel} · ${entry.memberCount} membros · ${entry.itemCount} itens',
+            style: theme.textTheme.bodySmall,
           ),
+          _LedgerRow(
+            label: 'Catálogo',
+            value: entry.isCatalogImportEnabled ? 'Ligado' : 'Desligado',
+          ),
+          _LedgerRow(
+            label: 'Espelho local',
+            value: entry.isMirroredLocally ? 'Sim' : 'Não',
+          ),
+          _LedgerRow(label: 'Atualizada em', value: _date(entry.updatedAt)),
           if (entry.lastError != null) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             _InlineWarning(message: 'Erro: ${entry.lastError}'),
           ],
         ],
@@ -419,152 +523,26 @@ class _SharedListDiagnosticCard extends StatelessWidget {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
+class _InlineWarning extends StatelessWidget {
+  const _InlineWarning({required this.message});
+  final String message;
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DiagnosticsPanel extends StatelessWidget {
-  const _DiagnosticsPanel({required this.child, this.borderColor});
-
-  final Widget child;
-  final Color? borderColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppTokens.radiusXl),
-        border: Border.all(
-          color:
-              borderColor ?? colorScheme.outlineVariant.withValues(alpha: 0.5),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-        child: child,
-      ),
-    );
-  }
-}
-
-class _MetricChip extends StatelessWidget {
-  const _MetricChip({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Chip(
-      label: Text('$label: $value'),
-      visualDensity: VisualDensity.compact,
-      backgroundColor: colorScheme.surfaceContainerHighest,
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
+    final colors = Theme.of(context).colorScheme;
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: colorScheme.onSurfaceVariant),
-        const SizedBox(width: 10),
+        Icon(Icons.error_outline, color: colors.error, size: 18),
+        const SizedBox(width: 8),
         Expanded(
           child: Text(
-            label,
-            style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.end,
-            overflow: TextOverflow.ellipsis,
-            style: textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
+            message,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colors.error),
           ),
         ),
       ],
     );
   }
-}
-
-class _InlineWarning extends StatelessWidget {
-  const _InlineWarning({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.errorContainer.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Row(
-          children: [
-            Icon(Icons.error_outline_rounded, color: colorScheme.error),
-            const SizedBox(width: 8),
-            Expanded(child: Text(message)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusPresentation {
-  const _StatusPresentation({required this.icon, required this.color});
-
-  final IconData icon;
-  final Color color;
 }

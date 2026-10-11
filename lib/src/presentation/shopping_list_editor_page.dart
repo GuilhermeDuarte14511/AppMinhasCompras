@@ -5,423 +5,37 @@ import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../application/finance_integration.dart';
+import '../application/finance_purchase_bridge.dart';
 import '../application/ports.dart';
 import '../application/fiscal_receipt_import.dart';
 import '../application/shared_list_sync_policy.dart';
 import '../application/store_and_services.dart';
 import '../application/voice_shopping.dart';
 import '../core/utils/format_utils.dart';
+import '../data/finance_integration_dependencies.dart';
 import '../data/remote/shared_lists_repository.dart';
 import '../domain/classifications.dart';
 import '../domain/models_and_utils.dart';
 import 'catalog_products_page.dart';
 import 'dialogs_and_sheets.dart';
-import 'launch.dart';
+import 'dialogs/delete_item_dialog.dart';
+import 'theme/editorial_workspace_theme.dart';
 import 'market_mode_page.dart';
 import 'purchase_history_page.dart';
 import 'shared_lists_pages.dart';
 import 'shopping_list_editor/shopping_list_editor_models.dart';
 import 'shopping_list_editor/widgets/editor_chrome_widgets.dart';
+import 'shopping_list_editor/widgets/list_editor_actions_sheet.dart';
+import 'shopping_list_editor/widgets/item_actions_sheet.dart';
 import 'shopping_list_editor/widgets/editor_empty_states.dart';
 import 'shopping_list_editor/widgets/editor_item_card.dart';
 import 'shopping_list_editor/widgets/editor_items_toolbar.dart';
 import 'shopping_list_editor/widgets/editor_price_history_sheet.dart';
-import 'shopping_list_editor/widgets/editor_summary_widgets.dart';
+import 'shopping_list_editor/widgets/editor_editorial_summary.dart';
 import 'utils/app_modal.dart';
 import 'utils/app_page_route.dart';
 import 'utils/app_toast.dart';
-
-enum _ListEditorMenuAction {
-  reopenList,
-  openSharedList,
-  syncSharedNow,
-  shareList,
-  importFiscalReceipt,
-  finalizePurchase,
-  openMarketMode,
-  openCatalog,
-  viewHistory,
-  editReminder,
-  editBudget,
-  editPaymentBalances,
-  toggleMarketOrdering,
-  renameList,
-  clearPurchased,
-}
-
-enum _ListItemSwipeQuickAction { edit, duplicate, delete }
-
-class _ListEditorActionsSheet extends StatelessWidget {
-  const _ListEditorActionsSheet({
-    required this.isClosed,
-    required this.isSharedLocked,
-    required this.hasReminder,
-    required this.hasPurchasedItems,
-    required this.marketOrderingEnabled,
-  });
-
-  final bool isClosed;
-  final bool isSharedLocked;
-  final bool hasReminder;
-  final bool hasPurchasedItems;
-  final bool marketOrderingEnabled;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
-    final quickActions = isClosed
-        ? const <_ListEditorMenuAction>[_ListEditorMenuAction.reopenList]
-        : <_ListEditorMenuAction>[
-            _ListEditorMenuAction.finalizePurchase,
-            _ListEditorMenuAction.importFiscalReceipt,
-            _ListEditorMenuAction.openMarketMode,
-            if (isSharedLocked) _ListEditorMenuAction.syncSharedNow,
-          ];
-    final purchaseActions = <_ListEditorMenuAction>[
-      if (!isClosed) ...[
-        _ListEditorMenuAction.importFiscalReceipt,
-        _ListEditorMenuAction.finalizePurchase,
-        _ListEditorMenuAction.openMarketMode,
-        _ListEditorMenuAction.openCatalog,
-        if (hasPurchasedItems) _ListEditorMenuAction.clearPurchased,
-      ],
-      if (isClosed) _ListEditorMenuAction.reopenList,
-      if (isClosed) _ListEditorMenuAction.openCatalog,
-      if (isSharedLocked) _ListEditorMenuAction.openSharedList,
-      if (isSharedLocked) _ListEditorMenuAction.syncSharedNow,
-      _ListEditorMenuAction.shareList,
-      _ListEditorMenuAction.viewHistory,
-    ];
-    final settingsActions = isClosed
-        ? const <_ListEditorMenuAction>[]
-        : <_ListEditorMenuAction>[
-            _ListEditorMenuAction.editReminder,
-            _ListEditorMenuAction.editBudget,
-            _ListEditorMenuAction.editPaymentBalances,
-            _ListEditorMenuAction.toggleMarketOrdering,
-            _ListEditorMenuAction.renameList,
-          ];
-
-    _ListEditorActionMeta resolveMeta(_ListEditorMenuAction action) {
-      switch (action) {
-        case _ListEditorMenuAction.reopenList:
-          return _ListEditorActionMeta(
-            label: 'Reabrir lista',
-            shortLabel: 'Reabrir',
-            icon: Icons.lock_open_rounded,
-            color: const Color(0xFF1E88E5),
-          );
-        case _ListEditorMenuAction.openSharedList:
-          return _ListEditorActionMeta(
-            label: 'Abrir lista compartilhada',
-            shortLabel: 'Abrir compartilhada',
-            icon: Icons.group_work_rounded,
-            color: const Color(0xFF00796B),
-          );
-        case _ListEditorMenuAction.syncSharedNow:
-          return _ListEditorActionMeta(
-            label: 'Sincronizar agora',
-            shortLabel: 'Sincronizar',
-            icon: Icons.sync_rounded,
-            color: const Color(0xFF00838F),
-          );
-        case _ListEditorMenuAction.shareList:
-          return _ListEditorActionMeta(
-            label: 'Gerar código de compartilhamento',
-            shortLabel: 'Compartilhar',
-            icon: Icons.qr_code_rounded,
-            color: const Color(0xFF1565C0),
-          );
-        case _ListEditorMenuAction.importFiscalReceipt:
-          return _ListEditorActionMeta(
-            label: 'Importar cupom fiscal',
-            shortLabel: 'Cupom',
-            icon: Icons.receipt_long_rounded,
-            color: const Color(0xFFF57C00),
-          );
-        case _ListEditorMenuAction.finalizePurchase:
-          return _ListEditorActionMeta(
-            label: 'Fechar compra',
-            shortLabel: 'Fechar',
-            icon: Icons.task_alt_rounded,
-            color: const Color(0xFF2E7D32),
-          );
-        case _ListEditorMenuAction.openMarketMode:
-          return _ListEditorActionMeta(
-            label: 'Abrir modo compra',
-            shortLabel: 'Modo compra',
-            icon: Icons.shopping_cart_checkout_rounded,
-            color: const Color(0xFFF97316),
-          );
-        case _ListEditorMenuAction.openCatalog:
-          return _ListEditorActionMeta(
-            label: 'Abrir catálogo de produtos',
-            shortLabel: 'Catálogo',
-            icon: Icons.local_offer_rounded,
-            color: const Color(0xFF0277BD),
-          );
-        case _ListEditorMenuAction.viewHistory:
-          return _ListEditorActionMeta(
-            label: 'Histórico mensal',
-            shortLabel: 'Histórico',
-            icon: Icons.event_note_rounded,
-            color: const Color(0xFF6D4C41),
-          );
-        case _ListEditorMenuAction.editReminder:
-          return _ListEditorActionMeta(
-            label: 'Configurar lembrete',
-            shortLabel: hasReminder ? 'Lembrete Ativo' : 'Lembrete Inativo',
-            icon: hasReminder
-                ? Icons.notifications_active_rounded
-                : Icons.notifications_none_rounded,
-            color: const Color(0xFF8E24AA),
-          );
-        case _ListEditorMenuAction.editBudget:
-          return _ListEditorActionMeta(
-            label: 'Definir orçamento',
-            shortLabel: 'Orçamento',
-            icon: Icons.account_balance_wallet_rounded,
-            color: const Color(0xFF3949AB),
-          );
-        case _ListEditorMenuAction.editPaymentBalances:
-          return _ListEditorActionMeta(
-            label: 'Configurar saldos',
-            shortLabel: 'Saldos',
-            icon: Icons.payments_rounded,
-            color: const Color(0xFF00838F),
-          );
-        case _ListEditorMenuAction.toggleMarketOrdering:
-          return _ListEditorActionMeta(
-            label: marketOrderingEnabled
-                ? 'Desativar ordem de mercado'
-                : 'Ativar ordem de mercado',
-            shortLabel: marketOrderingEnabled ? 'Ordem off' : 'Ordem on',
-            icon: marketOrderingEnabled
-                ? Icons.storefront_rounded
-                : Icons.storefront_outlined,
-            color: const Color(0xFF5E35B1),
-          );
-        case _ListEditorMenuAction.renameList:
-          return _ListEditorActionMeta(
-            label: 'Renomear lista',
-            shortLabel: 'Renomear',
-            icon: Icons.edit_note_rounded,
-            color: const Color(0xFF546E7A),
-          );
-        case _ListEditorMenuAction.clearPurchased:
-          return _ListEditorActionMeta(
-            label: 'Limpar comprados',
-            shortLabel: 'Limpar',
-            icon: Icons.cleaning_services_rounded,
-            color: const Color(0xFFC62828),
-          );
-      }
-    }
-
-    return SizedBox(
-      height: min(MediaQuery.sizeOf(context).height * 0.88, 700),
-      child: ListView(
-        padding: EdgeInsets.fromLTRB(16, 8, 16, 20 + bottomInset),
-        children: [
-          Text(
-            'Ações da lista',
-            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Tudo em um único menu, com atalhos para as ações principais.',
-            style: textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Ações rápidas',
-            style: textTheme.labelLarge?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: quickActions
-                .map((action) {
-                  final meta = resolveMeta(action);
-                  return _ListEditorQuickActionCard(
-                    meta: meta,
-                    onTap: () => Navigator.pop(context, action),
-                  );
-                })
-                .toList(growable: false),
-          ),
-          const SizedBox(height: 14),
-          _ListEditorActionSection(
-            title: 'Compra',
-            actions: purchaseActions,
-            resolveMeta: resolveMeta,
-            onTap: (action) => Navigator.pop(context, action),
-          ),
-          if (settingsActions.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            _ListEditorActionSection(
-              title: 'Configurações',
-              actions: settingsActions,
-              resolveMeta: resolveMeta,
-              onTap: (action) => Navigator.pop(context, action),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _ListEditorActionSection extends StatelessWidget {
-  const _ListEditorActionSection({
-    required this.title,
-    required this.actions,
-    required this.resolveMeta,
-    required this.onTap,
-  });
-
-  final String title;
-  final List<_ListEditorMenuAction> actions;
-  final _ListEditorActionMeta Function(_ListEditorMenuAction action)
-  resolveMeta;
-  final ValueChanged<_ListEditorMenuAction> onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: textTheme.labelLarge?.copyWith(
-            color: colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Material(
-          color: colorScheme.surfaceContainerLowest.withValues(alpha: 0.72),
-          clipBehavior: Clip.antiAlias,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            children: [
-              for (var i = 0; i < actions.length; i++) ...[
-                _ListEditorActionTile(
-                  meta: resolveMeta(actions[i]),
-                  onTap: () => onTap(actions[i]),
-                ),
-                if (i < actions.length - 1)
-                  Divider(
-                    height: 1,
-                    indent: 56,
-                    endIndent: 12,
-                    color: colorScheme.outlineVariant.withValues(alpha: 0.65),
-                  ),
-              ],
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ListEditorActionTile extends StatelessWidget {
-  const _ListEditorActionTile({required this.meta, required this.onTap});
-
-  final _ListEditorActionMeta meta;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      onTap: onTap,
-      leading: DecoratedBox(
-        decoration: BoxDecoration(
-          color: meta.color.withValues(alpha: 0.16),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(7),
-          child: Icon(meta.icon, color: meta.color, size: 18),
-        ),
-      ),
-      title: Text(meta.label),
-      trailing: const Icon(Icons.chevron_right_rounded),
-    );
-  }
-}
-
-class _ListEditorQuickActionCard extends StatelessWidget {
-  const _ListEditorQuickActionCard({required this.meta, required this.onTap});
-
-  final _ListEditorActionMeta meta;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: 104, maxWidth: 128),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: onTap,
-          child: Ink(
-            padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              color: meta.color.withValues(alpha: 0.12),
-              border: Border.all(color: meta.color.withValues(alpha: 0.26)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(meta.icon, color: meta.color),
-                const SizedBox(height: 6),
-                Text(
-                  meta.shortLabel,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ListEditorActionMeta {
-  const _ListEditorActionMeta({
-    required this.label,
-    required this.shortLabel,
-    required this.icon,
-    required this.color,
-  });
-
-  final String label;
-  final String shortLabel;
-  final IconData icon;
-  final Color color;
-}
 
 class ShoppingListEditorPage extends StatefulWidget {
   const ShoppingListEditorPage({
@@ -431,6 +45,9 @@ class ShoppingListEditorPage extends StatefulWidget {
     this.sharedListsRepository,
     this.voiceRecognitionService,
     this.startVoiceCapture = false,
+    this.startMarketMode = false,
+    this.financeIntegrationRepository,
+    this.initialSummaryExpanded,
   });
 
   final ShoppingListsStore store;
@@ -438,6 +55,9 @@ class ShoppingListEditorPage extends StatefulWidget {
   final SharedListsRepository? sharedListsRepository;
   final ShoppingVoiceRecognitionService? voiceRecognitionService;
   final bool startVoiceCapture;
+  final bool startMarketMode;
+  final FinanceIntegrationRepository? financeIntegrationRepository;
+  final bool? initialSummaryExpanded;
 
   @override
   State<ShoppingListEditorPage> createState() => _ShoppingListEditorPageState();
@@ -450,7 +70,6 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   late final TextEditingController _searchController;
   ShoppingCategory? _categoryFilter;
   bool _marketModeEnabled = false;
-  bool _summaryCollapsed = true;
   String? _expandedItemId;
   EditorItemsVisibility _itemsVisibility = EditorItemsVisibility.pending;
   bool _didShowBudgetWarning = false;
@@ -465,6 +84,10 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   SharedShoppingListSummary? _sharedLiveSummary;
   List<SharedShoppingItem>? _sharedLiveItems;
   DateTime? _lastSharedSyncAt;
+  late final FinanceIntegrationRepository _financeIntegrationRepository;
+  FinanceWorkspace? _financeWorkspace;
+  String? _financeLoadError;
+  Future<void>? _financeLoadFuture;
 
   String get _searchQuery => _searchController.text.trim();
   bool get _isSharedLocked => _linkedSharedSummary != null;
@@ -572,6 +195,14 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   @override
   void initState() {
     super.initState();
+    if (widget.startMarketMode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_openMarketShoppingMode());
+      });
+    }
+    _financeIntegrationRepository =
+        widget.financeIntegrationRepository ??
+        createFinanceIntegrationRepository();
     _searchController = TextEditingController();
     _searchController.addListener(_handleSearchChanged);
     final fromStore = widget.store.findById(widget.listId);
@@ -584,6 +215,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     _didShowBudgetWarning = _list.isOverBudget;
     _didShowBudgetNearLimitWarning = false;
     _resolveSharedLink();
+    unawaited(_refreshFinanceCheckout());
     if (widget.startVoiceCapture && widget.voiceRecognitionService != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -1361,56 +993,21 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   }
 
   Future<void> _showSwipeQuickActions(ShoppingItem item) async {
-    final action = await showAppModalBottomSheet<_ListItemSwipeQuickAction>(
-      context: context,
-      showDragHandle: true,
-      useSafeArea: true,
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.edit_rounded),
-                  title: const Text('Editar item'),
-                  onTap: () =>
-                      Navigator.pop(context, _ListItemSwipeQuickAction.edit),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.copy_rounded),
-                  title: const Text('Duplicar item'),
-                  onTap: () => Navigator.pop(
-                    context,
-                    _ListItemSwipeQuickAction.duplicate,
-                  ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.delete_rounded),
-                  title: const Text('Excluir item'),
-                  onTap: () =>
-                      Navigator.pop(context, _ListItemSwipeQuickAction.delete),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+    FocusScope.of(context).unfocus();
+    final action = await showItemActionsSheet(context, item: item);
 
     if (!mounted || action == null) {
       return;
     }
 
     switch (action) {
-      case _ListItemSwipeQuickAction.edit:
+      case ItemAction.edit:
         await _openItemForm(existing: item);
         return;
-      case _ListItemSwipeQuickAction.duplicate:
+      case ItemAction.duplicate:
         _duplicateItem(item);
         return;
-      case _ListItemSwipeQuickAction.delete:
+      case ItemAction.delete:
         await _deleteItem(item);
         return;
     }
@@ -1420,23 +1017,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     if (!_ensureEditable()) {
       return;
     }
-    final shouldDelete = await showAppDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Excluir item?'),
-        content: Text('Deseja remover "${item.name}" da lista?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Excluir'),
-          ),
-        ],
-      ),
-    );
+    final shouldDelete = await showDeleteItemDialog(context, item: item);
 
     if (!mounted || shouldDelete != true) {
       return;
@@ -1450,12 +1031,23 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
   }
 
   Future<void> _showPriceHistory(ShoppingItem item) async {
+    FocusScope.of(context).unfocus();
     await showAppModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       useSafeArea: true,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (context) {
-        return EditorPriceHistorySheet(item: item);
+        return ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * .85,
+          ),
+          child: EditorPriceHistorySheet(item: item),
+        );
       },
     );
   }
@@ -1569,6 +1161,8 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     final result = await showBudgetEditorDialog(
       context,
       initialValue: _list.budget,
+      initialPaymentBalances: _list.paymentBalances,
+      financeRepository: _financeIntegrationRepository,
     );
 
     if (!mounted || result == null) {
@@ -1589,7 +1183,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     }
 
     _updateList(
-      _list.copyWith(budget: value),
+      _list.copyWith(budget: value, paymentBalances: result.paymentBalances),
       message: 'Orçamento atualizado.',
     );
   }
@@ -1603,6 +1197,7 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     final result = await showPaymentBalancesEditorDialog(
       context,
       initialValues: _list.paymentBalances,
+      financeRepository: _financeIntegrationRepository,
     );
     if (!mounted || result == null) {
       return;
@@ -1747,7 +1342,16 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     final updated = await Navigator.push<ShoppingListModel>(
       context,
       buildAppPageRoute(
-        builder: (_) => ShoppingMarketModePage(initialList: _list),
+        builder: (_) => ShoppingMarketModePage(
+          initialList: _list,
+          financeRepository: _financeIntegrationRepository,
+          onSave: (updated) async {
+            await widget.store.upsertList(updated);
+            if (!mounted) return;
+            setState(() => _list = updated);
+            unawaited(_syncLocalChangesToShared(updated));
+          },
+        ),
       ),
     );
 
@@ -1755,14 +1359,18 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       return;
     }
 
-    _updateList(updated, message: 'Modo compra atualizado com sucesso.');
+    setState(() => _list = updated);
+    _maybeWarnBudgetExceeded(updated);
   }
 
   Future<void> _openPurchaseHistory() async {
     await Navigator.push<void>(
       context,
       buildAppPageRoute(
-        builder: (_) => PurchaseHistoryPage(store: widget.store),
+        builder: (_) => PurchaseHistoryPage(
+          store: widget.store,
+          financeRepository: _financeIntegrationRepository,
+        ),
       ),
     );
   }
@@ -1807,7 +1415,22 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     _showSnack('Lista reaberta. Edições liberadas.');
   }
 
+  bool _finalizingPurchase = false;
   Future<void> _finalizePurchase() async {
+    if (_finalizingPurchase) return;
+    _finalizingPurchase = true;
+    try {
+      await _performFinalizePurchase();
+    } catch (_) {
+      _showSnack(
+        'Não foi possível concluir o fechamento. Confira o histórico antes de tentar novamente.',
+      );
+    } finally {
+      _finalizingPurchase = false;
+    }
+  }
+
+  Future<void> _performFinalizePurchase() async {
     if (_list.isClosed) {
       _showSnack('A lista já está fechada. Toque em reabrir para editar.');
       return;
@@ -1817,10 +1440,56 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       return;
     }
 
-    final checkout = await showPurchaseCheckoutDialog(context, list: _list);
+    unawaited(
+      showAppDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const PopScope(
+          canPop: false,
+          child: AlertDialog(
+            content: Row(
+              children: [
+                SizedBox.square(
+                  dimension: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 16),
+                Expanded(child: Text('Consultando cartões do Finanças…')),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    try {
+      await _refreshFinanceCheckout().timeout(const Duration(seconds: 5));
+    } on TimeoutException {
+      _financeLoadError =
+          'A consulta aos cartões demorou mais que o esperado. Tente fechar novamente para atualizar.';
+    } finally {
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+    }
+    if (!mounted) return;
+    final checkout = await showPurchaseCheckoutDialog(
+      context,
+      list: _list,
+      financeWorkspace: _financeWorkspace,
+      financeLoadError: _financeLoadError,
+    );
     if (!mounted || checkout == null) {
       return;
     }
+
+    await _persistCheckoutCorrections(checkout.reviewedItems);
+    if (!mounted) return;
+
+    final financeIntent = checkout.sendToFinance
+        ? FinanceCheckoutIntent(
+            connectionId: await _financeIntegrationRepository.connectionId(),
+            allocations: checkout.financeAllocations,
+            categoryId: checkout.financeCategoryId,
+          )
+        : null;
 
     if (_linkedSharedSummary != null) {
       final repository = widget.sharedListsRepository;
@@ -1834,6 +1503,8 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         final localFinalized = await widget.store.finalizeList(
           _list.id,
           markPendingAsPurchased: checkout.markPendingAsPurchased,
+          financeIntent: financeIntent,
+          finalTotalCents: checkout.finalTotalCents,
         );
         if (mounted && localFinalized != null) {
           setState(() {
@@ -1846,9 +1517,17 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
           listId: _linkedSharedSummary!.id,
           updatedBy: uid,
           markPendingAsPurchased: checkout.markPendingAsPurchased,
+          finalTotalCents: checkout.finalTotalCents,
         );
         await _syncLinkedSharedNow(showSnack: true);
-        _showSnack('Compra fechada e salva no histórico compartilhado.');
+        final financeMessage = await _submitCompletedPurchase(checkout);
+        if (!mounted) return;
+        await showPurchaseCompletionDialog(
+          context,
+          financeMessage:
+              financeMessage ??
+              'Compra fechada e salva no histórico compartilhado.',
+        );
       } catch (error) {
         _showSnack('Não foi possível fechar a lista. Tente novamente.');
       }
@@ -1859,13 +1538,125 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
         await widget.store.finalizeList(
           _list.id,
           markPendingAsPurchased: checkout.markPendingAsPurchased,
+          financeIntent: financeIntent,
+          finalTotalCents: checkout.finalTotalCents,
         ) !=
         null;
     if (!mounted || !didFinalize) {
       return;
     }
-    _showSnack('Compra fechada e salva no histórico mensal.');
+    final financeMessage = await _submitCompletedPurchase(checkout);
+    if (!mounted) return;
+    await showPurchaseCompletionDialog(
+      context,
+      financeMessage:
+          financeMessage ?? 'Compra fechada e salva no histórico mensal.',
+    );
+    if (!mounted) return;
     Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
+  Future<void> _refreshFinanceCheckout() {
+    final active = _financeLoadFuture;
+    if (active != null) return active;
+    final future = _loadFinanceCheckout();
+    _financeLoadFuture = future;
+    future.whenComplete(() {
+      if (identical(_financeLoadFuture, future)) {
+        _financeLoadFuture = null;
+      }
+    });
+    return future;
+  }
+
+  Future<void> _persistCheckoutCorrections(
+    List<ShoppingItem> reviewedItems,
+  ) async {
+    if (reviewedItems.isEmpty || !_checkoutItemsChanged(reviewedItems)) return;
+    final corrected = _list.copyWith(
+      items: reviewedItems,
+      updatedAt: DateTime.now(),
+    );
+    await widget.store.upsertList(corrected);
+    if (!mounted) return;
+    setState(() => _list = corrected.deepCopy());
+  }
+
+  bool _checkoutItemsChanged(List<ShoppingItem> reviewedItems) {
+    if (reviewedItems.length != _list.items.length) return true;
+    for (var index = 0; index < reviewedItems.length; index++) {
+      final before = _list.items[index];
+      final after = reviewedItems[index];
+      if (before.id != after.id ||
+          before.quantity != after.quantity ||
+          before.unitPrice != after.unitPrice ||
+          before.isPurchased != after.isPurchased) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Future<void> _loadFinanceCheckout() async {
+    try {
+      if (!await _financeIntegrationRepository.isConnected()) {
+        _financeWorkspace = null;
+        _financeLoadError = null;
+        return;
+      }
+      final workspace = await _financeIntegrationRepository.loadWorkspace();
+      _financeWorkspace = workspace;
+      _financeLoadError = null;
+    } on FinanceIntegrationException catch (error) {
+      _financeWorkspace = null;
+      _financeLoadError = error.message;
+    } catch (_) {
+      _financeWorkspace = null;
+      _financeLoadError = 'O Minhas Finanças está indisponível agora.';
+    }
+  }
+
+  Future<String?> _submitCompletedPurchase(
+    PurchaseCheckoutResult checkout,
+  ) async {
+    CompletedPurchase? completed;
+    for (final candidate in widget.store.purchaseHistory) {
+      if (candidate.listId == _list.id) {
+        completed = candidate;
+        break;
+      }
+    }
+    if (completed == null || completed.spentValue <= 0) {
+      return 'Compra fechada, mas o total precisa ser maior que zero para lançar no Finanças.';
+    }
+    final intent = completed.financeIntent;
+    if (intent == null) return null;
+    try {
+      await _financeIntegrationRepository.submitPurchasePlan(
+        buildFinancePurchasePlan(
+          purchase: completed,
+          allocations: intent.allocations,
+          categoryId: intent.categoryId,
+        ),
+      );
+      final records =
+          (await _financeIntegrationRepository.purchaseSyncHistory())
+              .where((r) => r.purchaseId == completed!.id)
+              .toList();
+      final synced = records
+          .where((r) => r.status == FinanceSyncStatus.synced)
+          .length;
+      if (synced != records.length) {
+        return synced > 0
+            ? 'Compra fechada. $synced de ${records.length} pagamentos sincronizados. Confira o histórico.'
+            : 'Compra fechada. O envio ao Finanças está pendente; confira o histórico.';
+      }
+      return 'Compra fechada e lançada no Minhas Finanças.';
+    } on FinanceIntegrationException catch (error) {
+      return 'Compra fechada, mas não foi lançada no Finanças: ${error.message}';
+    } catch (_) {
+      return 'Compra fechada, mas não foi possível lançar no Minhas Finanças.';
+    }
   }
 
   void _clearFilters() {
@@ -1878,71 +1669,83 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
     });
   }
 
-  void _handleAppBarMenuAction(_ListEditorMenuAction action) {
+  void _handleAppBarMenuAction(ListEditorMenuAction action) {
     switch (action) {
-      case _ListEditorMenuAction.reopenList:
+      case ListEditorMenuAction.reopenList:
         _reopenListForEditing();
         return;
-      case _ListEditorMenuAction.openSharedList:
+      case ListEditorMenuAction.openSharedList:
         _openLinkedSharedList();
         return;
-      case _ListEditorMenuAction.syncSharedNow:
+      case ListEditorMenuAction.syncSharedNow:
         unawaited(_syncLocalChangesToShared(_list));
         _syncLinkedSharedNow(showSnack: true);
         return;
-      case _ListEditorMenuAction.shareList:
+      case ListEditorMenuAction.shareList:
         _shareListWithCode();
         return;
-      case _ListEditorMenuAction.importFiscalReceipt:
+      case ListEditorMenuAction.importFiscalReceipt:
         _importFromFiscalReceipt();
         return;
-      case _ListEditorMenuAction.finalizePurchase:
+      case ListEditorMenuAction.finalizePurchase:
         _finalizePurchase();
         return;
-      case _ListEditorMenuAction.openMarketMode:
+      case ListEditorMenuAction.openMarketMode:
         _openMarketShoppingMode();
         return;
-      case _ListEditorMenuAction.openCatalog:
+      case ListEditorMenuAction.openCatalog:
         _openCatalogPage();
         return;
-      case _ListEditorMenuAction.viewHistory:
+      case ListEditorMenuAction.viewHistory:
         _openPurchaseHistory();
         return;
-      case _ListEditorMenuAction.editReminder:
+      case ListEditorMenuAction.editReminder:
         _openReminderEditor();
         return;
-      case _ListEditorMenuAction.editBudget:
+      case ListEditorMenuAction.editBudget:
         _openBudgetEditor();
         return;
-      case _ListEditorMenuAction.editPaymentBalances:
+      case ListEditorMenuAction.editPaymentBalances:
         _openPaymentBalancesEditor();
         return;
-      case _ListEditorMenuAction.toggleMarketOrdering:
+      case ListEditorMenuAction.toggleMarketOrdering:
         setState(() {
           _marketModeEnabled = !_marketModeEnabled;
         });
         return;
-      case _ListEditorMenuAction.renameList:
+      case ListEditorMenuAction.renameList:
         _renameList();
         return;
-      case _ListEditorMenuAction.clearPurchased:
+      case ListEditorMenuAction.clearPurchased:
         _clearPurchased();
         return;
     }
   }
 
   Future<void> _showListActionsSheet() async {
-    final selected = await showAppModalBottomSheet<_ListEditorMenuAction>(
+    FocusScope.of(context).unfocus();
+    final selected = await showAppModalBottomSheet<ListEditorMenuAction>(
       context: context,
       showDragHandle: true,
       useSafeArea: true,
+      isScrollControlled: true,
+      backgroundColor: editorialWorkspaceTheme(
+        Theme.of(context),
+      ).colorScheme.surfaceContainerLowest,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      clipBehavior: Clip.antiAlias,
       builder: (context) {
-        return _ListEditorActionsSheet(
-          isClosed: _list.isClosed,
-          isSharedLocked: _isSharedLocked,
-          hasReminder: _list.reminder != null,
-          hasPurchasedItems: _list.purchasedItemsCount > 0,
-          marketOrderingEnabled: _marketModeEnabled,
+        return Theme(
+          data: editorialWorkspaceTheme(Theme.of(context)),
+          child: ListEditorActionsSheet(
+            isClosed: _list.isClosed,
+            isSharedLocked: _isSharedLocked,
+            hasReminder: _list.reminder != null,
+            hasPurchasedItems: _list.purchasedItemsCount > 0,
+            marketOrderingEnabled: _marketModeEnabled,
+          ),
         );
       },
     );
@@ -1978,174 +1781,235 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_list.name),
-        actions: [
-          IconButton(
-            tooltip: 'Ações da lista',
-            onPressed: _showListActionsSheet,
-            icon: const Icon(Icons.more_vert_rounded),
-          ),
-        ],
-      ),
-      floatingActionButton: _isEditingLocked
-          ? null
-          : Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
+    return Theme(
+      data: editorialWorkspaceTheme(Theme.of(context)),
+      child: Builder(
+        builder: (context) => Scaffold(
+          appBar: AppBar(
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (widget.voiceRecognitionService != null) ...[
-                  FloatingActionButton.small(
-                    heroTag: 'voice-quick-add',
-                    tooltip: 'Adicionar produtos por voz',
-                    onPressed: _openVoiceQuickAdd,
-                    child: const Icon(Icons.mic_rounded),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-                FloatingActionButton.extended(
-                  heroTag: 'manual-add-item',
-                  onPressed: _openItemForm,
-                  icon: const Icon(Icons.add_shopping_cart_rounded),
-                  label: const Text('Adicionar item'),
+                Text(_list.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text(
+                  '${formatItemCount(_list.items.length)}${_list.isClosed ? ' · Fechada' : ''}',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontSize: 11),
                 ),
               ],
             ),
-      body: AppGradientScene(
-        child: SafeArea(
-          child: Column(
-            children: [
-              if (linkedShared != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-                  child: Card(
-                    elevation: 0,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.group_work_rounded),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Lista compartilhada detectada',
-                                  style: Theme.of(context).textTheme.titleSmall
-                                      ?.copyWith(fontWeight: FontWeight.w800),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Abra a versão compartilhada para ver '
-                                  'atualizações em tempo real.',
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.onSurfaceVariant,
-                                      ),
-                                ),
-                                const SizedBox(height: 10),
-                                EditorSyncStatusPill(
-                                  isSyncing: _isSyncingToShared,
-                                  lastSyncAt: _lastSharedSyncAt,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              FilledButton.tonal(
-                                onPressed: _openLinkedSharedList,
-                                child: const Text('Abrir'),
-                              ),
-                              TextButton(
-                                onPressed: _openSharedInviteSheetFromLocal,
-                                child: const Text('Gerenciar'),
-                              ),
-                            ],
-                          ),
-                        ],
+            actions: [
+              IconButton(
+                tooltip: 'Compartilhar lista',
+                onPressed: _shareListWithCode,
+                icon: const Icon(Icons.person_add_outlined, size: 20),
+              ),
+              IconButton(
+                tooltip: 'Ações da lista',
+                onPressed: _showListActionsSheet,
+                icon: const Icon(Icons.more_vert_rounded),
+              ),
+            ],
+          ),
+          bottomNavigationBar: _isEditingLocked
+              ? null
+              : SafeArea(
+                  top: false,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(
+                          color: Theme.of(context).colorScheme.outlineVariant,
+                        ),
                       ),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 6,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            key: const ValueKey('editor_add_item'),
+                            onPressed: _openItemForm,
+                            icon: const Icon(
+                              Icons.add_shopping_cart_rounded,
+                              size: 18,
+                            ),
+                            label: const Text('Adicionar item'),
+                          ),
+                        ),
+                        if (widget.voiceRecognitionService != null)
+                          IconButton(
+                            tooltip: 'Adicionar produtos por voz',
+                            onPressed: _openVoiceQuickAdd,
+                            icon: const Icon(Icons.mic_outlined),
+                          ),
+                        IconButton(
+                          tooltip: 'Importar cupom fiscal',
+                          onPressed: _importFromFiscalReceipt,
+                          icon: const Icon(Icons.receipt_long_outlined),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
-                child: ListSummaryPanel(
-                  list: _list,
-                  collapsed: _summaryCollapsed,
-                  onBudgetTap: _isEditingLocked
-                      ? () => _ensureEditable()
-                      : _openBudgetEditor,
-                  onReminderTap: _isEditingLocked
-                      ? () => _ensureEditable()
-                      : _openReminderEditor,
-                  onPaymentBalancesTap: _isEditingLocked
-                      ? () => _ensureEditable()
-                      : _openPaymentBalancesEditor,
-                  onReopenTap: _list.isClosed ? _reopenListForEditing : null,
-                  onToggleCollapsed: () {
-                    setState(() {
-                      _summaryCollapsed = !_summaryCollapsed;
-                    });
-                  },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: ItemsToolsBar(
-                  controller: _searchController,
-                  selectedSort: _sortOption,
-                  selectedCategory: _categoryFilter,
-                  visibilityFilter: _itemsVisibility,
-                  marketModeEnabled: _marketModeEnabled,
-                  visibleCount: visibleItems.length,
-                  totalCount: _list.items.length,
-                  pendingCount: _pendingItemsCount,
-                  purchasedCount: _purchasedItemsCount,
-                  hasActiveFilters: _hasActiveFilters,
-                  onSortChanged: (value) {
-                    setState(() {
-                      _sortOption = value;
-                    });
-                  },
-                  onCategoryChanged: (value) {
-                    setState(() {
-                      _categoryFilter = value;
-                    });
-                  },
-                  onVisibilityChanged: _setItemsVisibility,
-                  onClearFilters: _clearFilters,
-                ),
-              ),
-              if (_itemsVisibility == EditorItemsVisibility.pending &&
-                  _purchasedItemsCount > 0)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  child: EditorInlineInfoBanner(
-                    icon: Icons.visibility_outlined,
-                    message: _purchasedItemsCount == 1
-                        ? '1 item comprado oculto para deixar a lista mais objetiva.'
-                        : '$_purchasedItemsCount itens comprados ocultos para deixar a lista mais objetiva.',
-                    actionLabel: 'Ver',
-                    onAction: () =>
-                        _setItemsVisibility(EditorItemsVisibility.purchased),
-                  ),
-                ),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 280),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  child: _list.items.isEmpty
-                      ? const EmptyItemsState()
-                      : visibleItems.isEmpty
-                      ? EmptySearchState(
+          body: SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Column(
+                        children: [
+                          if (linkedShared != null)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+                              child: Card(
+                                elevation: 0,
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    14,
+                                    12,
+                                    14,
+                                    12,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.group_work_rounded),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Lista compartilhada detectada',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleSmall
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.w800,
+                                                  ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'Abra a versão compartilhada para ver '
+                                              'atualizações em tempo real.',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.copyWith(
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurfaceVariant,
+                                                  ),
+                                            ),
+                                            const SizedBox(height: 10),
+                                            EditorSyncStatusPill(
+                                              isSyncing: _isSyncingToShared,
+                                              lastSyncAt: _lastSharedSyncAt,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          FilledButton.tonal(
+                                            onPressed: _openLinkedSharedList,
+                                            child: const Text('Abrir'),
+                                          ),
+                                          TextButton(
+                                            onPressed:
+                                                _openSharedInviteSheetFromLocal,
+                                            child: const Text('Gerenciar'),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          EditorEditorialSummary(
+                            list: _list,
+                            initialExpanded:
+                                widget.initialSummaryExpanded ?? _list.isClosed,
+                            onBudget: _isEditingLocked
+                                ? () => _ensureEditable()
+                                : _openBudgetEditor,
+                            onReminder: _isEditingLocked
+                                ? () => _ensureEditable()
+                                : _openReminderEditor,
+                            onBalances: _isEditingLocked
+                                ? () => _ensureEditable()
+                                : _openPaymentBalancesEditor,
+                            onMarket: _openMarketShoppingMode,
+                            onCheckout: _finalizePurchase,
+                            onReopen: _list.isClosed
+                                ? _reopenListForEditing
+                                : null,
+                          ),
+                          const SizedBox(height: 12),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                            child: ItemsToolsBar(
+                              controller: _searchController,
+                              selectedSort: _sortOption,
+                              selectedCategory: _categoryFilter,
+                              visibilityFilter: _itemsVisibility,
+                              marketModeEnabled: _marketModeEnabled,
+                              visibleCount: visibleItems.length,
+                              totalCount: _list.items.length,
+                              pendingCount: _pendingItemsCount,
+                              purchasedCount: _purchasedItemsCount,
+                              hasActiveFilters: _hasActiveFilters,
+                              onSortChanged: (value) {
+                                setState(() {
+                                  _sortOption = value;
+                                });
+                              },
+                              onCategoryChanged: (value) {
+                                setState(() {
+                                  _categoryFilter = value;
+                                });
+                              },
+                              onVisibilityChanged: _setItemsVisibility,
+                              onClearFilters: _clearFilters,
+                            ),
+                          ),
+                          if (_itemsVisibility ==
+                                  EditorItemsVisibility.pending &&
+                              _purchasedItemsCount > 0)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                              child: EditorInlineInfoBanner(
+                                icon: Icons.visibility_outlined,
+                                message: _purchasedItemsCount == 1
+                                    ? '1 item comprado oculto para deixar a lista mais objetiva.'
+                                    : '$_purchasedItemsCount itens comprados ocultos para deixar a lista mais objetiva.',
+                                actionLabel: 'Ver',
+                                onAction: () => _setItemsVisibility(
+                                  EditorItemsVisibility.purchased,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (_list.items.isEmpty)
+                      const SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: EmptyItemsState(),
+                      )
+                    else if (visibleItems.isEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: EmptySearchState(
                           query: _searchQuery,
                           visibilityFilter: _itemsVisibility,
                           onClearFilters: _clearFilters,
@@ -2157,15 +2021,18 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
                           ),
                           onShowAll: () =>
                               _setItemsVisibility(EditorItemsVisibility.all),
-                        )
-                      : ListView.separated(
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                        sliver: SliverList.separated(
                           key: ValueKey(
                             '${_list.id}-${_sortOption.name}-$_marketModeEnabled-${_categoryFilter?.key ?? 'all'}',
                           ),
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
                           itemCount: visibleItems.length,
                           separatorBuilder: (context, index) =>
-                              const SizedBox(height: 12),
+                              const SizedBox.shrink(),
                           itemBuilder: (context, index) {
                             final item = visibleItems[index];
                             return EditorEntryAnimation(
@@ -2233,9 +2100,11 @@ class _ShoppingListEditorPageState extends State<ShoppingListEditorPage> {
                             );
                           },
                         ),
+                      ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),

@@ -9,12 +9,14 @@ import '../../../core/utils/format_utils.dart';
 import '../../../domain/classifications.dart';
 import '../../../domain/models_and_utils.dart';
 import '../../../domain/product_price_analysis.dart';
-import '../../extensions/classification_ui_extensions.dart';
+import '../widgets/item_editor_theme.dart';
+import '../widgets/item_editor_category_picker.dart';
 import '../../utils/app_modal.dart';
 import '../../utils/item_price_insight.dart';
 import '../widgets/brl_currency_input_formatter.dart';
 import '../widgets/item_editor_support_widgets.dart';
 import 'barcode_scanner_sheet.dart';
+import 'pending_drafts_review_sheet.dart';
 
 enum ShoppingItemEditorMode { listItem, catalogProduct }
 
@@ -26,11 +28,18 @@ Future<ShoppingItemDraft?> showShoppingItemEditorSheet(
   Future<ProductLookupResult> Function(String barcode)? onLookupBarcode,
   Future<CatalogProduct?> Function(String name)? onLookupCatalogByName,
   ShoppingItemEditorMode mode = ShoppingItemEditorMode.listItem,
+  bool startBarcodeScan = false,
 }) {
   return showAppModalBottomSheet<ShoppingItemDraft>(
     context: context,
     isScrollControlled: true,
-    showDragHandle: true,
+    showDragHandle: false,
+    backgroundColor: Theme.of(context).brightness == Brightness.dark
+        ? const Color(0xFF20231E)
+        : const Color(0xFFFBF9F3),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
     useSafeArea: true,
     builder: (context) {
       return _ShoppingItemEditorSheet(
@@ -41,6 +50,7 @@ Future<ShoppingItemDraft?> showShoppingItemEditorSheet(
         onLookupCatalogByName: onLookupCatalogByName,
         mode: mode,
         allowMultiple: false,
+        startBarcodeScan: startBarcodeScan,
       );
     },
   );
@@ -56,7 +66,13 @@ Future<List<ShoppingItemDraft>?> showShoppingItemsEditorSheet(
   return showAppModalBottomSheet<List<ShoppingItemDraft>>(
     context: context,
     isScrollControlled: true,
-    showDragHandle: true,
+    showDragHandle: false,
+    backgroundColor: Theme.of(context).brightness == Brightness.dark
+        ? const Color(0xFF20231E)
+        : const Color(0xFFFBF9F3),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
     useSafeArea: true,
     builder: (context) {
       return _ShoppingItemEditorSheet(
@@ -81,6 +97,7 @@ class _ShoppingItemEditorSheet extends StatefulWidget {
     required this.onLookupCatalogByName,
     required this.mode,
     required this.allowMultiple,
+    this.startBarcodeScan = false,
   });
 
   final ShoppingItem? existingItem;
@@ -90,6 +107,7 @@ class _ShoppingItemEditorSheet extends StatefulWidget {
   final Future<CatalogProduct?> Function(String name)? onLookupCatalogByName;
   final ShoppingItemEditorMode mode;
   final bool allowMultiple;
+  final bool startBarcodeScan;
 
   @override
   State<_ShoppingItemEditorSheet> createState() =>
@@ -137,6 +155,11 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     _catalogMatch = _catalogProductFromExistingItem(widget.existingItem);
     _nameController.addListener(_handleCatalogMatchChanged);
     _barcodeController.addListener(_handleCatalogMatchChanged);
+    if (widget.startBarcodeScan) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_scanBarcode());
+      });
+    }
   }
 
   CatalogProduct? _catalogProductFromExistingItem(ShoppingItem? item) {
@@ -507,6 +530,23 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     _resetFormAfterQueuedDraft(draft.name);
   }
 
+  Future<void> _reviewPendingDrafts() async {
+    FocusScope.of(context).unfocus();
+    await showPendingDraftsReviewSheet(
+      context,
+      drafts: _pendingDrafts,
+      onChanged: (drafts) {
+        if (!mounted) return;
+        setState(() {
+          _pendingDrafts
+            ..clear()
+            ..addAll(drafts);
+          _lookupFeedback = null;
+        });
+      },
+    );
+  }
+
   void _submit() {
     final draft = _buildDraftFromForm();
     if (draft == null) {
@@ -535,8 +575,7 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
   @override
   Widget build(BuildContext context) {
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-    final safeBottomInset = MediaQuery.viewPaddingOf(context).bottom;
-    final contentBottomPadding = max(20.0, safeBottomInset + 20);
+
     final isEditing = widget.existingItem != null;
     final isCatalogMode = widget.mode == ShoppingItemEditorMode.catalogProduct;
     final title = isEditing
@@ -549,337 +588,457 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
     final priceInsight = _currentPriceInsight;
     final priceAdvice = _currentPriceAdvice;
 
-    return AnimatedPadding(
-      duration: const Duration(milliseconds: 180),
-      padding: EdgeInsets.only(bottom: keyboardInset),
-      child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(20, 6, 20, contentBottomPadding),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Scanner opcional: você pode escanear ou preencher tudo na mão.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Busque no catálogo ou preencha manualmente.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
+    return Theme(
+      data: itemEditorTheme(Theme.of(context)),
+      child: Builder(
+        builder: (context) => LayoutBuilder(
+          builder: (context, constraints) => AnimatedPadding(
+            duration: (MediaQuery.maybeOf(context)?.disableAnimations ?? false)
+                ? Duration.zero
+                : const Duration(milliseconds: 180),
+            padding: EdgeInsets.only(bottom: keyboardInset),
+            child: SizedBox(
+              height: max(0, constraints.maxHeight * .94 - keyboardInset),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      margin: const EdgeInsets.only(top: 8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 6, 8, 4),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title,
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              Text(
+                                isCatalogMode
+                                    ? 'Salvar no catálogo de produtos'
+                                    : 'Busque no catálogo ou preencha manualmente.',
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.bodySmall?.copyWith(fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Fechar formulário',
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close, size: 20),
+                        ),
+                      ],
+                    ),
+                  ),
                   Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _scanBarcode,
-                      icon: const Icon(Icons.qr_code_scanner_rounded),
-                      label: const Text('Ler código de barras'),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: _scanBarcode,
+                                    icon: const Icon(
+                                      Icons.qr_code_scanner_rounded,
+                                    ),
+                                    label: const Text('Ler código de barras'),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton.filledTonal(
+                                  tooltip: 'Buscar código',
+                                  onPressed: _isLookingUpBarcode
+                                      ? null
+                                      : _lookupBarcode,
+                                  icon: _isLookingUpBarcode
+                                      ? const SizedBox(
+                                          height: 18,
+                                          width: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.1,
+                                          ),
+                                        )
+                                      : const Icon(Icons.search_rounded),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _nameController,
+                              focusNode: _nameFocusNode,
+                              autofocus: !isEditing && !widget.startBarcodeScan,
+                              textInputAction: TextInputAction.next,
+                              decoration: InputDecoration(
+                                labelText: nameLabel,
+                                prefixIcon: const Icon(
+                                  Icons.local_grocery_store_rounded,
+                                ),
+                                suffixIcon: IconButton(
+                                  tooltip: 'Buscar no catálogo local',
+                                  onPressed: _isLookingUpCatalog
+                                      ? null
+                                      : () => _lookupCatalogByName(),
+                                  icon: _isLookingUpCatalog
+                                      ? const SizedBox(
+                                          height: 18,
+                                          width: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.1,
+                                          ),
+                                        )
+                                      : const Icon(Icons.manage_search_rounded),
+                                ),
+                              ),
+                              validator: (value) {
+                                final normalized = normalizeQuery(value ?? '');
+                                if (normalized.isEmpty) {
+                                  return isCatalogMode
+                                      ? 'Digite o nome do produto.'
+                                      : 'Digite o nome do item.';
+                                }
+                                if (_blockedNormalizedNames.contains(
+                                  normalized,
+                                )) {
+                                  return isCatalogMode
+                                      ? 'Esse produto já existe no catálogo.'
+                                      : 'Esse item já existe na lista.';
+                                }
+                                return null;
+                              },
+                              onChanged: (_) => _handleCatalogMatchChanged(),
+                              onFieldSubmitted: (_) => _lookupCatalogByName(),
+                            ),
+                            if (_matchingCatalogSuggestions.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              Text(
+                                'Produtos encontrados',
+                                style: Theme.of(context).textTheme.labelLarge
+                                    ?.copyWith(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                                    ),
+                              ),
+                              const SizedBox(height: 6),
+                              Column(
+                                children: [
+                                  for (final suggestion
+                                      in _matchingCatalogSuggestions)
+                                    CatalogSuggestionTile(
+                                      product: suggestion,
+                                      onTap: () => unawaited(
+                                        _applySuggestion(suggestion),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
+                            const SizedBox(height: 12),
+                            Text(
+                              'CATEGORIA',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(fontSize: 10, letterSpacing: .8),
+                            ),
+                            const SizedBox(height: 4),
+                            ItemEditorCategoryPicker(
+                              value: _selectedCategory,
+                              onChanged: (value) =>
+                                  setState(() => _selectedCategory = value),
+                            ),
+                            const SizedBox(height: 12),
+                            if (isCatalogMode)
+                              TextFormField(
+                                controller: _priceController,
+                                keyboardType: TextInputType.number,
+                                textInputAction: TextInputAction.done,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  _currencyFormatter,
+                                ],
+                                decoration: const InputDecoration(
+                                  labelText: 'Valor',
+                                  prefixIcon: Icon(
+                                    Icons.monetization_on_rounded,
+                                  ),
+                                  hintText: 'R\$ 0,00',
+                                ),
+                                onChanged: (_) => setState(() {}),
+                                validator: (value) {
+                                  final parsed =
+                                      BrlCurrencyInputFormatter.tryParse(
+                                        value ?? '',
+                                      );
+                                  if (parsed == null || parsed <= 0) {
+                                    return 'Informe um valor válido.';
+                                  }
+                                  return null;
+                                },
+                                onFieldSubmitted: (_) =>
+                                    _handleLastFieldSubmitted(),
+                              )
+                            else
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _quantityController,
+                                      keyboardType: TextInputType.number,
+                                      textInputAction: TextInputAction.next,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Quantidade',
+                                      ),
+                                      onChanged: (_) => setState(() {}),
+                                      validator: (value) {
+                                        final parsed = int.tryParse(
+                                          (value ?? '').trim(),
+                                        );
+                                        if (parsed == null || parsed < 1) {
+                                          return 'Informe uma quantidade válida.';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _priceController,
+                                      keyboardType: TextInputType.number,
+                                      textInputAction: TextInputAction.done,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                        _currencyFormatter,
+                                      ],
+                                      decoration: const InputDecoration(
+                                        labelText: 'Valor unitário',
+                                        hintText: 'R\$ 0,00',
+                                      ),
+                                      onChanged: (_) => setState(() {}),
+                                      validator: (value) {
+                                        final parsed =
+                                            BrlCurrencyInputFormatter.tryParse(
+                                              value ?? '',
+                                            );
+                                        if (parsed == null || parsed <= 0) {
+                                          return 'Informe um valor válido.';
+                                        }
+                                        return null;
+                                      },
+                                      onFieldSubmitted: (_) =>
+                                          _handleLastFieldSubmitted(),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Flexible(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'TOTAL EST.',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                fontSize: 10,
+                                                letterSpacing: .5,
+                                              ),
+                                        ),
+                                        Text(
+                                          formatCurrency(
+                                            (int.tryParse(
+                                                      _quantityController.text,
+                                                    ) ??
+                                                    0) *
+                                                (BrlCurrencyInputFormatter.tryParse(
+                                                      _priceController.text,
+                                                    ) ??
+                                                    0),
+                                          ),
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.titleMedium,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _barcodeController,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
+                              textInputAction: TextInputAction.next,
+                              decoration: InputDecoration(
+                                labelText: 'Código de barras (opcional)',
+                                prefixIcon: const Icon(Icons.qr_code_rounded),
+                                suffixIcon: _barcodeController.text.isEmpty
+                                    ? null
+                                    : IconButton(
+                                        onPressed: () {
+                                          _barcodeController.clear();
+                                          setState(() {
+                                            _lookupFeedback = null;
+                                          });
+                                        },
+                                        icon: const Icon(Icons.close_rounded),
+                                      ),
+                              ),
+                              onChanged: (_) => _handleCatalogMatchChanged(),
+                              onFieldSubmitted: (_) => _lookupBarcode(),
+                            ),
+                            if (_lookupFeedback != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                _lookupFeedback!,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                                    ),
+                              ),
+                            ],
+                            const SizedBox(height: 12),
+                            if (!isCatalogMode) ...[
+                              const SizedBox(height: 12),
+                              CheckboxListTile(
+                                value: _isPurchased,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _isPurchased = value ?? false;
+                                  });
+                                },
+                                contentPadding: EdgeInsets.zero,
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                title: Text(
+                                  'Já peguei este item',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                subtitle: Text(
+                                  'O item entra como comprado.',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodySmall?.copyWith(fontSize: 11),
+                                ),
+                              ),
+                            ],
+                            if (priceInsight != null) ...[
+                              const SizedBox(height: 10),
+                              ItemPriceInsightBanner(insight: priceInsight),
+                            ],
+                            if (priceAdvice != null) ...[
+                              const SizedBox(height: 10),
+                              LocalPriceAdviceBanner(advice: priceAdvice),
+                            ],
+                            if (_catalogMatch != null) ...[
+                              const SizedBox(height: 10),
+                              CatalogPriceHint(product: _catalogMatch!),
+                            ],
+                            const SizedBox(height: 20),
+                            if (widget.allowMultiple &&
+                                _pendingDrafts.isNotEmpty) ...[
+                              PendingDraftsPreview(
+                                drafts: _pendingDrafts,
+                                onReview: _reviewPendingDrafts,
+                              ),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton.icon(
+                                  onPressed: () {
+                                    Navigator.pop(
+                                      context,
+                                      List<ShoppingItemDraft>.unmodifiable(
+                                        _pendingDrafts,
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.check_rounded),
+                                  label: const Text('Concluir seleção'),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  IconButton.filledTonal(
-                    tooltip: 'Buscar código',
-                    onPressed: _isLookingUpBarcode ? null : _lookupBarcode,
-                    icon: _isLookingUpBarcode
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2.1),
-                          )
-                        : const Icon(Icons.search_rounded),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      border: Border(
+                        top: BorderSide(
+                          color: Theme.of(context).colorScheme.outlineVariant,
+                        ),
+                      ),
+                    ),
+                    child: SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                        child: widget.allowMultiple
+                            ? Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: _addAndContinue,
+                                      icon: const Icon(Icons.playlist_add_rounded),
+                                      label: const Text('Adicionar e continuar'),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: FilledButton.icon(
+                                      onPressed: _submit,
+                                      icon: const Icon(Icons.add_rounded),
+                                      label: const Text('Adicionar item'),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : SizedBox(
+                                width: double.infinity,
+                                child: FilledButton.icon(
+                                  onPressed: _submit,
+                                  icon: Icon(
+                                    isEditing
+                                        ? Icons.save_rounded
+                                        : Icons.add_rounded,
+                                  ),
+                                  label: Text(submitLabel),
+                                ),
+                              ),
+                      ),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _barcodeController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: 'Código de barras (opcional)',
-                  prefixIcon: const Icon(Icons.qr_code_rounded),
-                  suffixIcon: _barcodeController.text.isEmpty
-                      ? null
-                      : IconButton(
-                          onPressed: () {
-                            _barcodeController.clear();
-                            setState(() {
-                              _lookupFeedback = null;
-                            });
-                          },
-                          icon: const Icon(Icons.close_rounded),
-                        ),
-                ),
-                onChanged: (_) => _handleCatalogMatchChanged(),
-                onFieldSubmitted: (_) => _lookupBarcode(),
-              ),
-              if (_lookupFeedback != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  _lookupFeedback!,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _nameController,
-                focusNode: _nameFocusNode,
-                autofocus: !isEditing,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: nameLabel,
-                  prefixIcon: const Icon(Icons.local_grocery_store_rounded),
-                  suffixIcon: IconButton(
-                    tooltip: 'Buscar no catálogo local',
-                    onPressed: _isLookingUpCatalog
-                        ? null
-                        : () => _lookupCatalogByName(),
-                    icon: _isLookingUpCatalog
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2.1),
-                          )
-                        : const Icon(Icons.manage_search_rounded),
-                  ),
-                ),
-                validator: (value) {
-                  final normalized = normalizeQuery(value ?? '');
-                  if (normalized.isEmpty) {
-                    return isCatalogMode
-                        ? 'Digite o nome do produto.'
-                        : 'Digite o nome do item.';
-                  }
-                  if (_blockedNormalizedNames.contains(normalized)) {
-                    return isCatalogMode
-                        ? 'Esse produto já existe no catálogo.'
-                        : 'Esse item já existe na lista.';
-                  }
-                  return null;
-                },
-                onChanged: (_) => _handleCatalogMatchChanged(),
-                onFieldSubmitted: (_) => _lookupCatalogByName(),
-              ),
-              if (_matchingCatalogSuggestions.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Text(
-                  'Produtos encontrados',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Column(
-                  children: [
-                    for (final suggestion in _matchingCatalogSuggestions)
-                      CatalogSuggestionTile(
-                        product: suggestion,
-                        onTap: () => unawaited(_applySuggestion(suggestion)),
-                      ),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 12),
-              DropdownButtonFormField<ShoppingCategory>(
-                initialValue: _selectedCategory,
-                decoration: const InputDecoration(
-                  labelText: 'Categoria',
-                  prefixIcon: Icon(Icons.category_rounded),
-                ),
-                items: [
-                  for (final category in ShoppingCategory.values)
-                    DropdownMenuItem(
-                      value: category,
-                      child: Row(
-                        children: [
-                          Icon(category.icon, size: 18),
-                          const SizedBox(width: 8),
-                          Text(category.label),
-                        ],
-                      ),
-                    ),
-                ],
-                onChanged: (value) {
-                  if (value == null) {
-                    return;
-                  }
-                  setState(() {
-                    _selectedCategory = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 12),
-              if (isCatalogMode)
-                TextFormField(
-                  controller: _priceController,
-                  keyboardType: TextInputType.number,
-                  textInputAction: TextInputAction.done,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    _currencyFormatter,
-                  ],
-                  decoration: const InputDecoration(
-                    labelText: 'Valor',
-                    prefixIcon: Icon(Icons.monetization_on_rounded),
-                    hintText: 'R\$ 0,00',
-                  ),
-                  onChanged: (_) => setState(() {}),
-                  validator: (value) {
-                    final parsed = BrlCurrencyInputFormatter.tryParse(
-                      value ?? '',
-                    );
-                    if (parsed == null || parsed <= 0) {
-                      return 'Informe um valor válido.';
-                    }
-                    return null;
-                  },
-                  onFieldSubmitted: (_) => _handleLastFieldSubmitted(),
-                )
-              else
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _quantityController,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Quantidade',
-                          prefixIcon: Icon(Icons.numbers_rounded),
-                        ),
-                        validator: (value) {
-                          final parsed = int.tryParse((value ?? '').trim());
-                          if (parsed == null || parsed < 1) {
-                            return 'Informe uma quantidade válida.';
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _priceController,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.done,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          _currencyFormatter,
-                        ],
-                        decoration: const InputDecoration(
-                          labelText: 'Valor unitário',
-                          prefixIcon: Icon(Icons.monetization_on_rounded),
-                          hintText: 'R\$ 0,00',
-                        ),
-                        onChanged: (_) => setState(() {}),
-                        validator: (value) {
-                          final parsed = BrlCurrencyInputFormatter.tryParse(
-                            value ?? '',
-                          );
-                          if (parsed == null || parsed <= 0) {
-                            return 'Informe um valor válido.';
-                          }
-                          return null;
-                        },
-                        onFieldSubmitted: (_) => _handleLastFieldSubmitted(),
-                      ),
-                    ),
-                  ],
-                ),
-              if (!isCatalogMode) ...[
-                const SizedBox(height: 12),
-                CheckboxListTile(
-                  value: _isPurchased,
-                  onChanged: (value) {
-                    setState(() {
-                      _isPurchased = value ?? false;
-                    });
-                  },
-                  contentPadding: EdgeInsets.zero,
-                  controlAffinity: ListTileControlAffinity.leading,
-                  title: const Text('Já peguei este item'),
-                  subtitle: const Text('O item entra como comprado.'),
-                ),
-              ],
-              if (priceInsight != null) ...[
-                const SizedBox(height: 10),
-                ItemPriceInsightBanner(insight: priceInsight),
-              ],
-              if (priceAdvice != null) ...[
-                const SizedBox(height: 10),
-                LocalPriceAdviceBanner(advice: priceAdvice),
-              ],
-              if (_catalogMatch != null) ...[
-                const SizedBox(height: 10),
-                CatalogPriceHint(product: _catalogMatch!),
-              ],
-              const SizedBox(height: 20),
-              if (widget.allowMultiple && _pendingDrafts.isNotEmpty) ...[
-                PendingDraftsPreview(drafts: _pendingDrafts),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton.icon(
-                    onPressed: () {
-                      Navigator.pop(
-                        context,
-                        List<ShoppingItemDraft>.unmodifiable(_pendingDrafts),
-                      );
-                    },
-                    icon: const Icon(Icons.check_rounded),
-                    label: const Text('Concluir seleção'),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-              if (widget.allowMultiple)
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _addAndContinue,
-                        icon: const Icon(Icons.playlist_add_rounded),
-                        label: const Text('Adicionar e continuar'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: _submit,
-                        icon: const Icon(Icons.add_rounded),
-                        label: const Text('Adicionar item'),
-                      ),
-                    ),
-                  ],
-                )
-              else
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: _submit,
-                    icon: Icon(
-                      isEditing ? Icons.save_rounded : Icons.add_rounded,
-                    ),
-                    label: Text(submitLabel),
-                  ),
-                ),
-            ],
+            ),
           ),
         ),
       ),

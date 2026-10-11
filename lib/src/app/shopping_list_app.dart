@@ -8,7 +8,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -21,6 +20,7 @@ import '../application/store_and_services.dart';
 import '../application/sync/sync_operation.dart';
 import '../application/sync/sync_outbox_coordinator.dart';
 import '../application/sync/sync_outbox_storage.dart';
+import '../application/sync/snapshot_patch.dart';
 import '../application/sync_diagnostics.dart';
 import '../data/local/shared_prefs_sync_outbox_storage.dart';
 import '../data/local/storages.dart';
@@ -42,8 +42,8 @@ import '../presentation/pages.dart';
 import '../presentation/theme/app_tokens.dart';
 import '../presentation/utils/app_toast.dart';
 
-const Color _actionColor = Color(0xFFF97316);
-const Color _actionForegroundColor = Color(0xFF111827);
+const Color _actionColor = Color(0xFF365943);
+const Color _actionForegroundColor = Color(0xFFFFFFFF);
 
 @visibleForTesting
 List<ProductLookupService> buildDefaultProductLookupServices() {
@@ -152,6 +152,18 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   bool _storeReadyForOutbox = false;
   int _suppressStoreChangeTracking = 0;
   Future<void> _snapshotOutboxTail = Future<void>.value();
+  Map<String, dynamic>? _lastTrackedSnapshot;
+
+  Map<String, dynamic> _currentSyncSnapshot() => {
+    ...jsonDecode(_store.exportBackupJson()) as Map<String, dynamic>,
+    'settings': {
+      'themeMode': _themeMode == ThemeMode.dark ? 'dark' : 'light',
+      'autoImportOwnedSharedCatalogs': _store.autoImportOwnedSharedCatalogs,
+      'autoImportSharedCatalogs': _store.autoImportAllSharedCatalogs,
+      'sharedCatalogImportListIds': _store.sharedCatalogImportListIds.toList()
+        ..sort(),
+    },
+  };
   Object? _lastOutboxWriteError;
   String? _outboxWriteErrorUid;
   bool _hasPendingCloudSync = false;
@@ -246,6 +258,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         _authStateResolved = true;
 
         if (user == null) {
+          _lastTrackedSnapshot = null;
           _storeReadyForOutbox = false;
           _isInitialCloudHydration = false;
           _hydratingCloudUid = null;
@@ -267,6 +280,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
 
         final isDifferentUser = previousUid != user.uid;
         if (isDifferentUser && previousUid != null) {
+          _lastTrackedSnapshot = null;
           _storeReadyForOutbox = false;
           unawaited(_clearLocalDataWithoutSyncTracking());
         }
@@ -462,6 +476,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   }
 
   Future<void> _enqueueLegacySnapshotOperation(String uid) async {
+    final snapshotData = _currentSyncSnapshot();
+    final patch = diffSnapshotData(_lastTrackedSnapshot ?? {}, snapshotData);
+    if (patch.isEmpty) return;
     final current = await _syncOutbox.pending(userId: uid);
     var nextRevision = 1;
     for (final operation in current) {
@@ -479,10 +496,11 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         aggregateId: 'private-data',
         revision: nextRevision,
         kind: SyncOperationKind.upsert,
-        payload: const <String, Object?>{'schemaVersion': 1},
+        payload: <String, Object?>{'schemaVersion': 2, 'patch': patch},
         occurredAt: DateTime.now().toUtc(),
       ),
     );
+    _lastTrackedSnapshot = snapshotData;
   }
 
   Future<void> _recoverOrThrowOutboxWriteFailure(String uid) async {
@@ -528,6 +546,11 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       var mirroredCount = 0;
       for (final shared in ownedShared) {
         final sourceId = shared.sourceLocalListId?.trim() ?? '';
+        if (_store.isListPermanentlyDeleted(sourceId)) continue;
+        final localWithTrash = _store.findByIdIncludingTrash(sourceId);
+        if (localWithTrash?.isDeleted ?? false) {
+          continue;
+        }
         final local = _store.findById(sourceId);
         final mirrorAction = resolveOwnedSharedListMirrorAction(
           hasSourceLocalListId: sourceId.isNotEmpty,
@@ -837,6 +860,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   }
 
   bool _isTransientCloudError(Object error) {
+    if (error is TimeoutException) return true;
     if (error is FirebaseException) {
       return _transientCloudErrorCodes.contains(
         error.code.trim().toLowerCase(),
@@ -846,6 +870,9 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   }
 
   String _cloudErrorDetails(Object error) {
+    if (error is TimeoutException) {
+      return 'O servidor demorou para responder. As alterações continuam salvas neste dispositivo.';
+    }
     if (error is FirebaseException) {
       final code = _cloudErrorCode(error);
       final message = (error.message ?? '').trim();
@@ -906,21 +933,62 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         return;
       }
 
-      final hasCloudCoreData = snapshot.hasCoreData;
-      if (hasCloudCoreData) {
+      await _snapshotOutboxTail;
+      final pending = await _syncOutbox.pending(userId: uid);
+      var hydratedData = <String, dynamic>{
+        'version': 5,
+        'lists': snapshot.lists.map((entry) => entry.toJson()).toList(),
+        'purchaseHistory': snapshot.history
+            .map((entry) => entry.toJson())
+            .toList(),
+        'catalog': snapshot.catalog.map((entry) => entry.toJson()).toList(),
+        'pantry': snapshot.pantry.map((entry) => entry.toJson()).toList(),
+        'deletedEntityIds': snapshot.deletedEntityIds,
+        'settings': snapshot.settings.toFirestoreJson()..remove('updatedAt'),
+      };
+      for (final operation in pending) {
+        final patch = operation.payload['patch'];
+        if (patch is Map) {
+          hydratedData = applySnapshotPatch(
+            hydratedData,
+            Map<String, dynamic>.from(patch),
+          );
+        } else {
+          // Upgrade pending legacy snapshot markers before cloud hydration.
+          final legacyPatch = diffSnapshotData(
+            hydratedData,
+            _currentSyncSnapshot(),
+          );
+          await _syncOutbox.enqueue(
+            userId: uid,
+            operation: SyncOperation(
+              operationId: 'snapshot_${uniqueId()}',
+              aggregateType: 'legacy-user-snapshot',
+              aggregateId: 'private-data',
+              revision: operation.revision + 1,
+              kind: SyncOperationKind.upsert,
+              payload: {'schemaVersion': 2, 'patch': legacyPatch},
+              occurredAt: DateTime.now().toUtc(),
+            ),
+          );
+          await _syncOutbox.acknowledge(
+            SyncPushBatch(
+              userId: uid,
+              operations: [operation],
+              capturedAt: DateTime.now(),
+            ),
+          );
+          hydratedData = applySnapshotPatch(hydratedData, legacyPatch);
+        }
+      }
+      _lastTrackedSnapshot = hydratedData;
+      final hasCloudCoreData =
+          snapshot.hasAnyData || snapshot.deletedEntityIds.isNotEmpty;
+      if (hasCloudCoreData || pending.isNotEmpty) {
         debugPrint(
           '[CloudSync][pull] importando snapshot: listas=${snapshot.lists.length} histórico=${snapshot.history.length} catálogo=${snapshot.catalog.length} despensa=${snapshot.pantry.length}',
         );
-        final payload = jsonEncode({
-          'version': 4,
-          'exportedAt': DateTime.now().toIso8601String(),
-          'lists': snapshot.lists.map((entry) => entry.toJson()).toList(),
-          'purchaseHistory': snapshot.history
-              .map((entry) => entry.toJson())
-              .toList(),
-          'catalog': snapshot.catalog.map((entry) => entry.toJson()).toList(),
-          'pantry': snapshot.pantry.map((entry) => entry.toJson()).toList(),
-        });
+        final payload = jsonEncode(hydratedData);
         try {
           _isApplyingCloudSnapshot = true;
           debugPrint('[CloudSync][pull] chamando importBackupJson...');
@@ -939,7 +1007,10 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       debugPrint(
         '[CloudSync][pull] aplicando tema da nuvem (themeMode=${snapshot.settings.themeMode})...',
       );
-      final cloudTheme = _parseThemeMode(snapshot.settings.themeMode);
+      final hydratedSettings = FirestoreUserAppSettings.fromJson(
+        Map<String, dynamic>.from(hydratedData['settings'] as Map),
+      );
+      final cloudTheme = _parseThemeMode(hydratedSettings.themeMode);
       if (cloudTheme != null && cloudTheme != _themeMode) {
         await _setThemeMode(cloudTheme, syncCloud: false);
       }
@@ -948,10 +1019,10 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         try {
           await _store.applySharedCatalogImportSettings(
             autoImportOwnedSharedCatalogs:
-                snapshot.settings.autoImportOwnedSharedCatalogs,
+                hydratedSettings.autoImportOwnedSharedCatalogs,
             autoImportAllSharedCatalogs:
-                snapshot.settings.autoImportSharedCatalogs,
-            enabledSharedListIds: snapshot.settings.sharedCatalogImportListIds,
+                hydratedSettings.autoImportSharedCatalogs,
+            enabledSharedListIds: hydratedSettings.sharedCatalogImportListIds,
           );
         } finally {
           _suppressStoreChangeTracking--;
@@ -961,6 +1032,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
 
       debugPrint('[CloudSync][pull] vinculando snapshot ao usuário atual');
       _loadedCloudUid = uid;
+      await _enqueueLegacySnapshotOperation(uid);
       debugPrint('[CloudSync][pull] chamando _resolveOnboardingForUser...');
       await _resolveOnboardingForUser(uid, profile: snapshot.profile);
       debugPrint('[CloudSync][pull] _resolveOnboardingForUser OK');
@@ -1147,20 +1219,23 @@ class _ShoppingListAppState extends State<ShoppingListApp>
                 themeMode: _themeMode == ThemeMode.dark ? 'dark' : 'light',
                 isOnboardingCompleted: _onboardingCompleted,
               );
-        await repository.saveUserSnapshot(
-          uid: uid,
-          lists: _store.lists,
-          history: _store.purchaseHistory,
-          catalog: _store.catalogProducts,
-          pantry: _store.pantryItems,
-          settings: FirestoreUserAppSettings(
-            themeMode: _themeMode == ThemeMode.dark ? 'dark' : 'light',
-            autoImportOwnedSharedCatalogs: _store.autoImportOwnedSharedCatalogs,
-            autoImportSharedCatalogs: _store.autoImportAllSharedCatalogs,
-            sharedCatalogImportListIds: _store.sharedCatalogImportListIds,
-          ),
-          profile: profile,
-        );
+        final patches = <Map<String, dynamic>>[];
+        for (final operation in outboxBatch.operations) {
+          final patch = operation.payload['patch'];
+          patches.add(
+            patch is Map
+                ? Map<String, dynamic>.from(patch)
+                : diffSnapshotData({}, _currentSyncSnapshot()),
+          );
+        }
+        final compacted = compactSnapshotPatches(patches);
+        debugPrint('[CloudSync][push] ${patches.length} operações compactadas');
+        await repository.applyUserPatch(uid: uid, patch: compacted);
+        if (profile != null) {
+          await repository
+              .saveUserProfile(profile: profile)
+              .timeout(const Duration(seconds: 45));
+        }
         debugPrint(
           '[CloudSync][push] saveUserSnapshot OK — sincronização concluída!',
         );
@@ -1415,53 +1490,30 @@ class _ShoppingListAppState extends State<ShoppingListApp>
   }
 
   TextTheme _buildAppTextTheme(TextTheme baseTextTheme) {
-    final bodyTheme = GoogleFonts.nunitoSansTextTheme(baseTextTheme);
+    final bodyTheme = baseTextTheme.apply(fontFamily: 'MercadoPublicSans');
+    TextStyle? headline(TextStyle? style) => style?.copyWith(
+      fontFamily: 'MercadoNewsreader',
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0,
+    );
     return bodyTheme.copyWith(
-      displaySmall: GoogleFonts.rubik(
-        textStyle: bodyTheme.displaySmall?.copyWith(
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0,
-        ),
+      displaySmall: headline(bodyTheme.displaySmall),
+      headlineMedium: headline(bodyTheme.headlineMedium),
+      headlineSmall: headline(bodyTheme.headlineSmall),
+      titleLarge: headline(bodyTheme.titleLarge),
+      titleMedium: bodyTheme.titleMedium?.copyWith(
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0,
       ),
-      headlineMedium: GoogleFonts.rubik(
-        textStyle: bodyTheme.headlineMedium?.copyWith(
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0,
-        ),
-      ),
-      headlineSmall: GoogleFonts.rubik(
-        textStyle: bodyTheme.headlineSmall?.copyWith(
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0,
-        ),
-      ),
-      titleLarge: GoogleFonts.rubik(
-        textStyle: bodyTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0,
-        ),
-      ),
-      titleMedium: GoogleFonts.rubik(
-        textStyle: bodyTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0,
-        ),
-      ),
-      titleSmall: GoogleFonts.rubik(
-        textStyle: bodyTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-      ),
+      titleSmall: bodyTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
       bodyLarge: bodyTheme.bodyLarge?.copyWith(height: 1.38),
       bodyMedium: bodyTheme.bodyMedium?.copyWith(height: 1.36),
       bodySmall: bodyTheme.bodySmall?.copyWith(height: 1.3),
-      labelLarge: GoogleFonts.nunitoSans(
-        textStyle: bodyTheme.labelLarge?.copyWith(
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0,
-        ),
+      labelLarge: bodyTheme.labelLarge?.copyWith(
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0,
       ),
-      labelMedium: GoogleFonts.nunitoSans(
-        textStyle: bodyTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
-      ),
+      labelMedium: bodyTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
     );
   }
 
@@ -1470,18 +1522,18 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       useMaterial3: true,
       visualDensity: VisualDensity.adaptivePlatformDensity,
       colors: const FlexSchemeColor(
-        primary: Color(0xFF0D9488),
-        primaryContainer: Color(0xFFCCFBF1),
-        secondary: Color(0xFF0F766E),
-        secondaryContainer: Color(0xFFD1FAE5),
+        primary: Color(0xFF365943),
+        primaryContainer: Color(0xFFDDE9DD),
+        secondary: Color(0xFF62695F),
+        secondaryContainer: Color(0xFFE8EBE3),
         tertiary: _actionColor,
-        tertiaryContainer: Color(0xFFFFEDD5),
-        appBarColor: Color(0xFFF8FAFC),
-        error: Color(0xFFB3261E),
+        tertiaryContainer: Color(0xFFDDE9DD),
+        appBarColor: Color(0xFFF7F5EF),
+        error: Color(0xFFA44438),
       ),
       surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
       blendLevel: 4,
-      scaffoldBackground: const Color(0xFFF8FAFC),
+      scaffoldBackground: const Color(0xFFF7F5EF),
       subThemesData: const FlexSubThemesData(
         interactionEffects: true,
         blendOnLevel: 4,
@@ -1491,7 +1543,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     final textTheme = _buildAppTextTheme(base.textTheme);
     return base.copyWith(
       materialTapTargetSize: MaterialTapTargetSize.padded,
-      scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+      scaffoldBackgroundColor: const Color(0xFFF7F5EF),
       textTheme: textTheme,
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: scheme.primary,
@@ -1507,14 +1559,13 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         elevation: AppTokens.cardElevation,
         margin: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
-        color: scheme.surface,
-        shape: RoundedRectangleBorder(
+        color: const Color(0xFFF7F5EF),
+        shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(AppTokens.radiusXl)),
-          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
         ),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: const Color(0xFFF8FAFC),
+        backgroundColor: const Color(0xFFF7F5EF),
         foregroundColor: scheme.onSurface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -1691,7 +1742,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       ),
       inputDecorationTheme: base.inputDecorationTheme.copyWith(
         filled: true,
-        fillColor: const Color(0xFFFFFFFF),
+        fillColor: const Color(0xFFFFFEFA),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 14,
@@ -1723,18 +1774,18 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       useMaterial3: true,
       visualDensity: VisualDensity.adaptivePlatformDensity,
       colors: const FlexSchemeColor(
-        primary: Color(0xFF4ED7C7),
-        primaryContainer: Color(0xFF005C52),
-        secondary: Color(0xFF8ECFC6),
-        secondaryContainer: Color(0xFF24453F),
+        primary: Color(0xFFA6D0B0),
+        primaryContainer: Color(0xFF254632),
+        secondary: Color(0xFFAFBBAE),
+        secondaryContainer: Color(0xFF303D33),
         tertiary: _actionColor,
-        tertiaryContainer: Color(0xFF7C2D12),
-        appBarColor: Color(0xFF0F161A),
-        error: Color(0xFFF2A29D),
+        tertiaryContainer: Color(0xFF5A302C),
+        appBarColor: Color(0xFF1D241F),
+        error: Color(0xFFF0ABA1),
       ),
       surfaceMode: FlexSurfaceMode.highScaffoldLowSurface,
       blendLevel: 8,
-      scaffoldBackground: const Color(0xFF0F161A),
+      scaffoldBackground: const Color(0xFF1D241F),
       subThemesData: const FlexSubThemesData(
         interactionEffects: true,
         blendOnLevel: 8,
@@ -1744,7 +1795,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
     final textTheme = _buildAppTextTheme(base.textTheme);
     return base.copyWith(
       materialTapTargetSize: MaterialTapTargetSize.padded,
-      scaffoldBackgroundColor: const Color(0xFF0F161A),
+      scaffoldBackgroundColor: const Color(0xFF1D241F),
       textTheme: textTheme,
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: scheme.primary,
@@ -1760,16 +1811,13 @@ class _ShoppingListAppState extends State<ShoppingListApp>
         elevation: AppTokens.cardElevation,
         margin: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
-        color: const Color(0xFF1A252A),
-        shape: RoundedRectangleBorder(
+        color: const Color(0xFF1D241F),
+        shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(AppTokens.radiusXl)),
-          side: BorderSide(
-            color: scheme.outlineVariant.withValues(alpha: 0.48),
-          ),
         ),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: const Color(0xFF0F161A),
+        backgroundColor: const Color(0xFF1D241F),
         foregroundColor: scheme.onSurface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -1780,7 +1828,7 @@ class _ShoppingListAppState extends State<ShoppingListApp>
       ),
       inputDecorationTheme: base.inputDecorationTheme.copyWith(
         filled: true,
-        fillColor: const Color(0xFF1E2A2F),
+        fillColor: const Color(0xFF2A342D),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 14,

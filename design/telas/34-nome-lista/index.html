@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nome da lista</title>
+<!-- Google Fonts: Newsreader (Editorial Serif) & Public Sans (Clean functional UI) -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400&amp;family=Public+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            // Mercado Editorial Design System tokens
+            surface: {
+              DEFAULT: '#fbf9f4', // marfim de caderno
+              dim: '#ece8df',
+              bright: '#ffffff',
+              container: '#f4efe6',
+              'container-low': '#f9f6f0',
+              'container-high': '#eee9df',
+              'container-highest': '#e5dfd4'
+            },
+            'on-surface': '#1c1b18', // carvão editorial
+            'on-surface-variant': '#49453f',
+            outline: '#7a756d',
+            'outline-variant': '#cac5bb',
+            primary: {
+              DEFAULT: '#1f412d', // verde folha contábil
+              container: '#365943',
+              foreground: '#ffffff'
+            },
+            secondary: '#516353'
+          },
+          fontFamily: {
+            headline: ['Newsreader', 'serif'],
+            body: ['Public Sans', 'sans-serif'],
+            label: ['Public Sans', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    body {
+      font-family: 'Public Sans', sans-serif;
+      background-color: rgba(28, 27, 24, 0.45); /* Backdrop modal sobre fundo da aplicação */
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+<!-- Mobile Frame Container (390px) -->
+<main aria-labelledby="dialog-title" aria-modal="true" class="w-full max-w-[390px] bg-surface rounded-2xl shadow-xl border border-outline-variant overflow-hidden flex flex-col animate-fade-in" role="dialog">
+<!-- Top Drag Indicator (estilo bottom-sheet / modal M3 adaptado) -->
+<div class="pt-3 pb-1 flex justify-center w-full">
+<div class="w-10 h-1 bg-outline-variant rounded-full opacity-60"></div>
+</div>
+<!-- Dialog Header -->
+<div class="px-6 pt-3 pb-4 border-b border-outline-variant/40 flex items-start justify-between">
+<div>
+<h1 class="font-headline text-2xl font-normal text-on-surface leading-tight" id="dialog-title">
+          Nova lista de compras
+        </h1>
+</div>
+<button aria-label="Fechar" class="w-8 h-8 -mr-1 flex items-center justify-center text-on-surface-variant hover:text-on-surface active:opacity-70 transition-opacity rounded-full" type="button">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<!-- Dialog Body / Form Content -->
+<div class="px-6 py-5 flex flex-col gap-5">
+<!-- Input Field Group: Nome da lista -->
+<div class="flex flex-col gap-1.5">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wide" for="list-name">
+          Nome da lista <span class="text-primary">*</span>
+</label>
+<div class="relative flex items-center">
+<input autofocus="" class="w-full h-12 px-3.5 bg-surface-bright border border-outline focus:border-primary focus:ring-1 focus:ring-primary rounded-lg text-base text-on-surface font-body outline-none placeholder:text-outline transition-colors" id="list-name" name="list-name" placeholder="Ex.: Compras da semana" required="" type="text" value="Feira de sábado"/>
+</div>
+</div>
+<!-- Contexto alternativo discreto indicando suporte a renomeação (sem poluição) -->
+</div>
+<!-- Action Buttons -->
+<div class="px-6 pb-6 pt-2 flex flex-col gap-2.5 border-t border-outline-variant/40 bg-surface">
+<!-- Botão Primário: Criar / Salvar -->
+<button class="w-full h-12 min-h-[48px] bg-primary hover:bg-primary-container active:opacity-90 text-primary-foreground font-body font-medium text-base rounded-lg transition-colors flex items-center justify-center gap-2" type="button">
+<span>Criar lista</span>
+</button>
+<!-- Botão Secundário: Cancelar -->
+<button class="w-full h-12 min-h-[48px] bg-transparent border border-outline-variant hover:bg-surface-container active:bg-surface-container-high text-on-surface font-body font-medium text-base rounded-lg transition-colors flex items-center justify-center" type="button">
+<span>Cancelar</span>
+</button>
+</div>
+</main>
+</body>
+</html>

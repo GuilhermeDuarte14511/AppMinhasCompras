@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "281917164496-msr3c9g7d4sq79i8f67ths61lort4krm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.lista_compras_material",
+            "certificate_hash": "6b3201c649d3191db3280ea0c7caaddc415ffeac"
+          }
+        },
+        {
           "client_id": "281917164496-q4lb28h9t7gni57k2kqb0co5bjcsenq9.apps.googleusercontent.com",
           "client_type": 3
         }

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Minhas Compras — Minhas Listas</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Newsreader & Public Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "inverse-on-surface": "#f3f1eb",
+            "surface-container-high": "#eae8e2",
+            "on-secondary-fixed": "#191d10",
+            "secondary-container": "#e0e5cf",
+            "on-surface-variant": "#424843",
+            "primary-fixed": "#c4eccf",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "on-secondary-fixed-variant": "#444939",
+            "on-error": "#ffffff",
+            "primary": "#1f412d",
+            "on-primary-fixed": "#002110",
+            "on-primary-fixed-variant": "#2b4e39",
+            "secondary": "#5b604f",
+            "surface-container": "#f0eee8",
+            "surface": "#fbf9f3",
+            "inverse-primary": "#a9d0b4",
+            "error-container": "#ffdad6",
+            "on-surface": "#1b1c18",
+            "on-secondary": "#ffffff",
+            "outline": "#727972",
+            "on-primary-container": "#a7ceb2",
+            "on-tertiary": "#ffffff",
+            "background": "#fbf9f3",
+            "primary-container": "#365943",
+            "on-primary": "#ffffff",
+            "primary-fixed-dim": "#a9d0b4",
+            "surface-bright": "#fbf9f3",
+            "on-error-container": "#93000a",
+            "tertiary-container": "#724549",
+            "surface-variant": "#e4e2dd",
+            "surface-tint": "#43664f",
+            "secondary-fixed-dim": "#c4c9b4",
+            "on-secondary-container": "#616655",
+            "surface-container-low": "#f5f3ed",
+            "on-tertiary-container": "#f2b6ba",
+            "tertiary": "#582f33",
+            "surface-container-highest": "#e4e2dd",
+            "outline-variant": "#c1c8c1",
+            "surface-dim": "#dcdad4",
+            "on-tertiary-fixed": "#321015",
+            "tertiary-fixed": "#ffdadb",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "secondary-fixed": "#e0e5cf",
+            "error": "#ba1a1a",
+            "surface-container-lowest": "#ffffff",
+            "on-background": "#1b1c18",
+            "inverse-surface": "#30312d"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      font-size: 20px;
+    }
+    .filled-symbol {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    /* Estilo sutil de fichário / caderno */
+    .ledger-row {
+      position: relative;
+    }
+    .ledger-row::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background-color: #c1c8c1;
+      opacity: 0.6;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-body antialiased flex justify-center min-h-screen selection:bg-secondary-container selection:text-primary">
+<!-- Mobile Viewport Container 390px -->
+<main class="w-full max-w-[390px] bg-surface min-h-screen flex flex-col relative pb-6">
+<!-- 1. TopAppBar (Shared Component implementation) -->
+<header class="docked full-width top-0 bg-surface z-40"><div class="flex justify-between items-center w-full px-4 py-3 max-w-md mx-auto"><div class="flex items-center gap-2"><h1 class="font-headline text-2xl font-medium tracking-tight text-on-surface leading-none">Minhas listas</h1></div><div class="flex items-center gap-1"><button aria-label="Seleção múltipla" class="text-secondary hover:text-primary active:opacity-75 transition-opacity duration-100 w-9 h-9 flex items-center justify-center rounded-lg hover:bg-surface-container-high" type="button"><span class="material-symbols-outlined" data-icon="checklist">checklist</span></button><button aria-label="Lixeira" class="text-secondary hover:text-primary active:opacity-75 transition-opacity duration-100 w-9 h-9 flex items-center justify-center rounded-lg hover:bg-surface-container-high" type="button"><span class="material-symbols-outlined" data-icon="delete_outline">delete_outline</span></button><button aria-label="Backup e opções" class="text-secondary hover:text-primary active:opacity-75 transition-opacity duration-100 w-9 h-9 flex items-center justify-center rounded-lg hover:bg-surface-container-high" title="Backup e restauração (JSON)" type="button"><span class="material-symbols-outlined" data-icon="more_vert">more_vert</span></button></div></div><div class="h-px w-full bg-outline-variant/60"></div></header>
+<!-- Contextual Summary Ribbon -->
+<section class="bg-surface-container-low border-b border-outline-variant/40 flex flex-col"><div class="px-4 py-2.5 flex items-center justify-between"><div class="flex flex-col"><span class="text-[11px] uppercase tracking-wider text-secondary font-medium">Resumo</span><div class="text-xs text-on-surface font-medium flex items-center gap-1.5 mt-0.5"><span class="inline-block w-1.5 h-1.5 rounded-full bg-primary-container"></span><span>3 listas abertas</span><span class="text-outline">·</span><span class="tabular-nums font-semibold text-primary">Prev. R$ 513,80</span></div></div><button class="inline-flex items-center gap-1 bg-primary-container hover:bg-primary text-on-primary px-3 py-1.5 rounded-lg text-xs font-medium transition-colors active:scale-95 duration-100 shadow-sm" type="button"><span class="material-symbols-outlined text-[16px]" data-icon="add">add</span><span>Nova lista</span></button></div><div class="px-4 pb-2.5 pt-0.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar"><button class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface border border-outline-variant/70 text-on-surface-variant text-[11px] hover:bg-surface-container hover:text-on-surface transition-colors shrink-0" type="button"><span class="material-symbols-outlined text-[13px] text-secondary" data-icon="history">history</span><span>Criar com base em antiga</span></button><button class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface border border-outline-variant/70 text-on-surface-variant text-[11px] hover:bg-surface-container hover:text-on-surface transition-colors shrink-0" type="button"><span class="material-symbols-outlined text-[13px] text-secondary" data-icon="calendar_today">calendar_today</span><span>Histórico mensal</span></button><button class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface border border-outline-variant/70 text-on-surface-variant text-[11px] hover:bg-surface-container hover:text-on-surface transition-colors shrink-0" type="button"><span class="material-symbols-outlined text-[13px] text-secondary" data-icon="bolt">bolt</span><span>Reposição inteligente</span></button></div></section>
+<!-- 2. Search & Filter Bar -->
+<section class="px-4 pt-4 pb-2"><div class="relative w-full"><span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-secondary pointer-events-none" data-icon="search">search</span><input class="w-full pl-9 pr-8 py-2 text-sm bg-surface-container-lowest border border-outline-variant/80 rounded-lg text-on-surface placeholder:text-secondary focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-all" placeholder="Buscar lista..." type="search"/><button aria-label="Limpar busca" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-secondary hover:text-on-surface text-xs hidden" type="button"><span class="material-symbols-outlined text-[16px]" data-icon="close">close</span></button></div><nav aria-label="Filtros por status" class="flex items-center gap-1.5 overflow-x-auto pt-3 pb-1 no-scrollbar text-xs"><button class="px-3 py-1 rounded-full border border-primary-container bg-primary-container text-on-primary font-medium shrink-0 flex items-center gap-1" type="button"><span>Todas</span><span class="text-[11px] opacity-90 tabular-nums">(6)</span></button><button class="px-3 py-1 rounded-full border border-outline-variant bg-surface text-secondary hover:text-on-surface hover:border-secondary transition-colors shrink-0 flex items-center gap-1" type="button"><span>Abertas</span><span class="text-[11px] text-secondary tabular-nums">(3)</span></button><button class="px-3 py-1 rounded-full border border-outline-variant bg-surface text-secondary hover:text-on-surface hover:border-secondary transition-colors shrink-0 flex items-center gap-1" type="button"><span>Fechadas</span><span class="text-[11px] text-secondary tabular-nums">(2)</span></button><button class="px-3 py-1 rounded-full border border-outline-variant bg-surface text-secondary hover:text-on-surface hover:border-secondary transition-colors shrink-0 flex items-center gap-1" type="button"><span class="material-symbols-outlined text-[13px]" data-icon="group">group</span><span>Compartilhadas</span><span class="text-[11px] text-secondary tabular-nums">(1)</span></button></nav></section>
+<!-- 4. Main List: Ledger Index Format (Fichário de Mercado) -->
+<section class="px-4 pt-2 pb-4 flex flex-col"><div class="flex items-center justify-between py-1 mb-1.5"><span class="text-[11px] uppercase tracking-wider font-semibold text-secondary">Registros recentes</span></div><div class="flex flex-col border border-outline-variant/70 rounded-lg bg-surface-container-lowest overflow-hidden"><article class="ledger-row p-3.5 hover:bg-surface-container-low transition-colors"><div class="flex justify-between items-start gap-2"><div class="flex-1 min-w-0"><div class="flex items-center gap-1.5 flex-wrap"><span class="inline-block text-[10px] font-medium px-1.5 py-0.5 rounded bg-secondary-container text-on-secondary-container">Aberta</span><span class="text-[11px] text-secondary">Atualizada há 2 horas</span></div><h2 class="font-headline text-lg font-semibold text-on-surface leading-tight mt-1 truncate">Feira de sábado</h2><div class="mt-2 flex items-center gap-2"><div class="flex-1 bg-surface-container h-1.5 rounded-full overflow-hidden"><div class="bg-primary-container h-full rounded-full" style="width: 57%;"></div></div><span class="text-[11px] text-secondary font-medium tabular-nums shrink-0">8 de 14 itens</span></div></div><button aria-label="Opções da lista" class="text-secondary hover:text-on-surface p-1 rounded hover:bg-surface-container active:scale-95 transition-all" title="Ações: Duplicar, Usar como base, Mover para lixeira" type="button"><span class="material-symbols-outlined text-[18px]" data-icon="more_horiz">more_horiz</span></button></div><div class="mt-2.5 pt-2 border-t border-dashed border-outline-variant/40 flex items-center justify-between text-xs"><span class="text-secondary text-[11px]">Previsto: <span class="font-semibold text-on-surface tabular-nums">R$ 210,00</span></span><div class="text-right"><span class="text-secondary text-[11px]">Gasto: </span><span class="font-semibold text-primary tabular-nums">R$ 184,30</span><span class="text-secondary text-[10px] tabular-nums"> / Teto: R$ 250,00</span></div></div></article><article class="ledger-row p-3.5 hover:bg-surface-container-low transition-colors"><div class="flex justify-between items-start gap-2"><div class="flex-1 min-w-0"><div class="flex items-center gap-1.5 flex-wrap"><span class="inline-block text-[10px] font-medium px-1.5 py-0.5 rounded bg-secondary-container text-on-secondary-container">Aberta</span><span class="text-[11px] text-secondary">Atualizada ontem</span></div><h2 class="font-headline text-lg font-semibold text-on-surface leading-tight mt-1 truncate">Compras do mês</h2><div class="mt-2 flex items-center gap-2"><div class="flex-1 bg-surface-container h-1.5 rounded-full overflow-hidden"><div class="bg-primary-container h-full rounded-full" style="width: 12%;"></div></div><span class="text-[11px] text-secondary font-medium tabular-nums shrink-0">4 de 32 itens</span></div></div><button aria-label="Opções da lista" class="text-secondary hover:text-on-surface p-1 rounded hover:bg-surface-container active:scale-95 transition-all" title="Ações: Duplicar, Usar como base, Mover para lixeira" type="button"><span class="material-symbols-outlined text-[18px]" data-icon="more_horiz">more_horiz</span></button></div><div class="mt-2.5 pt-2 border-t border-dashed border-outline-variant/40 flex items-center justify-between text-xs"><span class="text-secondary text-[11px]">32 itens cadastrados</span><div class="text-right"><span class="text-secondary text-[11px]">Previsto: </span><span class="font-semibold text-on-surface tabular-nums">R$ 247,50</span><span class="text-secondary text-[10px] tabular-nums"> / Teto: R$ 600,00</span></div></div></article><article class="ledger-row p-3.5 hover:bg-surface-container-low transition-colors"><div class="flex justify-between items-start gap-2"><div class="flex-1 min-w-0"><div class="flex items-center gap-1.5 flex-wrap"><span class="inline-block text-[10px] font-medium px-1.5 py-0.5 rounded bg-secondary-container text-on-secondary-container">Aberta</span><span class="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-primary-fixed text-on-primary-fixed-variant"><span class="material-symbols-outlined text-[11px]" data-icon="group">group</span><span>Compartilhada</span></span><span class="text-[11px] text-secondary">Atualizada há 3 horas</span></div><h2 class="font-headline text-lg font-semibold text-on-surface leading-tight mt-1 truncate">Reposição de despensa &amp; limpeza</h2><div class="mt-2 flex items-center gap-2"><div class="flex-1 bg-surface-container h-1.5 rounded-full overflow-hidden"><div class="bg-primary-container h-full rounded-full" style="width: 75%;"></div></div><span class="text-[11px] text-secondary font-medium tabular-nums shrink-0">9 de 12 itens</span></div></div><button aria-label="Opções da lista" class="text-secondary hover:text-on-surface p-1 rounded hover:bg-surface-container active:scale-95 transition-all" title="Ações: Duplicar, Usar como base, Mover para lixeira" type="button"><span class="material-symbols-outlined text-[18px]" data-icon="more_horiz">more_horiz</span></button></div><div class="mt-2.5 pt-2 border-t border-dashed border-outline-variant/40 flex items-center justify-between text-xs"><span class="text-secondary text-[11px]">3 membros</span><div class="text-right"><span class="text-secondary text-[11px]">Gasto: </span><span class="font-semibold text-primary tabular-nums">R$ 82,00</span><span class="text-secondary text-[10px] tabular-nums"> (estimado)</span></div></div></article><article class="p-3.5 hover:bg-surface-container-low transition-colors opacity-80"><div class="flex justify-between items-start gap-2"><div class="flex-1 min-w-0"><div class="flex items-center gap-1.5 flex-wrap"><span class="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded bg-surface-container-high text-secondary"><span class="material-symbols-outlined text-[11px]" data-icon="check">check</span><span>Fechada</span></span><span class="text-[11px] text-secondary">Atualizada em 28 out</span></div><h2 class="font-headline text-lg font-semibold text-on-surface/90 leading-tight mt-1 line-through decoration-secondary/40">Churrasco de domingo</h2><div class="mt-2 flex items-center gap-2"><div class="flex-1 bg-surface-container h-1.5 rounded-full overflow-hidden"><div class="bg-secondary h-full rounded-full" style="width: 100%;"></div></div><span class="text-[11px] text-secondary font-medium tabular-nums shrink-0">16 de 16 itens</span></div></div><button aria-label="Opções da lista" class="text-secondary hover:text-on-surface p-1 rounded hover:bg-surface-container active:scale-95 transition-all" title="Ações: Duplicar, Usar como base, Mover para lixeira" type="button"><span class="material-symbols-outlined text-[18px]" data-icon="more_horiz">more_horiz</span></button></div><div class="mt-2.5 pt-2 border-t border-dashed border-outline-variant/40 flex items-center justify-between text-xs"><span class="text-secondary text-[11px]">Fechada</span><div class="text-right"><span class="text-secondary text-[11px]">Fechamento: </span><span class="font-semibold text-on-surface tabular-nums">R$ 319,45</span></div></div></article></div></section>
+<!-- 5. Seção de Estados Alternativos / Variantes de Projeto -->
+<!-- 6. BottomNavBar (Shared Component implementation) -->
+<!-- Active State Logic: 'Listas' is the active screen context -->
+</main>
+<script>
+    // Interações leves de micro-feedback
+    document.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        // Feedback háptico simulado caso aplicável
+      });
+    });
+  </script>
+</body></html>

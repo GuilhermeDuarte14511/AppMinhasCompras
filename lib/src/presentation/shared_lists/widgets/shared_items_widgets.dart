@@ -45,64 +45,55 @@ class SharedItemsToolbar extends StatelessWidget {
           ),
         ];
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.54),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: controller,
+          textInputAction: TextInputAction.search,
+          style: Theme.of(context).textTheme.bodySmall,
+          decoration: InputDecoration(
+            prefixIcon: const Icon(Icons.search_rounded, size: 18),
+            hintText: 'Buscar item por nome...',
+            suffixIcon: controller.text.isEmpty
+                ? null
+                : IconButton(
+                    tooltip: 'Limpar busca',
+                    onPressed: controller.clear,
+                    icon: const Icon(Icons.close_rounded, size: 18),
+                  ),
+          ),
         ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: controller,
-              textInputAction: TextInputAction.search,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search_rounded),
-                hintText: 'Buscar item por nome...',
-              ),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final filter in filterEntries)
-                  ChoiceChip(
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (final filter in filterEntries)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: ChoiceChip(
                     selected: selectedFilter == filter.value,
                     showCheckmark: false,
                     label: Text('${filter.label} ${filter.count}'),
-                    avatar: Icon(_filterIcon(filter.value), size: 16),
                     onSelected: (_) => onFilterSelected(filter.value),
                   ),
-              ],
-            ),
-            if (searchIsActive) ...[
-              const SizedBox(height: 8),
-              Text(
-                '${formatCountLabel(matchingCount, 'resultado', 'resultados')} na busca atual.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
                 ),
-              ),
             ],
-          ],
+          ),
         ),
-      ),
+        if (searchIsActive)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              '${formatCountLabel(matchingCount, 'resultado', 'resultados')} na busca atual.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+      ],
     );
-  }
-
-  IconData _filterIcon(SharedItemsFilter filter) {
-    return switch (filter) {
-      SharedItemsFilter.pending => Icons.pending_actions_rounded,
-      SharedItemsFilter.all => Icons.format_list_bulleted_rounded,
-      SharedItemsFilter.purchased => Icons.check_circle_rounded,
-    };
   }
 }
 
@@ -131,7 +122,7 @@ class SharedItemsHintCard extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
         child: Row(
           children: [
-            Icon(Icons.visibility_outlined, color: colorScheme.secondary),
+            Icon(Icons.visibility_outlined, color: colorScheme.primary),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -173,7 +164,7 @@ class SharedItemsEmptyState extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 120),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 360),
           child: DecoratedBox(
@@ -233,89 +224,93 @@ class SharedItemCard extends StatelessWidget {
     required this.onDecrement,
     required this.onEdit,
     required this.onDelete,
+    this.enabled = true,
   });
-
   final SharedShoppingItem item;
   final ValueChanged<bool?> onPurchasedChanged;
   final VoidCallback onIncrement;
   final VoidCallback onDecrement;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
-
+  final bool enabled;
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final cardColor = item.isPurchased
-        ? colorScheme.surfaceContainerLow.withValues(alpha: 0.95)
-        : colorScheme.surface;
-
+    final theme = Theme.of(context);
     return Semantics(
       container: true,
       label: 'Item ${item.name}',
       value: item.isPurchased ? 'Pego' : 'Pendente',
-      child: Card(
-        elevation: 0,
-        color: cardColor,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 10, 8, 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Checkbox(
-                      value: item.isPurchased,
-                      onChanged: onPurchasedChanged,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: theme.colorScheme.outlineVariant),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Checkbox(
+                  value: item.isPurchased,
+                  onChanged: enabled ? onPurchasedChanged : null,
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.name,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            decoration: item.isPurchased
+                                ? TextDecoration.lineThrough
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${item.quantity} × ${formatCurrency(item.unitPrice)}',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 2),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.name,
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                            style: textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              decoration: item.isPurchased
-                                  ? TextDecoration.lineThrough
-                                  : TextDecoration.none,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${item.quantity} x ${formatCurrency(item.unitPrice)}',
-                            style: textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                              decoration: item.isPurchased
-                                  ? TextDecoration.lineThrough
-                                  : TextDecoration.none,
-                            ),
-                          ),
-                        ],
-                      ),
+                ),
+                const SizedBox(width: 8),
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Text(
+                    formatCurrency(item.subtotal),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
+                  ),
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 48, top: 8),
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  SharedQuantityStepper(
+                    quantity: item.quantity,
+                    onIncrement: enabled ? onIncrement : null,
+                    onDecrement: enabled ? onDecrement : null,
                   ),
                   PopupMenuButton<String>(
+                    enabled: enabled,
                     tooltip: 'Mais ações do item',
-                    onSelected: (action) {
-                      if (action == 'edit') {
-                        onEdit();
-                        return;
-                      }
-                      if (action == 'delete') {
-                        onDelete();
-                      }
-                    },
-                    itemBuilder: (context) => const [
+                    onSelected: (action) =>
+                        action == 'edit' ? onEdit() : onDelete(),
+                    itemBuilder: (_) => const [
                       PopupMenuItem(value: 'edit', child: Text('Editar item')),
                       PopupMenuItem(
                         value: 'delete',
@@ -324,78 +319,6 @@ class SharedItemCard extends StatelessWidget {
                     ],
                   ),
                 ],
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  SharedItemInfoChip(
-                    icon: item.isPurchased
-                        ? Icons.check_circle_rounded
-                        : Icons.radio_button_unchecked_rounded,
-                    label: item.isPurchased ? 'Pego' : 'Pendente',
-                    emphasized: item.isPurchased,
-                  ),
-                  SharedItemInfoChip(
-                    icon: Icons.receipt_long_rounded,
-                    label: formatCurrency(item.subtotal),
-                  ),
-                  SharedQuantityStepper(
-                    quantity: item.quantity,
-                    onIncrement: onIncrement,
-                    onDecrement: onDecrement,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class SharedItemInfoChip extends StatelessWidget {
-  const SharedItemInfoChip({
-    super.key,
-    required this.icon,
-    required this.label,
-    this.emphasized = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool emphasized;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final backgroundColor = emphasized
-        ? colorScheme.primaryContainer
-        : colorScheme.surfaceContainerHighest;
-    final foregroundColor = emphasized
-        ? colorScheme.onPrimaryContainer
-        : colorScheme.onSurfaceVariant;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: foregroundColor),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: foregroundColor,
-                fontWeight: FontWeight.w700,
               ),
             ),
           ],
@@ -414,16 +337,16 @@ class SharedQuantityStepper extends StatelessWidget {
   });
 
   final int quantity;
-  final VoidCallback onIncrement;
-  final VoidCallback onDecrement;
+  final VoidCallback? onIncrement;
+  final VoidCallback? onDecrement;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(999),
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(4),
         border: Border.all(
           color: colorScheme.outlineVariant.withValues(alpha: 0.5),
         ),

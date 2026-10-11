@@ -1,0 +1,3 @@
+<objectAnimator xmlns:android="http://schemas.android.com/apk/res/android"
+    android:propertyName="strokeAlpha" android:valueFrom="0" android:valueTo="1"
+    android:startOffset="250" android:duration="650" android:valueType="floatType" />

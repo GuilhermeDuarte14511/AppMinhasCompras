@@ -8,13 +8,9 @@ import '../domain/classifications.dart';
 import '../domain/models_and_utils.dart';
 import '../domain/product_price_analysis.dart';
 import 'dialogs_and_sheets.dart';
-import 'extensions/classification_ui_extensions.dart';
-import 'launch.dart';
-import 'theme/app_tokens.dart';
+import 'theme/editorial_workspace_theme.dart';
 import 'utils/app_modal.dart';
 import 'utils/app_toast.dart';
-
-enum _ProductDetailsAction { delete }
 
 class ProductDetailsPage extends StatefulWidget {
   const ProductDetailsPage({
@@ -127,62 +123,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   }
 
   Future<void> _updatePrice(CatalogProduct product) async {
-    final formatter = BrlCurrencyInputFormatter();
-    final initialPrice = product.unitPrice ?? 0;
-    final controller = TextEditingController(
-      text: formatter.formatValue(initialPrice > 0 ? initialPrice : 0),
-    );
-    final formKey = GlobalKey<FormState>();
-
     final price = await showAppDialog<double>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Atualizar preço'),
-          content: Form(
-            key: formKey,
-            child: TextFormField(
-              controller: controller,
-              autofocus: true,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              inputFormatters: [formatter],
-              decoration: const InputDecoration(
-                labelText: 'Novo preço',
-                prefixIcon: Icon(Icons.attach_money_rounded),
-              ),
-              validator: (value) {
-                final parsed = BrlCurrencyInputFormatter.tryParse(value ?? '');
-                if (parsed == null || parsed <= 0) {
-                  return 'Informe um preço válido.';
-                }
-                return null;
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (formKey.currentState?.validate() != true) {
-                  return;
-                }
-                Navigator.pop(
-                  context,
-                  BrlCurrencyInputFormatter.tryParse(controller.text),
-                );
-              },
-              child: const Text('Salvar'),
-            ),
-          ],
-        );
-      },
+      builder: (context) => Theme(
+        data: editorialWorkspaceTheme(Theme.of(context)),
+        child: _ProductPriceDialog(initialPrice: product.unitPrice ?? 0),
+      ),
     );
-    controller.dispose();
 
     if (!mounted || price == null || price <= 0) {
       return;
@@ -240,375 +187,404 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: widget.store,
-      builder: (context, _) {
-        final product = _currentProduct();
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Detalhes do produto'),
-            actions: [
-              if (product != null) ...[
-                IconButton(
-                  tooltip: 'Editar produto',
-                  onPressed: () => _editProduct(product),
-                  icon: const Icon(Icons.edit_rounded),
+    return Theme(
+      data: editorialWorkspaceTheme(Theme.of(context)),
+      child: Builder(
+        builder: (context) => AnimatedBuilder(
+          animation: widget.store,
+          builder: (context, _) {
+            final product = _currentProduct();
+            return Scaffold(
+              appBar: AppBar(
+                title: Text(
+                  'Detalhes do produto',
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-                IconButton(
-                  tooltip: 'Atualizar preço',
-                  onPressed: () => _updatePrice(product),
-                  icon: const Icon(Icons.price_change_rounded),
-                ),
-                PopupMenuButton<_ProductDetailsAction>(
-                  tooltip: 'Mais ações',
-                  onSelected: (action) {
-                    if (action == _ProductDetailsAction.delete) {
-                      _deleteProduct(product);
-                    }
-                  },
-                  itemBuilder: (context) =>
-                      const <PopupMenuEntry<_ProductDetailsAction>>[
-                        PopupMenuItem<_ProductDetailsAction>(
-                          value: _ProductDetailsAction.delete,
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete_outline_rounded, size: 18),
-                              SizedBox(width: 10),
-                              Text('Excluir produto'),
-                            ],
-                          ),
-                        ),
-                      ],
-                ),
-              ],
-            ],
-          ),
-          body: AppGradientScene(
-            child: SafeArea(
-              child: product == null
-                  ? const _ProductRemovedState()
-                  : _ProductDetailsContent(product: product),
-            ),
-          ),
-        );
-      },
+                titleSpacing: 0,
+                leadingWidth: 40,
+                actions: [
+                  if (product != null) ...[
+                    IconButton(
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 48,
+                      ),
+                      padding: const EdgeInsets.all(8),
+                      tooltip: 'Editar produto',
+                      onPressed: () => _editProduct(product),
+                      icon: const Icon(Icons.edit_rounded),
+                    ),
+                    IconButton(
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 48,
+                      ),
+                      padding: const EdgeInsets.all(8),
+                      tooltip: 'Atualizar preço',
+                      onPressed: () => _updatePrice(product),
+                      icon: const Icon(Icons.price_change_rounded),
+                    ),
+                    IconButton(
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 48,
+                      ),
+                      padding: const EdgeInsets.all(8),
+                      tooltip: 'Excluir produto',
+                      onPressed: () => _deleteProduct(product),
+                      icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                    ),
+                  ],
+                ],
+              ),
+              body: SafeArea(
+                child: product == null
+                    ? const _ProductRemovedState()
+                    : _ProductDetailsContent(product: product),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }
 
 class _ProductDetailsContent extends StatelessWidget {
   const _ProductDetailsContent({required this.product});
-
   final CatalogProduct product;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     final analysis = ProductPriceAnalysis.fromHistory(product.priceHistory);
-    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
-    return ListView(
-      padding: EdgeInsets.fromLTRB(16, 8, 16, 24 + bottomInset),
-      children: [
-        _ProductHeader(product: product, analysis: analysis),
-        const SizedBox(height: 12),
-        _PriceTrendPanel(analysis: analysis),
-        const SizedBox(height: 12),
-        _PriceAdvicePanel(advice: ProductPriceAdvice.fromAnalysis(analysis)),
-        const SizedBox(height: 12),
-        _PriceChartPanel(analysis: analysis),
-        const SizedBox(height: 12),
-        _ProductStatsGrid(analysis: analysis),
-        const SizedBox(height: 12),
-        _PriceHistoryPanel(analysis: analysis),
-      ],
-    );
-  }
-}
-
-class _ProductHeader extends StatelessWidget {
-  const _ProductHeader({required this.product, required this.analysis});
-
-  final CatalogProduct product;
-  final ProductPriceAnalysis analysis;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    return _DetailsPanel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final monthly = _monthlyChartEntries(analysis.entries);
+    final advice = ProductPriceAdvice.fromAnalysis(analysis);
+    final history = analysis.entries.reversed.toList();
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Icon(
-                    product.category.icon,
-                    color: colorScheme.onPrimaryContainer,
+              Row(
+                children: [
+                  Chip(
+                    label: Text(product.category.label),
+                    visualDensity: VisualDensity.compact,
                   ),
+                  const Spacer(),
+                  Text(
+                    '${product.usageCount} usos',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(product.name, style: theme.textTheme.titleLarge),
+              const SizedBox(height: 6),
+              Text(
+                'Atualizado em ${formatShortDate(product.updatedAt)}',
+                style: theme.textTheme.bodySmall,
+              ),
+              if (product.barcode?.isNotEmpty == true) ...[
+                const Divider(height: 24),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.view_week_outlined,
+                      size: 18,
+                      color: colors.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SelectableText(
+                        product.barcode!,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 28),
+              _ProductPaper(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 12,
+                      runSpacing: 8,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'PREÇO ATUAL',
+                              style: theme.textTheme.labelSmall,
+                            ),
+                            Text(
+                              _formatNullablePrice(product.unitPrice),
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontSize: 32,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Tooltip(
+                          message: analysis.summaryLabel,
+                          child: Chip(
+                            avatar: Icon(
+                              analysis.absoluteDelta < 0
+                                  ? Icons.south_rounded
+                                  : analysis.absoluteDelta > 0
+                                  ? Icons.north_rounded
+                                  : Icons.horizontal_rule,
+                              size: 14,
+                            ),
+                            label: Text(
+                              analysis.hasEnoughHistory
+                                  ? '${analysis.absoluteDelta < 0 ? '-' : '+'}${formatCurrency(analysis.absoluteDelta.abs())} (${analysis.percentDelta.toStringAsFixed(1).replaceAll('.', ',')}%)'
+                                  : analysis.summaryLabel,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (analysis.hasEnoughHistory) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        analysis.summaryLabel,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                    const Divider(height: 24),
+                    LayoutBuilder(
+                      builder: (context, constraints) => Wrap(
+                        spacing: 8,
+                        runSpacing: 12,
+                        children: [
+                          for (final stat in [
+                            ('MÍNIMA', analysis.lowestPrice),
+                            ('MÉDIA', analysis.averagePrice),
+                            ('MÁXIMA', analysis.highestPrice),
+                          ])
+                            SizedBox(
+                              width: (constraints.maxWidth - 16) / 3,
+                              child: Column(
+                                children: [
+                                  Text(
+                                    stat.$1,
+                                    style: theme.textTheme.labelSmall,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _formatNullablePrice(stat.$2),
+                                    textAlign: TextAlign.center,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 24),
+                    Text(
+                      _chartRangeLabel(
+                        shownCount: monthly.length,
+                        totalCount: _monthlyPriceCount(analysis.entries),
+                      ),
+                      style: theme.textTheme.labelSmall,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Um ponto por mês: sempre o último preço salvo.',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 8),
+                    if (monthly.length < 2)
+                      Text(
+                        'Ainda não há meses suficientes para desenhar a tendência.',
+                        style: theme.textTheme.bodySmall,
+                      )
+                    else
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: colors.surfaceContainerLow,
+                          border: Border.all(color: colors.outlineVariant),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Column(
+                            children: [
+                              Semantics(
+                                label:
+                                    'Gráfico mensal com ${monthly.length} meses. Último preço salvo por mês. Faixa ${_chartPriceRangeLabel(monthly)}.',
+                                child: SizedBox(
+                                  height: 110,
+                                  width: double.infinity,
+                                  child: CustomPaint(
+                                    painter: _PriceHistoryChartPainter(
+                                      entries: monthly,
+                                      lineColor: colors.primary,
+                                      fillColor: colors.primary.withValues(
+                                        alpha: .15,
+                                      ),
+                                      gridColor: colors.outlineVariant,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              _ChartMonthLabels(entries: monthly),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
+              const SizedBox(height: 26),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Histórico de preço',
+                      style: theme.textTheme.titleMedium,
+                    ),
+                  ),
+                  Text(
+                    '${history.length} registros',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+              const Divider(height: 16),
+              _ProductPaper(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    Container(
+                      color: colors.surfaceContainerLow,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'DATA DE REGISTRO',
+                              style: theme.textTheme.labelSmall,
+                            ),
+                          ),
+                          Text('VALOR', style: theme.textTheme.labelSmall),
+                        ],
+                      ),
+                    ),
+                    if (history.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text('Nenhum preço registrado ainda.'),
+                      ),
+                    for (var i = 0; i < history.length; i++) ...[
+                      const Divider(height: 1),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: [
+                                  Text(
+                                    formatDateTime(history[i].recordedAt),
+                                    style: theme.textTheme.bodySmall,
+                                  ),
+                                  if (i == 0)
+                                    Text(
+                                      'Mais recente',
+                                      style: theme.textTheme.labelSmall
+                                          ?.copyWith(color: colors.primary),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              formatCurrency(history[i].price),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              _ProductPaper(
+                background: colors.surfaceContainerLow,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      product.name,
-                      style: textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w900,
+                      'ANÁLISE LOCAL DE PREÇO',
+                      style: theme.textTheme.labelSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      advice.title,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _InfoPill(
-                          icon: product.category.icon,
-                          label: product.category.label,
-                        ),
-                        _InfoPill(
-                          icon: Icons.history_toggle_off_rounded,
-                          label: '${product.usageCount} usos',
-                        ),
-                        if (product.barcode != null &&
-                            product.barcode!.isNotEmpty)
-                          _InfoPill(
-                            icon: Icons.qr_code_2_rounded,
-                            label: product.barcode!,
-                          ),
-                      ],
-                    ),
+                    const SizedBox(height: 4),
+                    Text(advice.message, style: theme.textTheme.bodySmall),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            analysis.latestPrice == null
-                ? 'Sem preço salvo'
-                : formatCurrency(analysis.latestPrice!),
-            style: textTheme.displaySmall?.copyWith(
-              color: colorScheme.primary,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Atualizado em ${formatShortDate(product.updatedAt)}',
-            style: textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _PriceTrendPanel extends StatelessWidget {
-  const _PriceTrendPanel({required this.analysis});
-
-  final ProductPriceAnalysis analysis;
-
+class _ProductPaper extends StatelessWidget {
+  const _ProductPaper({
+    required this.child,
+    this.background,
+    this.padding = const EdgeInsets.all(16),
+  });
+  final Widget child;
+  final Color? background;
+  final EdgeInsets padding;
   @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final tone = _trendTone(context, analysis.direction);
-    final delta = analysis.absoluteDelta;
-    final deltaLabel = analysis.hasEnoughHistory
-        ? '${delta >= 0 ? '+' : '-'} ${formatCurrency(delta.abs())}'
-        : 'Atualize o preço para comparar';
-
-    return _DetailsPanel(
-      backgroundColor: tone.background,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(tone.icon, color: tone.foreground, size: 30),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  analysis.summaryLabel,
-                  style: textTheme.titleMedium?.copyWith(
-                    color: tone.foreground,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  deltaLabel,
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PriceAdvicePanel extends StatelessWidget {
-  const _PriceAdvicePanel({required this.advice});
-
-  final ProductPriceAdvice advice;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final tone = _adviceTone(context, advice.type);
-    return _DetailsPanel(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: tone.background,
-              borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(10),
-              child: Icon(tone.icon, color: tone.foreground, size: 24),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Assistente de preço',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  advice.title,
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  advice.message,
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                _InfoPill(
-                  icon: Icons.offline_bolt_rounded,
-                  label: 'Análise local',
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PriceChartPanel extends StatelessWidget {
-  const _PriceChartPanel({required this.analysis});
-
-  final ProductPriceAnalysis analysis;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final chartEntries = _monthlyChartEntries(analysis.entries);
-    final totalMonthCount = _monthlyPriceCount(analysis.entries);
-    return _DetailsPanel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.show_chart_rounded, color: colorScheme.primary),
-              const SizedBox(width: 8),
-              Text(
-                'Histórico de preços',
-                style: textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            _chartRangeLabel(
-              shownCount: chartEntries.length,
-              totalCount: totalMonthCount,
-            ),
-            style: textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            'Um ponto por mês: sempre o último preço salvo.',
-            style: textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 14),
-          if (chartEntries.length < 2)
-            Text(
-              'Ainda não há meses suficientes para desenhar a tendência.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            )
-          else ...[
-            Semantics(
-              label:
-                  'Gráfico mensal com ${chartEntries.length} meses. Cada ponto mostra o último preço salvo no mês. Faixa exibida ${_chartPriceRangeLabel(chartEntries)}.',
-              child: SizedBox(
-                height: 136,
-                width: double.infinity,
-                child: CustomPaint(
-                  painter: _PriceHistoryChartPainter(
-                    entries: chartEntries,
-                    lineColor: colorScheme.primary,
-                    fillColor: colorScheme.primaryContainer,
-                    gridColor: colorScheme.outlineVariant.withValues(
-                      alpha: 0.62,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            _ChartMonthLabels(entries: chartEntries),
-          ],
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+    padding: padding,
+    clipBehavior: Clip.antiAlias,
+    decoration: BoxDecoration(
+      color: background ?? Theme.of(context).colorScheme.surfaceContainerLowest,
+      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: child,
+  );
 }
 
 List<PriceHistoryEntry> _monthlyChartEntries(List<PriceHistoryEntry> entries) {
@@ -705,265 +681,6 @@ class _ChartMonthLabels extends StatelessWidget {
   }
 }
 
-class _ProductStatsGrid extends StatelessWidget {
-  const _ProductStatsGrid({required this.analysis});
-
-  final ProductPriceAnalysis analysis;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: [
-        _StatTile(
-          icon: Icons.south_rounded,
-          label: 'Menor preço',
-          value: _formatNullablePrice(analysis.lowestPrice),
-        ),
-        _StatTile(
-          icon: Icons.north_rounded,
-          label: 'Maior preço',
-          value: _formatNullablePrice(analysis.highestPrice),
-        ),
-        _StatTile(
-          icon: Icons.functions_rounded,
-          label: 'Média',
-          value: _formatNullablePrice(analysis.averagePrice),
-        ),
-        _StatTile(
-          icon: Icons.event_available_rounded,
-          label: 'Registros',
-          value: formatCountLabel(analysis.entries.length, 'preço', 'preços'),
-        ),
-      ],
-    );
-  }
-}
-
-class _PriceHistoryPanel extends StatelessWidget {
-  const _PriceHistoryPanel({required this.analysis});
-
-  final ProductPriceAnalysis analysis;
-
-  @override
-  Widget build(BuildContext context) {
-    final history = [...analysis.entries]
-      ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
-    final textTheme = Theme.of(context).textTheme;
-    return _DetailsPanel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Linha do tempo',
-            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 10),
-          if (history.isEmpty)
-            Text(
-              'Nenhum preço registrado ainda.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            )
-          else
-            ...history.asMap().entries.map((entry) {
-              final index = entry.key;
-              final record = entry.value;
-              final previous = index + 1 < history.length
-                  ? history[index + 1]
-                  : null;
-              final delta = previous == null
-                  ? null
-                  : record.price - previous.price;
-              return _HistoryRow(record: record, delta: delta);
-            }),
-        ],
-      ),
-    );
-  }
-}
-
-class _HistoryRow extends StatelessWidget {
-  const _HistoryRow({required this.record, required this.delta});
-
-  final PriceHistoryEntry record;
-  final double? delta;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final priceDelta = delta;
-    final isIncrease = (priceDelta ?? 0) > 0;
-    final isDecrease = (priceDelta ?? 0) < 0;
-    final deltaColor = priceDelta == null
-        ? colorScheme.onSurfaceVariant
-        : isIncrease
-        ? colorScheme.error
-        : colorScheme.primary;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.42),
-          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-          border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.26),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-          child: Row(
-            children: [
-              Icon(Icons.monetization_on_rounded, color: colorScheme.primary),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      formatCurrency(record.price),
-                      style: textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      formatDateTime(record.recordedAt),
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                priceDelta == null
-                    ? 'Inicial'
-                    : '${isIncrease
-                          ? '+'
-                          : isDecrease
-                          ? '-'
-                          : ''} ${formatCurrency(priceDelta.abs())}',
-                style: textTheme.labelMedium?.copyWith(
-                  color: deltaColor,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StatTile extends StatelessWidget {
-  const _StatTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    return SizedBox(
-      width: 164,
-      child: _DetailsPanel(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: colorScheme.primary, size: 20),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _InfoPill extends StatelessWidget {
-  const _InfoPill({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.54),
-        borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: colorScheme.primary),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: colorScheme.onSurface,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DetailsPanel extends StatelessWidget {
-  const _DetailsPanel({required this.child, this.backgroundColor});
-
-  final Widget child;
-  final Color? backgroundColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: backgroundColor ?? colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppTokens.radiusXl),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.54),
-        ),
-      ),
-      child: Padding(padding: const EdgeInsets.all(14), child: child),
-    );
-  }
-}
-
 class _ProductRemovedState extends StatelessWidget {
   const _ProductRemovedState();
 
@@ -1001,89 +718,6 @@ class _ProductRemovedState extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _TrendTone {
-  const _TrendTone({
-    required this.background,
-    required this.foreground,
-    required this.icon,
-  });
-
-  final Color background;
-  final Color foreground;
-  final IconData icon;
-}
-
-_TrendTone _trendTone(
-  BuildContext context,
-  ProductPriceTrendDirection direction,
-) {
-  final colorScheme = Theme.of(context).colorScheme;
-  switch (direction) {
-    case ProductPriceTrendDirection.down:
-      return _TrendTone(
-        background: colorScheme.primaryContainer,
-        foreground: colorScheme.onPrimaryContainer,
-        icon: Icons.trending_down_rounded,
-      );
-    case ProductPriceTrendDirection.up:
-      return _TrendTone(
-        background: colorScheme.errorContainer,
-        foreground: colorScheme.onErrorContainer,
-        icon: Icons.trending_up_rounded,
-      );
-    case ProductPriceTrendDirection.same:
-      return _TrendTone(
-        background: colorScheme.surfaceContainerHighest,
-        foreground: colorScheme.onSurfaceVariant,
-        icon: Icons.trending_flat_rounded,
-      );
-    case ProductPriceTrendDirection.unknown:
-      return _TrendTone(
-        background: colorScheme.tertiaryContainer,
-        foreground: colorScheme.onTertiaryContainer,
-        icon: Icons.insights_rounded,
-      );
-  }
-}
-
-_TrendTone _adviceTone(BuildContext context, ProductPriceAdviceType type) {
-  final colorScheme = Theme.of(context).colorScheme;
-  switch (type) {
-    case ProductPriceAdviceType.bestPrice:
-    case ProductPriceAdviceType.goodPrice:
-      return _TrendTone(
-        background: colorScheme.primaryContainer,
-        foreground: colorScheme.onPrimaryContainer,
-        icon: Icons.verified_rounded,
-      );
-    case ProductPriceAdviceType.highPrice:
-    case ProductPriceAdviceType.recordHigh:
-      return _TrendTone(
-        background: colorScheme.errorContainer,
-        foreground: colorScheme.onErrorContainer,
-        icon: Icons.report_gmailerrorred_rounded,
-      );
-    case ProductPriceAdviceType.normalPrice:
-      return _TrendTone(
-        background: colorScheme.surfaceContainerHighest,
-        foreground: colorScheme.onSurfaceVariant,
-        icon: Icons.balance_rounded,
-      );
-    case ProductPriceAdviceType.learning:
-      return _TrendTone(
-        background: colorScheme.tertiaryContainer,
-        foreground: colorScheme.onTertiaryContainer,
-        icon: Icons.school_rounded,
-      );
-    case ProductPriceAdviceType.noPrice:
-      return _TrendTone(
-        background: colorScheme.secondaryContainer,
-        foreground: colorScheme.onSecondaryContainer,
-        icon: Icons.lightbulb_rounded,
-      );
   }
 }
 
@@ -1210,5 +844,70 @@ class _PriceHistoryChartPainter extends CustomPainter {
         oldDelegate.lineColor != lineColor ||
         oldDelegate.fillColor != fillColor ||
         oldDelegate.gridColor != gridColor;
+  }
+}
+
+class _ProductPriceDialog extends StatefulWidget {
+  const _ProductPriceDialog({required this.initialPrice});
+  final double initialPrice;
+  @override
+  State<_ProductPriceDialog> createState() => _ProductPriceDialogState();
+}
+
+class _ProductPriceDialogState extends State<_ProductPriceDialog> {
+  final _formatter = BrlCurrencyInputFormatter();
+  final _formKey = GlobalKey<FormState>();
+  late final _controller = TextEditingController(
+    text: _formatter.formatValue(widget.initialPrice),
+  );
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Atualizar preço'),
+      content: Form(
+        key: _formKey,
+        child: TextFormField(
+          controller: _controller,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [_formatter],
+          decoration: const InputDecoration(
+            labelText: 'Novo preço',
+            prefixIcon: Icon(Icons.attach_money_rounded),
+          ),
+          validator: (value) {
+            final parsed = BrlCurrencyInputFormatter.tryParse(value ?? '');
+            if (parsed == null || parsed <= 0) {
+              return 'Informe um preço válido.';
+            }
+            return null;
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () {
+            if (_formKey.currentState?.validate() != true) {
+              return;
+            }
+            Navigator.pop(
+              context,
+              BrlCurrencyInputFormatter.tryParse(_controller.text),
+            );
+          },
+          child: const Text('Salvar'),
+        ),
+      ],
+    );
   }
 }

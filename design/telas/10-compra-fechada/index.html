@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Fechamento de compra — Minhas Compras</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Newsreader (Editorial Serif) & Public Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400&amp;family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "secondary-fixed": "#e0e5cf",
+            "surface-dim": "#dcdad4",
+            "on-primary-container": "#a7ceb2",
+            "primary-container": "#365943",
+            "surface-variant": "#e4e2dd",
+            "secondary": "#5b604f",
+            "on-tertiary-container": "#f2b6ba",
+            "tertiary-fixed": "#ffdadb",
+            "on-tertiary": "#ffffff",
+            "on-primary-fixed-variant": "#2b4e39",
+            "surface-container-high": "#eae8e2",
+            "inverse-surface": "#30312d",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "on-error-container": "#93000a",
+            "outline-variant": "#c1c8c1",
+            "tertiary-container": "#724549",
+            "on-surface": "#1b1c18",
+            "on-secondary-container": "#616655",
+            "on-primary": "#ffffff",
+            "inverse-primary": "#a9d0b4",
+            "on-secondary-fixed-variant": "#444939",
+            "surface-container-highest": "#e4e2dd",
+            "on-secondary-fixed": "#191d10",
+            "inverse-on-surface": "#f3f1eb",
+            "error": "#ba1a1a",
+            "on-surface-variant": "#424843",
+            "on-background": "#1b1c18",
+            "tertiary": "#582f33",
+            "primary": "#1f412d",
+            "surface-tint": "#43664f",
+            "secondary-fixed-dim": "#c4c9b4",
+            "primary-fixed-dim": "#a9d0b4",
+            "on-tertiary-fixed": "#321015",
+            "on-secondary": "#ffffff",
+            "background": "#fbf9f3",
+            "primary-fixed": "#c4eccf",
+            "error-container": "#ffdad6",
+            "surface": "#fbf9f3",
+            "outline": "#727972",
+            "secondary-container": "#e0e5cf",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "on-primary-fixed": "#002110",
+            "on-error": "#ffffff",
+            "surface-container-lowest": "#ffffff",
+            "surface-container": "#f0eee8",
+            "surface-container-low": "#f5f3ed",
+            "surface-bright": "#fbf9f3"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      line-height: 1;
+    }
+    .num-tabular {
+      font-variant-numeric: tabular-nums;
+    }
+    /* Estilo sutil de recibo sem nostalgia caricata */
+    .receipt-edge {
+      background-image: radial-gradient(circle at 10px -5px, transparent 12px, #FFFEFA 13px);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-body antialiased selection:bg-secondary-fixed selection:text-on-secondary-fixed flex justify-center min-h-screen">
+<!-- Canvas Móvel (390px padrão mobile compacto) -->
+<div class="w-full max-w-[420px] bg-surface min-h-screen flex flex-col relative pb-8">
+<!-- 1. TopAppBar / Navegação Superior Editorial -->
+<header class="sticky top-0 z-40 bg-surface/95 backdrop-blur-sm border-b border-outline-variant/40 px-4 h-14 flex items-center justify-between"><div class="flex items-center gap-2"><a aria-label="Voltar" class="min-w-[48px] min-h-[48px] -ml-2 inline-flex items-center justify-center text-on-surface hover:text-primary transition-colors active:opacity-70" href="#"><span class="material-symbols-outlined text-[24px]">arrow_back</span></a><h1 class="font-headline text-[1.4rem] font-medium tracking-tight text-on-surface">Detalhe da compra</h1></div><div class="flex items-center gap-1 relative"><button aria-label="Mais opções" class="min-w-[48px] min-h-[48px] -mr-2 inline-flex items-center justify-center text-on-surface hover:text-primary transition-colors active:scale-95" title="Mais opções"><span class="material-symbols-outlined text-[22px]">more_vert</span></button></div></header>
+<main class="flex-1 px-4 pt-4 pb-6 space-y-6"><section class="space-y-2 border-b border-outline-variant/40 pb-4"><div><span class="text-[11px] uppercase tracking-wider text-secondary font-medium block">Lista finalizada</span><h2 class="font-headline text-2xl font-normal text-on-surface tracking-tight leading-snug mt-0.5">Feira de sábado — Produtores</h2></div><div class="text-[12.5px] text-secondary flex items-center gap-1.5 pt-1"><span class="material-symbols-outlined text-[15px]">calendar_today</span><span>Finalizada em 26 de outubro de 2024</span></div></section><section class="border border-outline-variant/60 rounded bg-surface-container-lowest p-4 space-y-3.5"><div class="flex items-center justify-between pb-2 border-b border-outline-variant/30"><span class="text-[11px] tracking-wider uppercase text-secondary font-medium">Resumo financeiro</span><span class="text-[11.5px] font-medium text-primary bg-primary-fixed px-2 py-0.5 rounded">Concluída</span></div><div class="grid grid-cols-2 gap-4 py-1"><div class="border-r border-outline-variant/30 pr-3"><span class="block text-[11px] text-secondary font-medium">Total planejado (Teto)</span><span class="block font-body text-[16px] font-medium text-on-surface num-tabular mt-0.5">R$ 200,00</span></div><div class="pl-1"><span class="block text-[11px] text-secondary font-medium">Total comprado (Real)</span><span class="block font-headline text-[1.35rem] font-semibold text-primary leading-tight num-tabular mt-0.5">R$ 184,30</span></div></div><div class="pt-2 border-t border-outline-variant/30 flex items-center justify-between text-[12.5px]"><span class="text-secondary font-medium">Forma de pagamento</span><span class="text-on-surface font-medium inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-secondary">credit_card</span>Cartão de débito</span></div></section><section class="space-y-4"><div class="flex items-baseline justify-between border-b border-outline pb-1.5"><h3 class="font-headline text-[1.2rem] text-on-surface">Itens comprados</h3><span class="text-[11.5px] text-secondary font-normal num-tabular">8 itens registrados</span></div><div class="space-y-2.5"><div class="py-2 border-b border-outline-variant/30 flex items-start justify-between gap-2"><div class="space-y-0.5"><p class="text-[13.5px] font-medium text-on-surface">Banana prata madura</p><div class="flex items-center gap-1 text-[11.5px] text-secondary num-tabular"><span>Hortifrúti</span><span class="text-outline-variant">•</span><span>1,2 kg × R$ 8,50/kg</span></div></div><div class="text-right num-tabular"><span class="text-[13.5px] font-medium text-on-surface">R$ 10,20</span></div></div><div class="py-2 border-b border-outline-variant/30 flex items-start justify-between gap-2"><div class="space-y-0.5"><p class="text-[13.5px] font-medium text-on-surface">Tomate italiano selecionado</p><div class="flex items-center gap-1 text-[11.5px] text-secondary num-tabular"><span>Hortifrúti</span><span class="text-outline-variant">•</span><span>0,8 kg × R$ 8,50/kg</span></div></div><div class="text-right num-tabular"><span class="text-[13.5px] font-medium text-on-surface">R$ 6,80</span></div></div><div class="py-2 border-b border-outline-variant/30 flex items-start justify-between gap-2"><div class="space-y-0.5"><p class="text-[13.5px] font-medium text-on-surface">Ovos caipiras vermelhos</p><div class="flex items-center gap-1 text-[11.5px] text-secondary num-tabular"><span>Hortifrúti</span><span class="text-outline-variant">•</span><span>1 un × R$ 16,90</span></div></div><div class="text-right num-tabular"><span class="text-[13.5px] font-medium text-on-surface">R$ 16,90</span></div></div><div class="py-2 border-b border-outline-variant/30 flex items-start justify-between gap-2"><div class="space-y-0.5"><p class="text-[13.5px] font-medium text-on-surface">Café especial torrado e moído 250g</p><div class="flex items-center gap-1 text-[11.5px] text-secondary num-tabular"><span>Mercearia</span><span class="text-outline-variant">•</span><span>2 un × R$ 18,90</span></div></div><div class="text-right num-tabular"><span class="text-[13.5px] font-medium text-on-surface">R$ 37,80</span></div></div><div class="py-2 border-b border-outline-variant/30 flex items-start justify-between gap-2"><div class="space-y-0.5"><p class="text-[13.5px] font-medium text-on-surface">Arroz agulhinha tipo 1 5kg</p><div class="flex items-center gap-1 text-[11.5px] text-secondary num-tabular"><span>Mercearia</span><span class="text-outline-variant">•</span><span>1 un × R$ 29,80</span></div></div><div class="text-right num-tabular"><span class="text-[13.5px] font-medium text-on-surface">R$ 29,80</span></div></div><div class="py-2 border-b border-outline-variant/30 flex items-start justify-between gap-2"><div class="space-y-0.5"><p class="text-[13.5px] font-medium text-on-surface">Azeite de oliva extravirgem 500ml</p><div class="flex items-center gap-1 text-[11.5px] text-secondary num-tabular"><span>Mercearia</span><span class="text-outline-variant">•</span><span>1 un × R$ 38,90</span></div></div><div class="text-right num-tabular"><span class="text-[13.5px] font-medium text-on-surface">R$ 38,90</span></div></div><div class="py-2 border-b border-outline-variant/30 flex items-start justify-between gap-2"><div class="space-y-0.5"><p class="text-[13.5px] font-medium text-on-surface">Leite integral pasteurizado tipo A 1L</p><div class="flex items-center gap-1 text-[11.5px] text-secondary num-tabular"><span>Laticínios</span><span class="text-outline-variant">•</span><span>2 un × R$ 5,89</span></div></div><div class="text-right num-tabular"><span class="text-[13.5px] font-medium text-on-surface">R$ 11,78</span></div></div><div class="py-2 border-b border-outline-variant/30 flex items-start justify-between gap-2"><div class="space-y-0.5"><p class="text-[13.5px] font-medium text-on-surface">Detergente biodegradável neutro 500ml</p><div class="flex items-center gap-1 text-[11.5px] text-secondary num-tabular"><span>Limpeza</span><span class="text-outline-variant">•</span><span>3 un × R$ 3,19</span></div></div><div class="text-right num-tabular"><span class="text-[13.5px] font-medium text-on-surface">R$ 9,57</span></div></div></div></section><section class="pt-2 space-y-3"><button class="w-full h-12 rounded-lg bg-primary text-on-primary font-medium text-[14px] flex items-center justify-center gap-2 hover:bg-primary-container active:scale-[0.99] transition-all"><span class="material-symbols-outlined text-[18px]">content_copy</span><span>Duplicar como nova lista</span></button><button class="w-full h-11 rounded-lg border border-outline-variant bg-surface text-secondary hover:text-tertiary text-[13px] font-medium flex items-center justify-center gap-1.5 hover:bg-surface-container active:scale-[0.99] transition-all"><span class="material-symbols-outlined text-[18px]">lock_open</span><span>Reabrir lista</span></button><p class="text-[11px] text-center text-secondary leading-tight">A reabertura desfaz o fechamento da compra e reativa a lista.</p></section></main>
+<!-- BottomNavBar fixo (Shared Component JSON - Destino Histórico Ativo) -->
+</div>
+</body></html>

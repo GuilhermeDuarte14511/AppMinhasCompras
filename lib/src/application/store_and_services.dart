@@ -11,6 +11,8 @@ import 'pantry_inventory_policy.dart';
 import 'ports.dart';
 
 class ShoppingListsStore extends ChangeNotifier {
+  static const trashRetention = Duration(days: 30);
+
   ShoppingListsStore(
     this._storage, {
     required ShoppingReminderService reminderService,
@@ -42,6 +44,9 @@ class ShoppingListsStore extends ChangeNotifier {
   final List<ShoppingListModel> _lists = <ShoppingListModel>[];
   final List<CompletedPurchase> _history = <CompletedPurchase>[];
   final List<PantryItem> _pantry = <PantryItem>[];
+  final Set<String> _permanentlyDeletedListIds = {};
+  bool isListPermanentlyDeleted(String id) =>
+      _permanentlyDeletedListIds.contains(id);
   static const PantryInventoryPolicy _pantryPolicy = PantryInventoryPolicy();
   final Set<String> _sharedCatalogImportListIds = <String>{};
   bool _isLoading = true;
@@ -55,10 +60,20 @@ class ShoppingListsStore extends ChangeNotifier {
   bool get isLoading => _isLoading;
   Object? get loadError => _loadError;
 
-  List<ShoppingListModel> get lists => List.unmodifiable(_lists);
+  List<ShoppingListModel> get allLists => List.unmodifiable(_lists);
+  List<ShoppingListModel> get lists =>
+      List.unmodifiable(_lists.where((list) => !list.isDeleted));
+  List<ShoppingListModel> get trashedLists {
+    return List<ShoppingListModel>.unmodifiable(
+      _lists.where((list) => list.isDeleted).toList()
+        ..sort((a, b) => b.deletedAt!.compareTo(a.deletedAt!)),
+    );
+  }
+
   List<ShoppingListModel> get listsByCreatedAt {
     return List<ShoppingListModel>.unmodifiable(
-      List<ShoppingListModel>.of(_lists)..sort(_compareListsByCreatedAtDesc),
+      _lists.where((list) => !list.isDeleted).toList()
+        ..sort(_compareListsByCreatedAtDesc),
     );
   }
 
@@ -101,6 +116,7 @@ class ShoppingListsStore extends ChangeNotifier {
       _lists
         ..clear()
         ..addAll(loadedLists);
+      final removedExpiredTrash = _removeExpiredTrash(DateTime.now());
       _history
         ..clear()
         ..addAll(loadedHistory);
@@ -120,12 +136,15 @@ class ShoppingListsStore extends ChangeNotifier {
         ..addAll(
           await _sharedCatalogImportPreferences.loadEnabledSharedListIds(),
         );
-      await _productCatalog.ingestFromLists(_lists);
-      await _reminderService.syncFromLists(_lists, reset: true);
+      final activeLists = lists;
+      await _reminderService.syncFromLists(activeLists, reset: true);
       await _homeWidgetService.updateSnapshot(
-        lists: _lists,
+        lists: activeLists,
         pantryItems: _pantry,
       );
+      if (removedExpiredTrash) {
+        await _storage.saveLists(_lists);
+      }
     } catch (error) {
       _loadError = error;
     } finally {
@@ -138,6 +157,15 @@ class ShoppingListsStore extends ChangeNotifier {
 
   ShoppingListModel? findById(String listId) {
     for (final list in _lists) {
+      if (list.id == listId && !list.isDeleted) {
+        return list;
+      }
+    }
+    return null;
+  }
+
+  ShoppingListModel? findByIdIncludingTrash(String listId) {
+    for (final list in _lists) {
       if (list.id == listId) {
         return list;
       }
@@ -148,6 +176,9 @@ class ShoppingListsStore extends ChangeNotifier {
   Future<ShoppingListModel> createList({
     required String name,
     ShoppingListModel? basedOn,
+    double? budget,
+    bool clearBudget = false,
+    List<PaymentBalance>? paymentBalances,
   }) async {
     final trimmedName = name.trim();
     final now = DateTime.now();
@@ -169,9 +200,9 @@ class ShoppingListsStore extends ChangeNotifier {
       createdAt: now,
       updatedAt: now,
       items: copiedItems,
-      budget: source?.budget,
+      budget: clearBudget ? null : budget ?? source?.budget,
       reminder: null,
-      paymentBalances: copiedPaymentBalances,
+      paymentBalances: paymentBalances ?? copiedPaymentBalances,
     );
 
     _lists.insert(0, created);
@@ -179,12 +210,15 @@ class ShoppingListsStore extends ChangeNotifier {
     _invalidateListSuggestionCache();
     await _persistAndNotify();
     await _productCatalog.ingestFromLists([created]);
+    notifyListeners();
     return created;
   }
 
   Future<ShoppingListModel> createListFromDrafts({
     required String name,
     required List<ShoppingItemDraft> drafts,
+    double? budget,
+    List<PaymentBalance> paymentBalances = const [],
   }) async {
     final trimmedName = name.trim();
     final now = DateTime.now();
@@ -193,6 +227,8 @@ class ShoppingListsStore extends ChangeNotifier {
       name: trimmedName,
       createdAt: now,
       updatedAt: now,
+      budget: budget,
+      paymentBalances: paymentBalances,
       items: drafts
           .where((draft) => draft.name.trim().isNotEmpty)
           .map(
@@ -221,6 +257,7 @@ class ShoppingListsStore extends ChangeNotifier {
     _invalidateListSuggestionCache();
     await _persistAndNotify();
     await _productCatalog.ingestFromLists([created]);
+    notifyListeners();
     return created;
   }
 
@@ -228,6 +265,7 @@ class ShoppingListsStore extends ChangeNotifier {
     ShoppingListModel list, {
     bool ingestCatalog = true,
   }) async {
+    if (isListPermanentlyDeleted(list.id)) return;
     final index = _lists.indexWhere((entry) => entry.id == list.id);
     if (index >= 0) {
       _lists[index] = list;
@@ -240,6 +278,7 @@ class ShoppingListsStore extends ChangeNotifier {
     await _syncReminderForList(list);
     if (ingestCatalog) {
       await _productCatalog.ingestFromLists([list]);
+      notifyListeners();
     }
   }
 
@@ -354,12 +393,15 @@ class ShoppingListsStore extends ChangeNotifier {
     _invalidateListSuggestionCache();
     await _persistAndNotify();
     await _productCatalog.ingestFromLists([updated]);
+    notifyListeners();
     return PantryListAddResult(list: updated.deepCopy(), merged: merged);
   }
 
   Future<ShoppingListModel?> finalizeList(
     String listId, {
     bool markPendingAsPurchased = false,
+    FinanceCheckoutIntent? financeIntent,
+    int? finalTotalCents,
   }) async {
     final index = _lists.indexWhere((entry) => entry.id == listId);
     if (index < 0) {
@@ -378,36 +420,56 @@ class ShoppingListsStore extends ChangeNotifier {
               : item.copyWith(),
         )
         .toList(growable: false);
-    final completed = CompletedPurchase(
-      id: uniqueId(),
-      listId: source.id,
-      listName: source.name,
-      closedAt: now,
-      items: completedItems,
-      budget: source.budget,
-      paymentBalances: source.paymentBalances
-          .map((entry) => entry.copyWith())
-          .toList(growable: false),
-    );
+    final checkpoint = _history
+        .where(
+          (entry) =>
+              entry.listId == source.id &&
+              !entry.closedAt.isBefore(source.updatedAt),
+        )
+        .firstOrNull;
+    final completed =
+        checkpoint ??
+        CompletedPurchase(
+          financeIntent: financeIntent,
+          finalTotalCents: finalTotalCents,
+          id: uniqueId(),
+          listId: source.id,
+          listName: source.name,
+          closedAt: now,
+          items: completedItems,
+          budget: source.budget,
+          paymentBalances: source.paymentBalances
+              .map((entry) => entry.copyWith())
+              .toList(growable: false),
+        );
 
-    _history.add(completed);
+    // Save the immutable intent before persisting a closed list. If the second
+    // write is interrupted, the next closing reuses this exact snapshot and ID.
+    if (checkpoint == null) {
+      await _historyStorage.saveHistory([..._history, completed]);
+      _history.add(completed);
+    }
     _trimHistory();
     _sortHistoryByClosedAt();
 
     final updatedList = source.copyWith(
-      items: completedItems,
+      items: completed.items,
       isClosed: true,
-      closedAt: now,
-      updatedAt: now,
+      closedAt: completed.closedAt,
+      updatedAt: completed.closedAt,
     );
     _lists[index] = updatedList;
-    _replenishPantryFromCompletedItems(completedItems, purchasedAt: now);
+    _replenishPantryFromCompletedItems(
+      completed.items,
+      purchasedAt: completed.closedAt,
+    );
     _sortListsByUpdatedAt();
     _invalidateListSuggestionCache();
 
     await _persistAndNotify();
     await _syncReminderForList(updatedList);
     await _productCatalog.ingestFromLists([updatedList]);
+    notifyListeners();
     return updatedList.deepCopy();
   }
 
@@ -628,13 +690,15 @@ class ShoppingListsStore extends ChangeNotifier {
     await _persistAndNotify();
   }
 
-  Future<void> deleteList(String listId) async {
-    final before = _lists.length;
-    _lists.removeWhere((entry) => entry.id == listId);
-    final removed = _lists.length < before;
-    if (!removed) {
+  Future<void> deleteList(String listId, {DateTime? deletedAt}) async {
+    final index = _lists.indexWhere(
+      (entry) => entry.id == listId && !entry.isDeleted,
+    );
+    if (index < 0) {
       return;
     }
+    final now = deletedAt ?? DateTime.now();
+    _lists[index] = _lists[index].copyWith(deletedAt: now, updatedAt: now);
     _invalidateListSuggestionCache();
     await _reminderService.cancelForList(listId);
     await _persistAndNotify();
@@ -644,7 +708,19 @@ class ShoppingListsStore extends ChangeNotifier {
     if (listIds.isEmpty) {
       return;
     }
-    _lists.removeWhere((entry) => listIds.contains(entry.id));
+    final now = DateTime.now();
+    var changed = false;
+    for (var index = 0; index < _lists.length; index++) {
+      final list = _lists[index];
+      if (!listIds.contains(list.id) || list.isDeleted) {
+        continue;
+      }
+      _lists[index] = list.copyWith(deletedAt: now, updatedAt: now);
+      changed = true;
+    }
+    if (!changed) {
+      return;
+    }
     _invalidateListSuggestionCache();
 
     for (final listId in listIds) {
@@ -654,10 +730,17 @@ class ShoppingListsStore extends ChangeNotifier {
   }
 
   Future<void> clearAllLists() async {
-    if (_lists.isEmpty) {
+    final activeLists = lists;
+    if (activeLists.isEmpty) {
       return;
     }
-    _lists.clear();
+    final now = DateTime.now();
+    for (var index = 0; index < _lists.length; index++) {
+      final list = _lists[index];
+      if (!list.isDeleted) {
+        _lists[index] = list.copyWith(deletedAt: now, updatedAt: now);
+      }
+    }
     _invalidateListSuggestionCache();
     await _reminderService.syncFromLists(
       const <ShoppingListModel>[],
@@ -666,7 +749,71 @@ class ShoppingListsStore extends ChangeNotifier {
     await _persistAndNotify();
   }
 
+  Future<void> restoreList(String listId, {DateTime? restoredAt}) async {
+    final index = _lists.indexWhere(
+      (entry) => entry.id == listId && entry.isDeleted,
+    );
+    if (index < 0) {
+      return;
+    }
+    final restored = _lists[index].copyWith(
+      clearDeletedAt: true,
+      updatedAt: restoredAt ?? DateTime.now(),
+    );
+    _lists[index] = restored;
+    _sortListsByUpdatedAt();
+    _invalidateListSuggestionCache();
+    await _persistAndNotify();
+    await _syncReminderForList(restored);
+  }
+
+  Future<void> restoreListsById(Set<String> listIds) async {
+    if (listIds.isEmpty) {
+      return;
+    }
+    final now = DateTime.now();
+    final restored = <ShoppingListModel>[];
+    for (var index = 0; index < _lists.length; index++) {
+      final list = _lists[index];
+      if (!listIds.contains(list.id) || !list.isDeleted) {
+        continue;
+      }
+      final updated = list.copyWith(clearDeletedAt: true, updatedAt: now);
+      _lists[index] = updated;
+      restored.add(updated);
+    }
+    if (restored.isEmpty) {
+      return;
+    }
+    _sortListsByUpdatedAt();
+    _invalidateListSuggestionCache();
+    await _persistAndNotify();
+    for (final list in restored) {
+      await _syncReminderForList(list);
+    }
+  }
+
+  Future<void> deleteListForever(String listId) async {
+    final before = _lists.length;
+    _lists.removeWhere((entry) => entry.id == listId && entry.isDeleted);
+    if (_lists.length == before) {
+      return;
+    }
+    _permanentlyDeletedListIds.add(listId);
+    _invalidateListSuggestionCache();
+    await _persistAndNotify();
+  }
+
+  Future<void> purgeExpiredTrash({DateTime? now}) async {
+    if (!_removeExpiredTrash(now ?? DateTime.now())) {
+      return;
+    }
+    _invalidateListSuggestionCache();
+    await _persistAndNotify();
+  }
+
   Future<void> clearAllLocalData() async {
+    _permanentlyDeletedListIds.clear();
     _lists.clear();
     _history.clear();
     _pantry.clear();
@@ -705,7 +852,8 @@ class ShoppingListsStore extends ChangeNotifier {
 
   String exportBackupJson() {
     final payload = <String, dynamic>{
-      'version': 4,
+      'version': 5,
+      'deletedEntityIds': {'lists': _permanentlyDeletedListIds.toList()},
       'exportedAt': DateTime.now().toIso8601String(),
       'lists': _lists.map((list) => list.toJson()).toList(growable: false),
       'purchaseHistory': _history
@@ -733,6 +881,16 @@ class ShoppingListsStore extends ChangeNotifier {
     required bool replaceExisting,
   }) async {
     final decodedPayload = _decodeBackupPayload(rawPayload);
+    final rawBackup = jsonDecode(rawPayload);
+    final rawDeletions = rawBackup is Map
+        ? rawBackup['deletedEntityIds']
+        : null;
+    if (replaceExisting) _permanentlyDeletedListIds.clear();
+    if (rawDeletions is Map && rawDeletions['lists'] is List) {
+      _permanentlyDeletedListIds.addAll(
+        (rawDeletions['lists'] as List).whereType<String>(),
+      );
+    }
     final imported = decodedPayload.lists;
     final importedHistory = decodedPayload.history;
     final importedCatalog = decodedPayload.catalog;
@@ -745,6 +903,7 @@ class ShoppingListsStore extends ChangeNotifier {
     );
     final normalizedHistory = _normalizeImportedHistory(
       importedHistory,
+      regenerateItemIds: !replaceExisting,
       existingIds: replaceExisting
           ? <String>{}
           : _history.map((entry) => entry.id).toSet(),
@@ -783,6 +942,7 @@ class ShoppingListsStore extends ChangeNotifier {
     }
 
     _trimHistory();
+    _removeExpiredTrash(DateTime.now());
     _sortListsByUpdatedAt();
     _sortHistoryByClosedAt();
     _sortPantry();
@@ -792,8 +952,14 @@ class ShoppingListsStore extends ChangeNotifier {
       _loadError = null;
       notifyListeners();
     }
-    await _reminderService.syncFromLists(_lists, reset: true);
-    await _productCatalog.ingestFromLists(normalized);
+    await _reminderService.syncFromLists(lists, reset: true);
+    // Legacy list-only backups need catalog migration. A supplied catalog,
+    // including an empty one, is authoritative and must preserve deletions.
+    if (rawBackup is! Map || !rawBackup.containsKey('catalog')) {
+      await _productCatalog.ingestFromLists(
+        normalized.where((list) => !list.isDeleted).toList(growable: false),
+      );
+    }
 
     return BackupImportReport(
       importedLists: normalized.length,
@@ -1494,7 +1660,7 @@ class ShoppingListsStore extends ChangeNotifier {
       normalizedLists.add(
         source.copyWith(
           id: listId,
-          updatedAt: DateTime.now(),
+          updatedAt: source.updatedAt,
           items: normalizedItems,
         ),
       );
@@ -1506,6 +1672,7 @@ class ShoppingListsStore extends ChangeNotifier {
   List<CompletedPurchase> _normalizeImportedHistory(
     List<CompletedPurchase> imported, {
     required Set<String> existingIds,
+    required bool regenerateItemIds,
   }) {
     final ids = {...existingIds};
     final normalized = <CompletedPurchase>[];
@@ -1520,7 +1687,11 @@ class ShoppingListsStore extends ChangeNotifier {
         source.copyWith(
           id: id,
           items: source.items
-              .map((item) => item.copyWith(id: uniqueId()))
+              .map(
+                (item) => regenerateItemIds || id != source.id
+                    ? item.copyWith(id: uniqueId())
+                    : item,
+              )
               .toList(growable: false),
         ),
       );
@@ -1554,13 +1725,30 @@ class ShoppingListsStore extends ChangeNotifier {
     await _reminderService.scheduleForList(list);
   }
 
+  bool _removeExpiredTrash(DateTime now) {
+    final cutoff = now.subtract(trashRetention);
+    final before = _lists.length;
+    _permanentlyDeletedListIds.addAll(
+      _lists
+          .where(
+            (entry) =>
+                entry.deletedAt != null && !entry.deletedAt!.isAfter(cutoff),
+          )
+          .map((entry) => entry.id),
+    );
+    _lists.removeWhere(
+      (entry) => entry.deletedAt != null && !entry.deletedAt!.isAfter(cutoff),
+    );
+    return _lists.length != before;
+  }
+
   Future<void> _persistAndNotify() async {
     await _storage.saveLists(_lists);
     await _historyStorage.saveHistory(_history);
     await _pantryStorage.saveItems(_pantry);
     try {
       await _homeWidgetService.updateSnapshot(
-        lists: _lists,
+        lists: lists,
         pantryItems: _pantry,
       );
     } catch (_) {

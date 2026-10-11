@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Fechamento — pagamento e categoria</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-highest": "#e4e2dd",
+            "on-error-container": "#93000a",
+            "primary-fixed-dim": "#a9d0b4",
+            "background": "#fbf9f3",
+            "on-surface": "#1b1c18",
+            "surface-variant": "#e4e2dd",
+            "surface-dim": "#dcdad4",
+            "outline": "#727972",
+            "inverse-surface": "#30312d",
+            "surface-container-low": "#f5f3ed",
+            "primary-container": "#365943",
+            "on-tertiary-fixed": "#321015",
+            "surface-container": "#f0eee8",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "surface-bright": "#fbf9f3",
+            "surface-container-high": "#eae8e2",
+            "on-secondary": "#ffffff",
+            "secondary-container": "#e0e5cf",
+            "tertiary-fixed": "#ffdadb",
+            "primary-fixed": "#c4eccf",
+            "secondary-fixed-dim": "#c4c9b4",
+            "error": "#ba1a1a",
+            "surface": "#fbf9f3",
+            "on-primary-container": "#a7ceb2",
+            "on-primary": "#ffffff",
+            "on-primary-fixed-variant": "#2b4e39",
+            "outline-variant": "#c1c8c1",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "secondary": "#5b604f",
+            "on-surface-variant": "#424843",
+            "on-tertiary-container": "#f2b6ba",
+            "inverse-on-surface": "#f3f1eb",
+            "on-secondary-fixed-variant": "#444939",
+            "on-secondary-fixed": "#191d10",
+            "tertiary-container": "#724549",
+            "tertiary": "#582f33",
+            "surface-tint": "#43664f",
+            "on-secondary-container": "#616655",
+            "primary": "#1f412d",
+            "surface-container-lowest": "#ffffff",
+            "on-primary-fixed": "#002110",
+            "on-tertiary": "#ffffff",
+            "on-error": "#ffffff",
+            "on-background": "#1b1c18",
+            "inverse-primary": "#a9d0b4",
+            "secondary-fixed": "#e0e5cf",
+            "error-container": "#ffdad6"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-dim font-body text-on-surface antialiased min-h-screen flex justify-center items-end sm:items-center p-0 sm:p-4">
+<!-- Mobile Viewport 390px Container -->
+<div class="relative w-full max-w-[390px] h-[844px] max-h-screen overflow-hidden bg-on-surface/40 flex flex-col justify-end shadow-2xl">
+<!-- Scrim / Peek Area (Metade superior representando a rolagem anterior da lista de itens) -->
+<div class="flex-1 w-full px-5 pb-3 flex flex-col justify-end text-surface opacity-90 select-none pointer-events-none">
+<div class="space-y-1.5 pb-2">
+<div class="flex justify-between items-center text-xs tracking-wide text-surface/80 border-b border-surface/20 pb-1 tabular-nums">
+<span>Café Torrado Especial 500g</span>
+<span>R$ 28,90</span>
+</div>
+<div class="flex justify-between items-center text-xs tracking-wide text-surface/80 border-b border-surface/20 pb-1 tabular-nums">
+<span>Azeite de Oliva Extra Virgem 500ml</span>
+<span>R$ 41,50</span>
+</div>
+<div class="flex justify-between items-baseline pt-1">
+<span class="text-xs uppercase font-medium tracking-wider text-surface/70">Subtotal apurado</span>
+<span class="font-headline text-lg tabular-nums text-surface">R$ 184,30</span>
+</div>
+</div>
+</div>
+<!-- Modal Bottom Sheet (Metade Inferior focada nos controles de finalização financeira) -->
+<div class="w-full bg-[#F7F5EF] rounded-t-2xl shadow-xl flex flex-col border-t border-outline-variant/40 animate-slide-up">
+<!-- Drag handle sutil -->
+<div class="pt-3 pb-1 flex justify-center">
+<div class="w-10 h-1 rounded-full bg-outline-variant"></div>
+</div>
+<!-- Cabeçalho do modal -->
+<div class="px-5 pt-1 pb-3 flex items-start justify-between border-b border-outline-variant/60">
+<div>
+<h1 class="font-headline text-[26px] leading-tight text-on-surface tracking-tight font-normal">
+            Conferir compra
+          </h1>
+<p class="font-body text-xs text-on-surface-variant font-normal mt-0.5">
+            Compras da semana
+          </p>
+</div>
+<button aria-label="Fechar modal" class="p-1 -mr-1.5 text-on-surface-variant hover:text-on-surface rounded-full transition-colors flex items-center justify-center" type="button">
+<span class="material-symbols-outlined text-[22px]">close</span>
+</button>
+</div>
+<!-- Conteúdo principal: Lançamento financeiro -->
+<div class="px-5 py-4 space-y-4 overflow-y-auto">
+<!-- Título da seção -->
+<div class="flex items-baseline justify-between pt-0.5">
+<h2 class="font-headline text-[21px] text-on-surface font-normal">
+            Lançamento financeiro
+          </h2>
+<span class="text-xs text-secondary font-medium tracking-wide">
+            Automático
+          </span>
+</div>
+<!-- Linha Switch 1: Lançar no Minhas Finanças (Ativado) -->
+<div class="flex items-center justify-between py-2 border-b border-outline-variant/40">
+<div class="pr-3">
+<p class="font-body text-sm font-medium text-on-surface leading-snug">
+              Lançar no Minhas Finanças
+            </p>
+<p class="font-body text-xs text-on-surface-variant mt-0.5">
+              Registra a despesa automaticamente
+            </p>
+</div>
+<!-- Switch Ativado (Verde contábil #365943 / primary-container) -->
+<div class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out bg-[#365943]">
+<span class="translate-x-5 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+</div>
+</div>
+<!-- Linha Switch 2: Dividir pagamento (Desativado) -->
+<div class="flex items-center justify-between py-2 border-b border-outline-variant/40">
+<div class="pr-3">
+<p class="font-body text-sm font-medium text-on-surface leading-snug">
+              Dividir pagamento
+            </p>
+<p class="font-body text-xs text-on-surface-variant mt-0.5">
+              Distribuir valor entre múltiplos cartões ou saldos
+            </p>
+</div>
+<!-- Switch Desativado -->
+<div class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out bg-surface-container-highest">
+<span class="translate-x-0 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-outline-variant shadow ring-0 transition duration-200 ease-in-out"></span>
+</div>
+</div>
+<!-- Campo seletor: Meio de pagamento -->
+<div class="space-y-1.5 pt-1">
+<label class="block font-label text-[11px] font-semibold tracking-wider text-secondary uppercase">
+            MEIO DE PAGAMENTO
+          </label>
+<div class="w-full flex items-center justify-between px-3.5 py-3 rounded-lg border border-outline-variant bg-[#FFFEFA] cursor-pointer hover:border-outline transition-colors">
+<div class="flex items-center space-x-2.5 truncate">
+<span class="material-symbols-outlined text-[19px] text-[#365943]">credit_card</span>
+<span class="font-body text-sm text-on-surface truncate tabular-nums">
+                Nubank Principal (Crédito) · R$ 3.420,00
+              </span>
+</div>
+<span class="material-symbols-outlined text-secondary text-[20px] ml-2 flex-shrink-0">keyboard_arrow_down</span>
+</div>
+</div>
+<!-- Campo seletor: Categoria -->
+<div class="space-y-1.5">
+<label class="block font-label text-[11px] font-semibold tracking-wider text-secondary uppercase">
+            CATEGORIA
+          </label>
+<div class="w-full flex items-center justify-between px-3.5 py-3 rounded-lg border border-outline-variant bg-[#FFFEFA] cursor-pointer hover:border-outline transition-colors">
+<div class="flex items-center space-x-2.5 truncate">
+<span class="material-symbols-outlined text-[19px] text-[#365943]">local_mall</span>
+<span class="font-body text-sm text-on-surface truncate">
+                Alimentação &amp; Mercado
+              </span>
+</div>
+<span class="material-symbols-outlined text-secondary text-[20px] ml-2 flex-shrink-0">keyboard_arrow_down</span>
+</div>
+</div>
+<!-- Bloco de impacto financeiro (Callout contábil) -->
+<div class="flex items-start space-x-2.5 p-3 rounded-lg bg-surface-container border border-outline-variant/60">
+<span class="material-symbols-outlined text-secondary text-[18px] mt-0.5 flex-shrink-0">account_balance_wallet</span>
+<p class="font-body text-xs text-on-surface-variant leading-relaxed">
+            Crédito e débito entram no saldo previsto do mês.
+          </p>
+</div>
+</div>
+<!-- Rodapé de ações (Base do modal) -->
+<div class="px-5 pt-3 pb-6 border-t border-outline-variant/60 bg-[#F7F5EF] space-y-2">
+<button class="w-full h-12 bg-[#365943] hover:bg-[#2b4e39] active:bg-[#1f412d] text-white font-label font-medium text-sm rounded-lg flex items-center justify-center space-x-2 transition-colors shadow-none" type="button">
+<span class="material-symbols-outlined text-[19px]">check</span>
+<span>Confirmar fechamento</span>
+</button>
+<button class="w-full h-12 bg-transparent text-secondary hover:text-on-surface active:bg-surface-container-high font-label font-medium text-sm rounded-lg flex items-center justify-center transition-colors" type="button">
+          Cancelar
+        </button>
+</div>
+</div>
+</div>
+</body></html>

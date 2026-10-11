@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-background text-on-surface antialiased" lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Minhas Compras — Despensa doméstica</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Fonts: Newsreader & Public Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration with Design System tokens -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "secondary-fixed-dim": "#c4c9b4",
+            "on-error-container": "#93000a",
+            "tertiary-container": "#724549",
+            "surface-container-highest": "#e4e2dd",
+            "surface-container-high": "#eae8e2",
+            "on-primary": "#ffffff",
+            "on-tertiary-fixed": "#321015",
+            "inverse-primary": "#a9d0b4",
+            "on-primary-fixed": "#002110",
+            "surface-variant": "#e4e2dd",
+            "secondary-fixed": "#e0e5cf",
+            "surface": "#fbf9f3",
+            "outline": "#727972",
+            "secondary": "#5b604f",
+            "primary-container": "#365943",
+            "surface-container-low": "#f5f3ed",
+            "on-secondary-fixed-variant": "#444939",
+            "surface-dim": "#dcdad4",
+            "on-secondary": "#ffffff",
+            "on-background": "#1b1c18",
+            "secondary-container": "#e0e5cf",
+            "primary-fixed-dim": "#a9d0b4",
+            "inverse-surface": "#30312d",
+            "outline-variant": "#c1c8c1",
+            "on-tertiary": "#ffffff",
+            "on-primary-container": "#a7ceb2",
+            "tertiary": "#582f33",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "error-container": "#ffdad6",
+            "surface-tint": "#43664f",
+            "on-secondary-fixed": "#191d10",
+            "inverse-on-surface": "#f3f1eb",
+            "tertiary-fixed": "#ffdadb",
+            "on-primary-fixed-variant": "#2b4e39",
+            "on-tertiary-container": "#f2b6ba",
+            "on-error": "#ffffff",
+            "background": "#fbf9f3",
+            "error": "#ba1a1a",
+            "primary-fixed": "#c4eccf",
+            "primary": "#1f412d",
+            "surface-container": "#f0eee8",
+            "on-surface-variant": "#424843",
+            "on-secondary-container": "#616655",
+            "surface-container-lowest": "#ffffff",
+            "surface-bright": "#fbf9f3",
+            "on-surface": "#1b1c18",
+            "tertiary-fixed-dim": "#f4b7bb"
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          fontFamily: {
+            headline: ["Newsreader", "serif"],
+            display: ["Newsreader", "serif"],
+            body: ["Public Sans", "sans-serif"],
+            label: ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    /* Hide scrollbar for clean chip row */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-secondary-container selection:text-on-secondary-container flex flex-col min-h-screen">
+<!-- Mobile Viewport Container (Editorial Grid Max Width) -->
+<div class="w-full max-w-md mx-auto min-h-screen flex flex-col bg-background relative pb-6">
+<!-- TopAppBar conforme Shared Components JSON com especificidade Editorial -->
+<header class="bg-surface text-primary border-b border-outline-variant flat no shadows sticky top-0 z-40"><div class="flex justify-between items-center w-full px-4 py-3 max-w-md mx-auto"><div class="flex items-center gap-1 -ml-2"><button aria-label="Voltar" class="text-on-surface hover:text-primary active:opacity-75 transition-colors p-2 rounded flex items-center justify-center min-w-[44px] min-h-[44px]" type="button"><span class="material-symbols-outlined text-2xl" data-icon="arrow_back">arrow_back</span></button><h1 class="font-headline text-2xl font-normal text-on-surface tracking-tight ml-1">Despensa</h1></div><div class="flex items-center gap-1 -mr-2"><button aria-label="Adicionar produto do catálogo" class="text-primary hover:bg-surface-container-high transition-colors p-2 rounded flex items-center gap-1.5 font-body text-xs font-semibold min-h-[44px]" title="Adicionar produto do catálogo" type="button"><span class="material-symbols-outlined text-xl" data-icon="add_circle">add_circle</span><span class="hidden sm:inline">Do catálogo</span></button></div></div></header>
+<!-- Main Content Canvas: Despensa Doméstica -->
+<main class="flex-1 px-4 pt-4 pb-6 space-y-6"><section class="space-y-3"><div class="border border-outline-variant rounded-lg bg-surface-container-lowest p-3 space-y-2.5"><div class="flex items-center justify-between pb-2 border-b border-outline-variant"><span class="font-label text-xs uppercase tracking-wider text-secondary font-medium">Status dos mantimentos</span><span class="font-body text-xs text-secondary tabular-nums">13 produtos cadastrados</span></div><div class="grid grid-cols-3 divide-x divide-outline-variant text-center py-0.5"><div class="px-2"><span class="block font-headline text-2xl font-semibold text-tertiary tabular-nums">3</span><span class="font-label text-xs text-tertiary font-medium">Acabou</span></div><div class="px-2"><span class="block font-headline text-2xl font-semibold text-secondary tabular-nums">4</span><span class="font-label text-xs text-secondary font-medium">Está acabando</span></div><div class="px-2"><span class="block font-headline text-2xl font-semibold text-primary tabular-nums">6</span><span class="font-label text-xs text-primary font-medium">Tenho</span></div></div></div><div class="relative flex items-center"><span class="material-symbols-outlined absolute left-3 text-secondary text-lg pointer-events-none" data-icon="search">search</span><input class="w-full pl-9 pr-4 py-2 bg-surface-container-lowest border border-outline-variant rounded font-body text-sm text-on-surface placeholder:text-secondary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary min-h-[44px]" placeholder="Buscar item ou categoria na despensa..." type="search"/></div><div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 -mx-4 px-4 text-xs font-medium"><button class="min-h-[36px] px-3.5 py-1.5 rounded-full bg-primary text-on-primary whitespace-nowrap transition-colors" type="button">Todos (13)</button><button class="min-h-[36px] px-3 py-1.5 rounded-full border border-tertiary-container text-tertiary bg-surface-container-lowest hover:bg-surface-container-low whitespace-nowrap transition-colors flex items-center gap-1.5" type="button"><span class="w-2 h-2 rounded-full bg-tertiary"></span>Acabou (3)</button><button class="min-h-[36px] px-3 py-1.5 rounded-full border border-outline-variant text-secondary bg-surface-container-lowest hover:bg-surface-container-low whitespace-nowrap transition-colors flex items-center gap-1.5" type="button"><span class="w-2 h-2 rounded-full bg-secondary"></span>Está acabando (4)</button><button class="min-h-[36px] px-3 py-1.5 rounded-full border border-outline-variant text-secondary bg-surface-container-lowest hover:bg-surface-container-low whitespace-nowrap transition-colors flex items-center gap-1.5" type="button"><span class="w-2 h-2 rounded-full bg-primary-container"></span>Tenho (6)</button></div></section><section class="space-y-2"><div class="flex items-center justify-between pb-1.5 border-b border-tertiary-container/30"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-tertiary"></span><h2 class="font-headline text-lg font-medium text-on-surface">Acabou</h2><span class="font-label text-xs font-semibold px-2 py-0.5 rounded bg-error-container text-on-error-container tabular-nums">3 itens</span></div></div><ul class="divide-y divide-outline-variant/60"><li class="py-3 space-y-2.5"><div class="flex items-start justify-between gap-3"><div><p class="font-body text-base font-semibold text-on-surface leading-tight">Café torrado e moído 500g</p><p class="font-body text-xs text-secondary mt-0.5">Mercearia</p></div><button aria-label="Remover Café torrado da despensa" class="text-outline hover:text-tertiary p-1 transition-colors" title="Remover da despensa" type="button"><span class="material-symbols-outlined text-lg" data-icon="delete_outline">delete_outline</span></button></div><div class="flex flex-wrap items-center justify-between gap-2 pt-1"><div class="inline-flex items-center border border-outline-variant rounded p-0.5 bg-surface-container"><button class="px-2 py-1 text-xs font-medium rounded transition-colors text-secondary hover:text-on-surface" type="button">Tenho</button><button class="px-2 py-1 text-xs font-medium rounded transition-colors text-secondary hover:text-on-surface" type="button">Está acabando</button><button class="px-2 py-1 text-xs font-semibold rounded transition-colors bg-surface-container-lowest text-tertiary shadow-sm" type="button">Acabou</button></div><button class="min-h-[38px] px-3 py-1 border border-primary text-primary hover:bg-primary hover:text-on-primary rounded font-body text-xs font-semibold transition-colors flex items-center gap-1.5" type="button"><span class="material-symbols-outlined text-sm" data-icon="add_shopping_cart">add_shopping_cart</span>Adicionar à lista (2 un)</button></div></li><li class="py-3 space-y-2.5"><div class="flex items-start justify-between gap-3"><div><p class="font-body text-base font-semibold text-on-surface leading-tight">Azeite de oliva extravirgem 500ml</p><p class="font-body text-xs text-secondary mt-0.5">Óleos e temperos</p></div><button aria-label="Remover Azeite da despensa" class="text-outline hover:text-tertiary p-1 transition-colors" title="Remover da despensa" type="button"><span class="material-symbols-outlined text-lg" data-icon="delete_outline">delete_outline</span></button></div><div class="flex flex-wrap items-center justify-between gap-2 pt-1"><div class="inline-flex items-center border border-outline-variant rounded p-0.5 bg-surface-container"><button class="px-2 py-1 text-xs font-medium rounded transition-colors text-secondary hover:text-on-surface" type="button">Tenho</button><button class="px-2 py-1 text-xs font-medium rounded transition-colors text-secondary hover:text-on-surface" type="button">Está acabando</button><button class="px-2 py-1 text-xs font-semibold rounded transition-colors bg-surface-container-lowest text-tertiary shadow-sm" type="button">Acabou</button></div><button class="min-h-[38px] px-3 py-1 border border-primary text-primary hover:bg-primary hover:text-on-primary rounded font-body text-xs font-semibold transition-colors flex items-center gap-1.5" type="button"><span class="material-symbols-outlined text-sm" data-icon="add_shopping_cart">add_shopping_cart</span>Adicionar à lista (1 un)</button></div></li><li class="py-3 space-y-2.5"><div class="flex items-start justify-between gap-3"><div><p class="font-body text-base font-semibold text-on-surface leading-tight">Detergente biodegradável 500ml</p><p class="font-body text-xs text-secondary mt-0.5">Limpeza</p></div><button aria-label="Remover Detergente da despensa" class="text-outline hover:text-tertiary p-1 transition-colors" title="Remover da despensa" type="button"><span class="material-symbols-outlined text-lg" data-icon="delete_outline">delete_outline</span></button></div><div class="flex flex-wrap items-center justify-between gap-2 pt-1"><div class="inline-flex items-center border border-outline-variant rounded p-0.5 bg-surface-container"><button class="px-2 py-1 text-xs font-medium rounded transition-colors text-secondary hover:text-on-surface" type="button">Tenho</button><button class="px-2 py-1 text-xs font-medium rounded transition-colors text-secondary hover:text-on-surface" type="button">Está acabando</button><button class="px-2 py-1 text-xs font-semibold rounded transition-colors bg-surface-container-lowest text-tertiary shadow-sm" type="button">Acabou</button></div><button class="min-h-[38px] px-3 py-1 border border-primary text-primary hover:bg-primary hover:text-on-primary rounded font-body text-xs font-semibold transition-colors flex items-center gap-1.5" type="button"><span class="material-symbols-outlined text-sm" data-icon="add_shopping_cart">add_shopping_cart</span>Adicionar à lista (3 un)</button></div></li></ul></section><section class="space-y-2 pt-2"><div class="flex items-center justify-between pb-1.5 border-b border-outline-variant"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-secondary"></span><h2 class="font-headline text-lg font-medium text-on-surface">Está acabando</h2><span class="font-label text-xs font-semibold px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container tabular-nums">4 itens</span></div></div><ul class="divide-y divide-outline-variant/60"><li class="py-3 space-y-2.5"><div class="flex items-start justify-between gap-3"><div><p class="font-body text-base font-medium text-on-surface leading-snug">Leite integral 1L</p><p class="font-body text-xs text-secondary mt-0.5">Laticínios</p></div><button aria-label="Remover Leite integral da despensa" class="text-outline hover:text-tertiary p-1 transition-colors" title="Remover da despensa" type="button"><span class="material-symbols-outlined text-lg" data-icon="delete_outline">delete_outline</span></button></div><div class="flex flex-wrap items-center justify-between gap-2 pt-1"><div class="inline-flex items-center border border-outline-variant rounded p-0.5 bg-surface-container"><button class="px-2 py-1 text-xs font-medium rounded transition-colors text-secondary hover:text-on-surface" type="button">Tenho</button><button class="px-2 py-1 text-xs font-semibold rounded transition-colors bg-surface-container-lowest text-secondary shadow-sm" type="button">Está acabando</button><button class="px-2 py-1 text-xs font-medium rounded transition-colors text-secondary hover:text-on-surface" type="button">Acabou</button></div><button class="min-h-[38px] px-3 py-1 border border-outline-variant text-on-surface hover:border-primary hover:text-primary rounded font-body text-xs font-semibold transition-colors flex items-center gap-1.5" type="button"><span class="material-symbols-outlined text-sm" data-icon="add_shopping_cart">add_shopping_cart</span>Adicionar à lista (3 un)</button></div></li><li class="py-3 space-y-2.5"><div class="flex items-start justify-between gap-3"><div><p class="font-body text-base font-medium text-on-surface leading-snug">Ovos caipiras (estojo)</p><p class="font-body text-xs text-secondary mt-0.5">Ovos e laticínios</p></div><button aria-label="Remover Ovos da despensa" class="text-outline hover:text-tertiary p-1 transition-colors" title="Remover da despensa" type="button"><span class="material-symbols-outlined text-lg" data-icon="delete_outline">delete_outline</span></button></div><div class="flex flex-wrap items-center justify-between gap-2 pt-1"><div class="inline-flex items-center border border-outline-variant rounded p-0.5 bg-surface-container"><button class="px-2 py-1 text-xs font-medium rounded transition-colors text-secondary hover:text-on-surface" type="button">Tenho</button><button class="px-2 py-1 text-xs font-semibold rounded transition-colors bg-surface-container-lowest text-secondary shadow-sm" type="button">Está acabando</button><button class="px-2 py-1 text-xs font-medium rounded transition-colors text-secondary hover:text-on-surface" type="button">Acabou</button></div><button class="min-h-[38px] px-3 py-1 border border-outline-variant text-on-surface hover:border-primary hover:text-primary rounded font-body text-xs font-semibold transition-colors flex items-center gap-1.5" type="button"><span class="material-symbols-outlined text-sm" data-icon="add_shopping_cart">add_shopping_cart</span>Adicionar à lista (1 estojo)</button></div></li><li class="py-3 space-y-2.5"><div class="flex items-start justify-between gap-3"><div><p class="font-body text-base font-medium text-on-surface leading-snug">Arroz agulhinha 5kg</p><p class="font-body text-xs text-secondary mt-0.5">Grãos e cereais</p></div><button aria-label="Remover Arroz da despensa" class="text-outline hover:text-tertiary p-1 transition-colors" title="Remover da despensa" type="button"><span class="material-symbols-outlined text-lg" data-icon="delete_outline">delete_outline</span></button></div><div class="flex flex-wrap items-center justify-between gap-2 pt-1"><div class="inline-flex items-center border border-outline-variant rounded p-0.5 bg-surface-container"><button class="px-2 py-1 text-xs font-medium rounded transition-colors text-secondary hover:text-on-surface" type="button">Tenho</button><button class="px-2 py-1 text-xs font-semibold rounded transition-colors bg-surface-container-lowest text-secondary shadow-sm" type="button">Está acabando</button><button class="px-2 py-1 text-xs font-medium rounded transition-colors text-secondary hover:text-on-surface" type="button">Acabou</button></div><button class="min-h-[38px] px-3 py-1 border border-outline-variant text-on-surface hover:border-primary hover:text-primary rounded font-body text-xs font-semibold transition-colors flex items-center gap-1.5" type="button"><span class="material-symbols-outlined text-sm" data-icon="add_shopping_cart">add_shopping_cart</span>Adicionar à lista (1 pct)</button></div></li><li class="py-3 space-y-2.5"><div class="flex items-start justify-between gap-3"><div><p class="font-body text-base font-medium text-on-surface leading-snug">Manteiga de primeira 200g</p><p class="font-body text-xs text-secondary mt-0.5">Laticínios</p></div><button aria-label="Remover Manteiga da despensa" class="text-outline hover:text-tertiary p-1 transition-colors" title="Remover da despensa" type="button"><span class="material-symbols-outlined text-lg" data-icon="delete_outline">delete_outline</span></button></div><div class="flex flex-wrap items-center justify-between gap-2 pt-1"><div class="inline-flex items-center border border-outline-variant rounded p-0.5 bg-surface-container"><button class="px-2 py-1 text-xs font-medium rounded transition-colors text-secondary hover:text-on-surface" type="button">Tenho</button><button class="px-2 py-1 text-xs font-semibold rounded transition-colors bg-surface-container-lowest text-secondary shadow-sm" type="button">Está acabando</button><button class="px-2 py-1 text-xs font-medium rounded transition-colors text-secondary hover:text-on-surface" type="button">Acabou</button></div><button class="min-h-[38px] px-3 py-1 border border-outline-variant text-on-surface hover:border-primary hover:text-primary rounded font-body text-xs font-semibold transition-colors flex items-center gap-1.5" type="button"><span class="material-symbols-outlined text-sm" data-icon="add_shopping_cart">add_shopping_cart</span>Adicionar à lista (1 un)</button></div></li></ul></section><section class="space-y-2 pt-2"><div class="flex items-center justify-between pb-1.5 border-b border-outline-variant"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-primary-container"></span><h2 class="font-headline text-lg font-medium text-on-surface">Tenho</h2><span class="font-label text-xs font-semibold px-2 py-0.5 rounded bg-surface-container text-secondary tabular-nums">6 itens</span></div></div><ul class="divide-y divide-outline-variant/60"><li class="py-3 space-y-2.5"><div class="flex items-start justify-between gap-3"><div><p class="font-body text-base font-medium text-on-surface leading-snug">Feijão carioca 1kg</p><p class="font-body text-xs text-secondary mt-0.5">Grãos e cereais</p></div><button aria-label="Remover Feijão da despensa" class="text-outline hover:text-tertiary p-1 transition-colors" title="Remover da despensa" type="button"><span class="material-symbols-outlined text-lg" data-icon="delete_outline">delete_outline</span></button></div><div class="flex flex-wrap items-center justify-between gap-2 pt-1"><div class="inline-flex items-center border border-outline-variant rounded p-0.5 bg-surface-container"><button class="px-2 py-1 text-xs font-semibold rounded transition-colors bg-surface-container-lowest text-primary shadow-sm" type="button">Tenho</button><button class="px-2 py-1 text-xs font-medium rounded transition-colors text-secondary hover:text-on-surface" type="button">Está acabando</button><button class="px-2 py-1 text-xs font-medium rounded transition-colors text-secondary hover:text-on-surface" type="button">Acabou</button></div><button class="min-h-[38px] px-3 py-1 border border-outline-variant text-on-surface hover:border-primary hover:text-primary rounded font-body text-xs font-semibold transition-colors flex items-center gap-1.5" type="button"><span class="material-symbols-outlined text-sm" data-icon="add_shopping_cart">add_shopping_cart</span>Adicionar à lista (1 kg)</button></div></li><li class="py-3 space-y-2.5"><div class="flex items-start justify-between gap-3"><div><p class="font-body text-base font-medium text-on-surface leading-snug">Sal marinho refinado 1kg</p><p class="font-body text-xs text-secondary mt-0.5">Temperos e condimentos</p></div><button aria-label="Remover Sal da despensa" class="text-outline hover:text-tertiary p-1 transition-colors" title="Remover da despensa" type="button"><span class="material-symbols-outlined text-lg" data-icon="delete_outline">delete_outline</span></button></div><div class="flex flex-wrap items-center justify-between gap-2 pt-1"><div class="inline-flex items-center border border-outline-variant rounded p-0.5 bg-surface-container"><button class="px-2 py-1 text-xs font-semibold rounded transition-colors bg-surface-container-lowest text-primary shadow-sm" type="button">Tenho</button><button class="px-2 py-1 text-xs font-medium rounded transition-colors text-secondary hover:text-on-surface" type="button">Está acabando</button><button class="px-2 py-1 text-xs font-medium rounded transition-colors text-secondary hover:text-on-surface" type="button">Acabou</button></div><button class="min-h-[38px] px-3 py-1 border border-outline-variant text-on-surface hover:border-primary hover:text-primary rounded font-body text-xs font-semibold transition-colors flex items-center gap-1.5" type="button"><span class="material-symbols-outlined text-sm" data-icon="add_shopping_cart">add_shopping_cart</span>Adicionar à lista (1 kg)</button></div></li><li class="py-3 space-y-2.5"><div class="flex items-start justify-between gap-3"><div><p class="font-body text-base font-medium text-on-surface leading-snug">Sabão em pó ecológico 1,6kg</p><p class="font-body text-xs text-secondary mt-0.5">Limpeza</p></div><button aria-label="Remover Sabão em pó da despensa" class="text-outline hover:text-tertiary p-1 transition-colors" title="Remover da despensa" type="button"><span class="material-symbols-outlined text-lg" data-icon="delete_outline">delete_outline</span></button></div><div class="flex flex-wrap items-center justify-between gap-2 pt-1"><div class="inline-flex items-center border border-outline-variant rounded p-0.5 bg-surface-container"><button class="px-2 py-1 text-xs font-semibold rounded transition-colors bg-surface-container-lowest text-primary shadow-sm" type="button">Tenho</button><button class="px-2 py-1 text-xs font-medium rounded transition-colors text-secondary hover:text-on-surface" type="button">Está acabando</button><button class="px-2 py-1 text-xs font-medium rounded transition-colors text-secondary hover:text-on-surface" type="button">Acabou</button></div><button class="min-h-[38px] px-3 py-1 border border-outline-variant text-on-surface hover:border-primary hover:text-primary rounded font-body text-xs font-semibold transition-colors flex items-center gap-1.5" type="button"><span class="material-symbols-outlined text-sm" data-icon="add_shopping_cart">add_shopping_cart</span>Adicionar à lista (1 pct)</button></div></li></ul></section><footer class="pt-4 pb-2 border-t border-outline-variant text-center space-y-1"><p class="font-label text-xs text-secondary">Controle simplificado por status • Despensa</p><p class="font-label text-[11px] text-outline">Minhas Compras</p></footer></main>
+<!-- BottomNavBar conforme Shared Components JSON (Docked bottom-0, Flat, Destino Despensa Ativo) -->
+</div>
+<!-- Inline micro-interactions for tactile responsiveness -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Toggle visual feedback for add-to-list action buttons
+      const listButtons = document.querySelectorAll('button:has([data-icon="add_shopping_cart"])');
+      listButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const currentText = btn.innerText;
+          btn.innerHTML = '<span class="material-symbols-outlined text-sm" style="font-variation-settings: \'FILL\' 1;">check</span> Adicionado';
+          btn.classList.add('bg-primary-container', 'text-on-primary', 'border-primary-container');
+          setTimeout(() => {
+            btn.innerHTML = '<span class="material-symbols-outlined text-sm">add_shopping_cart</span> Adicionar à lista';
+            btn.classList.remove('bg-primary-container', 'text-on-primary', 'border-primary-container');
+          }, 1800);
+        });
+      });
+    });
+  </script>
+</body></html>

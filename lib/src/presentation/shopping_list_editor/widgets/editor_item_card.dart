@@ -49,58 +49,49 @@ class EditorShoppingItemCard extends StatelessWidget {
     return Semantics(
       container: true,
       explicitChildNodes: true,
-      child: Card(
-        elevation: 0,
-        clipBehavior: Clip.antiAlias,
-        child: AnimatedContainer(
-          duration: motionDuration,
-          curve: Curves.easeOutCubic,
-          decoration: BoxDecoration(
-            color: item.isPurchased
-                ? colorScheme.surfaceContainerHigh
-                : colorScheme.surface,
-            border: Border.all(
-              color: item.isPurchased
-                  ? colorScheme.primary.withValues(alpha: 0.32)
-                  : colorScheme.outlineVariant.withValues(alpha: 0.5),
-            ),
-            borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-          ),
-          child: Material(
-            type: MaterialType.transparency,
-            child: InkWell(
-              excludeFromSemantics: true,
-              onTap: onToggleExpanded,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 6, 8),
-                child: Column(
-                  children: [
-                    EditorItemCardHeader(
-                      item: item,
-                      readOnly: readOnly,
-                      expanded: expanded,
-                      motionDuration: motionDuration,
-                      onToggleExpanded: onToggleExpanded,
-                      onPurchasedChanged: onPurchasedChanged,
-                      onEdit: onEdit,
-                      onViewHistory: onViewHistory,
-                      onDelete: onDelete,
-                    ),
-                    AnimatedSize(
-                      duration: motionDuration,
-                      curve: Curves.easeOutCubic,
-                      alignment: Alignment.topCenter,
-                      child: expanded
-                          ? EditorItemCardDetails(
-                              item: item,
-                              readOnly: readOnly,
-                              onIncrement: onIncrement,
-                              onDecrement: onDecrement,
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-                  ],
-                ),
+      child: AnimatedContainer(
+        duration: motionDuration,
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          color: item.isPurchased
+              ? colorScheme.surfaceContainerLow
+              : Colors.transparent,
+          border: Border(bottom: BorderSide(color: colorScheme.outlineVariant)),
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            excludeFromSemantics: true,
+            onTap: onToggleExpanded,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(0, 4, 0, 4),
+              child: Column(
+                children: [
+                  EditorItemCardHeader(
+                    item: item,
+                    readOnly: readOnly,
+                    expanded: expanded,
+                    motionDuration: motionDuration,
+                    onToggleExpanded: onToggleExpanded,
+                    onPurchasedChanged: onPurchasedChanged,
+                    onEdit: onEdit,
+                    onViewHistory: onViewHistory,
+                    onDelete: onDelete,
+                  ),
+                  AnimatedSize(
+                    duration: motionDuration,
+                    curve: Curves.easeOutCubic,
+                    alignment: Alignment.topCenter,
+                    child: expanded
+                        ? EditorItemCardDetails(
+                            item: item,
+                            readOnly: readOnly,
+                            onIncrement: onIncrement,
+                            onDecrement: onDecrement,
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ],
               ),
             ),
           ),

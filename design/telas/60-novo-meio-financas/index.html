@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Minhas Compras — Novo meio de pagamento</title>
+<!-- Google Fonts: Newsreader & Public Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-secondary-fixed": "#191d10",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "on-tertiary": "#ffffff",
+            "surface": "#fbf9f3",
+            "on-tertiary-fixed": "#321015",
+            "error": "#ba1a1a",
+            "surface-bright": "#fbf9f3",
+            "on-secondary": "#ffffff",
+            "on-primary-container": "#a7ceb2",
+            "on-primary": "#ffffff",
+            "background": "#fbf9f3",
+            "error-container": "#ffdad6",
+            "surface-variant": "#e4e2dd",
+            "primary-fixed-dim": "#a9d0b4",
+            "on-secondary-container": "#616655",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "on-primary-fixed-variant": "#2b4e39",
+            "on-tertiary-container": "#f2b6ba",
+            "on-error-container": "#93000a",
+            "tertiary-fixed": "#ffdadb",
+            "inverse-primary": "#a9d0b4",
+            "surface-container-low": "#f5f3ed",
+            "surface-container-highest": "#e4e2dd",
+            "surface-container-high": "#eae8e2",
+            "outline": "#727972",
+            "secondary-fixed-dim": "#c4c9b4",
+            "on-secondary-fixed-variant": "#444939",
+            "secondary-container": "#e0e5cf",
+            "inverse-on-surface": "#f3f1eb",
+            "tertiary-container": "#724549",
+            "on-surface": "#1b1c18",
+            "surface-tint": "#43664f",
+            "surface-container-lowest": "#ffffff",
+            "on-background": "#1b1c18",
+            "outline-variant": "#c1c8c1",
+            "inverse-surface": "#30312d",
+            "primary-container": "#365943",
+            "on-surface-variant": "#424843",
+            "primary-fixed": "#c4eccf",
+            "tertiary": "#582f33",
+            "primary": "#1f412d",
+            "surface-container": "#f0eee8",
+            "secondary-fixed": "#e0e5cf",
+            "on-primary-fixed": "#002110",
+            "surface-dim": "#dcdad4",
+            "secondary": "#5b604f",
+            "on-error": "#ffffff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "2xl": "1rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-[#101210] font-body text-on-surface antialiased min-h-screen flex items-center justify-center p-0 sm:p-4">
+<!-- Mobile Viewport Canvas 390px -->
+<div class="relative w-full max-w-[390px] h-[844px] overflow-hidden bg-background shadow-2xl flex flex-col justify-end">
+<!-- Tela de Fundo (Simulando Minhas Compras / Gestão de Pagamentos) -->
+<div class="absolute inset-0 flex flex-col bg-surface select-none pointer-events-none filter blur-[1.5px] scale-[0.99] origin-top opacity-90 transition-all">
+<!-- TopAppBar estática herdada da identidade da marca -->
+<header class="flex justify-between items-center w-full px-4 h-14 bg-surface border-b border-outline-variant">
+<div class="flex items-center space-x-3">
+<span class="material-symbols-outlined text-primary text-2xl">menu</span>
+<h1 class="font-headline text-2xl font-normal text-on-surface tracking-tight">Minhas Compras</h1>
+</div>
+<span class="material-symbols-outlined text-primary text-2xl">account_balance_wallet</span>
+</header>
+<!-- Conteúdo da tela de trás: Resumo contábil e Meios cadastrados -->
+<div class="p-4 space-y-5">
+<div class="border-b border-outline-variant pb-3">
+<span class="text-xs uppercase tracking-wider font-semibold text-secondary">Finanças do Mês</span>
+<div class="mt-1 flex justify-between items-baseline">
+<span class="font-headline text-2xl text-on-surface">Total em aberto</span>
+<span class="font-headline text-2xl tabular-nums font-medium text-primary">R$ 1.842,50</span>
+</div>
+</div>
+<div class="space-y-3">
+<div class="text-xs uppercase tracking-wider font-semibold text-secondary">Meios Existentes</div>
+<div class="p-3 bg-surface-container-lowest rounded-lg border border-outline-variant flex justify-between items-center">
+<div class="flex items-center space-x-3">
+<span class="material-symbols-outlined text-primary">credit_card</span>
+<div>
+<p class="font-medium text-sm text-on-surface">Alimentação Ticket</p>
+<p class="text-xs text-secondary">VA • Final 8812</p>
+</div>
+</div>
+<span class="text-xs tabular-nums text-secondary">R$ 412,00</span>
+</div>
+<div class="p-3 bg-surface-container-lowest rounded-lg border border-outline-variant flex justify-between items-center">
+<div class="flex items-center space-x-3">
+<span class="material-symbols-outlined text-primary">credit_card</span>
+<div>
+<p class="font-medium text-sm text-on-surface">Itaú Personnalité</p>
+<p class="text-xs text-secondary">Crédito • Final 3019</p>
+</div>
+</div>
+<span class="text-xs tabular-nums text-secondary">R$ 3.200,00</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Scrim Escurecido Modal (rgba(0,0,0,0.45)) -->
+<div class="absolute inset-0 bg-black/45 z-10 transition-opacity"></div>
+<!-- Modal Bottom Sheet Flutter Real (_CreatePaymentSourceForm) -->
+<div class="relative z-20 w-full bg-surface-container-lowest rounded-t-2xl shadow-2xl border-t border-outline-variant/60 flex flex-col max-h-[790px] overflow-hidden">
+<!-- Drag Handle Centralizado -->
+<div class="pt-3 pb-1 w-full flex justify-center">
+<div class="w-10 h-1 bg-outline-variant/80 rounded-full"></div>
+</div>
+<!-- Cabeçalho do Bottom Sheet -->
+<div class="px-5 pt-2 pb-4">
+<div class="flex items-center justify-between">
+<h2 class="font-headline text-[23px] leading-tight font-normal text-on-surface">
+            Novo meio de pagamento
+          </h2>
+<!-- Botão Fechar com área de toque 48x48dp -->
+<button aria-label="Fechar" class="w-12 h-12 -mr-2 -mt-1 flex items-center justify-center rounded-full text-secondary hover:text-on-surface hover:bg-surface-container active:scale-[0.96] transition-all" type="button">
+<span class="material-symbols-outlined text-[22px]">close</span>
+</button>
+</div>
+<p class="text-sm font-normal text-secondary mt-1">
+          Ele também será criado no Minhas Finanças.
+        </p>
+<div class="mt-3.5 border-b border-outline-variant/60"></div>
+</div>
+<!-- Corpo do Formulário com Scroll Suave se necessário -->
+<div class="px-5 pb-6 overflow-y-auto space-y-5">
+<!-- Seletor de Tipo (ChoiceChips) -->
+<div class="space-y-2">
+<label class="block text-[11px] font-semibold tracking-wider text-secondary uppercase">
+            TIPO
+          </label>
+<div class="flex items-center space-x-2">
+<!-- Chip Ativo: Crédito -->
+<button class="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-primary-container text-on-primary text-xs font-semibold shadow-sm transition-all" type="button">
+<span class="material-symbols-outlined text-sm font-bold">check</span>
+<span>Crédito</span>
+</button>
+<!-- Chip Inativo: Débito -->
+<button class="inline-flex items-center px-3.5 py-1.5 rounded-lg border border-outline-variant/90 bg-transparent text-xs font-medium text-on-surface hover:bg-surface-container active:scale-[0.97] transition-all" type="button">
+              Débito
+            </button>
+<!-- Chip Inativo: VA -->
+<button class="inline-flex items-center px-3.5 py-1.5 rounded-lg border border-outline-variant/90 bg-transparent text-xs font-medium text-on-surface hover:bg-surface-container active:scale-[0.97] transition-all" type="button">
+              VA
+            </button>
+<!-- Chip Inativo: VR -->
+<button class="inline-flex items-center px-3.5 py-1.5 rounded-lg border border-outline-variant/90 bg-transparent text-xs font-medium text-on-surface hover:bg-surface-container active:scale-[0.97] transition-all" type="button">
+              VR
+            </button>
+</div>
+</div>
+<!-- Campo 1: Nome -->
+<div class="space-y-1.5">
+<label class="block text-xs font-medium text-on-surface" for="source-name">
+            Nome do cartão ou meio <span class="text-error">*</span>
+</label>
+<div class="relative">
+<input class="w-full rounded-lg border border-outline-variant/90 bg-surface-container-lowest px-3.5 py-2.5 text-sm text-on-surface placeholder:text-outline focus:border-primary-container focus:ring-1 focus:ring-primary-container outline-none transition-colors" id="source-name" name="source-name" placeholder="Ex.: Cartão Nubank" type="text" value="Nubank Ultravioleta"/>
+</div>
+</div>
+<!-- Linha: Final (4 dígitos) e Limite Disponível -->
+<div class="grid grid-cols-2 gap-3">
+<!-- Final (4 dígitos) -->
+<div class="space-y-1.5">
+<label class="block text-xs font-medium text-on-surface truncate" for="card-digits">
+              Final (4 dígitos)
+            </label>
+<input class="w-full tabular-nums rounded-lg border border-outline-variant/90 bg-surface-container-lowest px-3.5 py-2.5 text-sm text-on-surface placeholder:text-outline focus:border-primary-container focus:ring-1 focus:ring-primary-container outline-none transition-colors" id="card-digits" inputmode="numeric" maxlength="4" name="card-digits" placeholder="Ex.: 4092" type="text" value="4092"/>
+</div>
+<!-- Limite Disponível -->
+<div class="space-y-1.5">
+<label class="block text-xs font-medium text-on-surface truncate" for="credit-limit">
+              Limite disponível
+            </label>
+<div class="relative flex items-center">
+<input class="w-full tabular-nums rounded-lg border border-outline-variant/90 bg-surface-container-lowest px-3.5 py-2.5 text-sm font-medium text-on-surface placeholder:text-outline focus:border-primary-container focus:ring-1 focus:ring-primary-container outline-none transition-colors" id="credit-limit" inputmode="decimal" name="credit-limit" placeholder="R$ 0,00" type="text" value="R$ 5.000,00"/>
+</div>
+</div>
+</div>
+<!-- Linha: Fechamento e Vencimento -->
+<div class="grid grid-cols-2 gap-3">
+<!-- Fechamento -->
+<div class="space-y-1.5">
+<label class="block text-xs font-medium text-on-surface truncate" for="close-day">
+              Dia do fechamento
+            </label>
+<div class="relative">
+<button class="w-full flex items-center justify-between rounded-lg border border-outline-variant/90 bg-surface-container-lowest px-3 py-2.5 text-sm text-on-surface text-left focus:border-primary-container focus:ring-1 focus:ring-primary-container" id="close-day" type="button">
+<span class="tabular-nums font-normal">Dia 20</span>
+<span class="material-symbols-outlined text-secondary text-lg">arrow_drop_down</span>
+</button>
+</div>
+</div>
+<!-- Vencimento -->
+<div class="space-y-1.5">
+<label class="block text-xs font-medium text-on-surface truncate" for="due-day">
+              Dia do vencimento
+            </label>
+<div class="relative">
+<button class="w-full flex items-center justify-between rounded-lg border border-outline-variant/90 bg-surface-container-lowest px-3 py-2.5 text-sm text-on-surface text-left focus:border-primary-container focus:ring-1 focus:ring-primary-container" id="due-day" type="button">
+<span class="tabular-nums font-normal">Dia 27</span>
+<span class="material-symbols-outlined text-secondary text-lg">arrow_drop_down</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Ação Primária & Secundária no Rodapé -->
+<div class="pt-2 space-y-2">
+<!-- Botão Principal: Criar e usar -->
+<button class="w-full h-12 rounded-xl bg-primary-container text-white font-body font-medium text-base flex items-center justify-center tracking-normal active:scale-[0.98] transition-transform hover:opacity-95 shadow-sm" type="button">
+            Criar e usar
+          </button>
+<!-- Botão Cancelar Secundário -->
+<button class="w-full h-10 rounded-lg text-secondary text-sm font-medium hover:text-on-surface hover:bg-surface-container/60 transition-colors" type="button">
+            Cancelar
+          </button>
+</div>
+</div>
+</div>
+</div>
+</body></html>

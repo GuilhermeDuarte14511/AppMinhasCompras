@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Convidar para lista - Minhas Compras</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "on-primary-container": "#a7ceb2",
+            "surface-container-high": "#eae8e2",
+            "background": "#fcfbf7",
+            "on-tertiary-fixed": "#321015",
+            "on-surface": "#1b1c18",
+            "on-primary-fixed": "#002110",
+            "on-tertiary": "#ffffff",
+            "tertiary-fixed": "#ffdadb",
+            "on-tertiary-container": "#f2b6ba",
+            "primary-fixed": "#c4eccf",
+            "outline-variant": "#e2ded6",
+            "on-primary-fixed-variant": "#2b4e39",
+            "inverse-surface": "#30312d",
+            "surface-tint": "#2d4f38",
+            "error": "#ba1a1a",
+            "error-container": "#ffdad6",
+            "tertiary-container": "#724549",
+            "primary-container": "#2d4f38",
+            "outline": "#727972",
+            "surface": "#fcfbf7",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "on-error-container": "#93000a",
+            "surface-container-lowest": "#ffffff",
+            "surface-bright": "#fcfbf7",
+            "primary-fixed-dim": "#a9d0b4",
+            "surface-variant": "#f4f1ea",
+            "on-surface-variant": "#424843",
+            "secondary-fixed": "#e0e5cf",
+            "tertiary": "#582f33",
+            "secondary": "#63695c",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "surface-container-low": "#f6fbf2",
+            "on-background": "#1b1c18",
+            "secondary-container": "#e0e5cf",
+            "on-secondary": "#ffffff",
+            "inverse-on-surface": "#f3f1eb",
+            "on-secondary-fixed": "#191d10",
+            "on-secondary-container": "#616655",
+            "on-secondary-fixed-variant": "#444939",
+            "secondary-fixed-dim": "#c4c9b4",
+            "surface-dim": "#dcdad4",
+            "on-error": "#ffffff",
+            "primary": "#2d4f38",
+            "on-primary": "#ffffff",
+            "surface-container-highest": "#e4e2dd",
+            "surface-container": "#f5f3ec",
+            "inverse-primary": "#a9d0b4"
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          fontFamily: {
+            headline: ["Newsreader", "serif"],
+            display: ["Newsreader", "serif"],
+            body: ["Public Sans", "sans-serif"],
+            label: ["Public Sans", "sans-serif"]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .tabular { font-variant-numeric: tabular-nums; }
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-[#fcfbf7] text-on-surface font-body antialiased flex justify-center min-h-screen">
+<div class="w-full max-w-[390px] min-h-screen flex flex-col bg-[#fcfbf7] justify-between selection:bg-primary selection:text-on-primary">
+<!-- 1. CABEÇALHO LIMPO -->
+<header class="w-full px-4 pt-4 pb-3 flex items-center gap-3 border-b border-outline-variant bg-[#fcfbf7]">
+<button aria-label="Voltar" class="w-10 h-10 -ml-1 flex items-center justify-center rounded-lg text-on-surface hover:text-primary transition-colors" type="button">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<h1 class="font-headline text-2xl font-normal text-on-surface tracking-tight">Convidar para lista</h1>
+</header>
+<!-- CONTEÚDO PRINCIPAL -->
+<main class="flex-1 px-5 pt-6 pb-6 flex flex-col space-y-7">
+<!-- 2. SEÇÃO CÓDIGO DA LISTA COMPARTILHADA -->
+<section class="flex flex-col">
+<span class="text-xs font-semibold uppercase tracking-wider text-secondary mb-2.5">Código da lista compartilhada</span>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 flex flex-col items-center text-center shadow-none">
+<!-- Código em destaque -->
+<div class="font-mono text-2xl font-bold tracking-widest text-primary tabular py-2 px-3 bg-[#f6fbf2] rounded border border-outline-variant w-full" id="codeDisplay">
+            MC-7829-CASA
+          </div>
+<!-- Status Ativo (sem prazo inventado) -->
+<div class="mt-3 flex items-center gap-1.5 text-xs text-primary font-medium" id="codeStatus">
+<span class="w-2 h-2 rounded-full bg-primary inline-block"></span>
+<span>Ativo</span>
+</div>
+<!-- Ações do Dono -->
+<div class="grid grid-cols-3 gap-2 w-full mt-4 pt-3 border-t border-outline-variant" id="ownerActions">
+<!-- Copiar -->
+<button class="flex flex-col items-center justify-center py-2 px-1 rounded hover:bg-[#f6fbf2] transition-colors text-on-surface group" id="copyBtn" type="button">
+<span class="material-symbols-outlined text-xl text-primary mb-1">content_copy</span>
+<span class="text-xs font-medium text-secondary group-hover:text-primary transition-colors">Copiar</span>
+</button>
+<!-- Regenerar -->
+<button class="flex flex-col items-center justify-center py-2 px-1 rounded hover:bg-[#f6fbf2] transition-colors text-on-surface group" id="regenerateBtn" type="button">
+<span class="material-symbols-outlined text-xl text-primary mb-1">refresh</span>
+<span class="text-xs font-medium text-secondary group-hover:text-primary transition-colors">Regenerar</span>
+</button>
+<!-- Revogar -->
+<button class="flex flex-col items-center justify-center py-2 px-1 rounded hover:bg-[#f6fbf2] transition-colors text-on-surface group" id="revokeBtn" type="button">
+<span class="material-symbols-outlined text-xl text-error mb-1">link_off</span>
+<span class="text-xs font-medium text-secondary group-hover:text-error transition-colors">Revogar</span>
+</button>
+</div>
+</div>
+<!-- Botão Gerar código (quando revogado ou novo) -->
+<button class="mt-3 w-full py-2.5 px-4 rounded-lg border border-outline-variant text-primary font-medium text-sm hover:bg-[#f6fbf2] transition-colors text-center" id="generateBtn" type="button">
+          Gerar código
+        </button>
+</section>
+<!-- 3. SEÇÃO MEMBROS DA LISTA (MODELO REAL DO APP) -->
+<section class="flex flex-col flex-1">
+<span class="text-xs font-semibold uppercase tracking-wider text-secondary mb-2">Membros da lista</span>
+<div class="divide-y divide-outline-variant border-y border-outline-variant" id="membersList">
+<!-- Item 1: Você (dono) -->
+<div class="py-3.5 flex items-center justify-between">
+<div class="flex flex-col">
+<span class="text-sm font-medium text-on-surface">Você (dono)</span>
+<span class="text-xs font-mono text-secondary">uid:...7c3b1</span>
+</div>
+<span class="text-xs font-medium text-primary">Ativo</span>
+</div>
+<!-- Item 2: Membro com UID e ação explícita de remoção -->
+<div class="py-3 flex items-center justify-between member-row">
+<div class="flex flex-col">
+<span class="text-sm font-medium text-on-surface">Membro</span>
+<span class="text-xs font-mono text-secondary">uid:...9014d</span>
+</div>
+<button class="text-xs font-medium text-error hover:underline px-2 py-1 rounded transition-colors" onclick="removeMember(this)" type="button">
+              Remover membro
+            </button>
+</div>
+<!-- Item 3: Membro com UID e ação explícita de remoção -->
+<div class="py-3 flex items-center justify-between member-row">
+<div class="flex flex-col">
+<span class="text-sm font-medium text-on-surface">Membro</span>
+<span class="text-xs font-mono text-secondary">uid:...4102f</span>
+</div>
+<button class="text-xs font-medium text-error hover:underline px-2 py-1 rounded transition-colors" onclick="removeMember(this)" type="button">
+              Remover membro
+            </button>
+</div>
+</div>
+</section>
+</main>
+<!-- 4. BOTÃO PRIMÁRIO NO RODAPÉ DA PÁGINA (SEM BARRA GLOBAL) -->
+<footer class="p-5 pt-3 border-t border-outline-variant bg-[#fcfbf7]">
+<button class="w-full py-3.5 px-4 rounded-lg bg-[#2d4f38] text-white font-medium text-sm flex items-center justify-center hover:opacity-95 active:opacity-90 transition-opacity" type="button">
+        Abrir lista compartilhada
+      </button>
+</footer>
+</div>
+<script>
+    const codeDisplay = document.getElementById('codeDisplay');
+    const codeStatus = document.getElementById('codeStatus');
+    const copyBtn = document.getElementById('copyBtn');
+    const regenerateBtn = document.getElementById('regenerateBtn');
+    const generateBtn = document.getElementById('generateBtn');
+    const revokeBtn = document.getElementById('revokeBtn');
+
+    copyBtn?.addEventListener('click', () => {
+      const text = codeDisplay.innerText;
+      if (text === 'NENHUM CÓDIGO') return;
+      navigator.clipboard?.writeText(text);
+      const span = copyBtn.querySelector('span:last-child');
+      const original = span.innerText;
+      span.innerText = 'Copiado!';
+      setTimeout(() => { span.innerText = original; }, 1500);
+    });
+
+    regenerateBtn?.addEventListener('click', () => {
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      codeDisplay.innerText = `MC-${rand}-CASA`;
+      codeStatus.innerHTML = '<span class="w-2 h-2 rounded-full bg-primary inline-block"></span><span>Ativo</span>';
+    });
+
+    generateBtn?.addEventListener('click', () => {
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      codeDisplay.innerText = `MC-${rand}-CASA`;
+      codeStatus.innerHTML = '<span class="w-2 h-2 rounded-full bg-primary inline-block"></span><span>Ativo</span>';
+    });
+
+    revokeBtn?.addEventListener('click', () => {
+      codeDisplay.innerText = 'NENHUM CÓDIGO';
+      codeStatus.innerHTML = '<span class="w-2 h-2 rounded-full bg-error inline-block"></span><span class="text-error">Revogado</span>';
+    });
+
+    function removeMember(btn) {
+      const row = btn.closest('.member-row');
+      if (row) {
+        row.remove();
+      }
+    }
+  </script>
+</body></html>

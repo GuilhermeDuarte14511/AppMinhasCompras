@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lista compartilhada — Minhas Compras</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS with custom configuration -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-primary-fixed": "#002110",
+            "on-secondary": "#ffffff",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "background": "#fbf9f3",
+            "on-primary-container": "#a7ceb2",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "tertiary-container": "#724549",
+            "on-tertiary-container": "#f2b6ba",
+            "on-primary-fixed-variant": "#2b4e39",
+            "on-surface-variant": "#424843",
+            "on-primary": "#ffffff",
+            "error": "#ba1a1a",
+            "secondary-fixed": "#e0e5cf",
+            "primary-fixed-dim": "#a9d0b4",
+            "surface-variant": "#e4e2dd",
+            "primary": "#1f412d",
+            "on-secondary-container": "#616655",
+            "surface-container-highest": "#e4e2dd",
+            "surface-container-low": "#f5f3ed",
+            "tertiary-fixed": "#ffdadb",
+            "surface-container": "#f0eee8",
+            "outline": "#727972",
+            "error-container": "#ffdad6",
+            "secondary-fixed-dim": "#c4c9b4",
+            "on-surface": "#1b1c18",
+            "tertiary": "#582f33",
+            "surface-tint": "#43664f",
+            "on-background": "#1b1c18",
+            "surface-container-lowest": "#ffffff",
+            "secondary-container": "#e0e5cf",
+            "secondary": "#5b604f",
+            "on-secondary-fixed-variant": "#444939",
+            "on-secondary-fixed": "#191d10",
+            "surface-dim": "#dcdad4",
+            "surface-bright": "#fbf9f3",
+            "primary-fixed": "#c4eccf",
+            "surface-container-high": "#eae8e2",
+            "on-error-container": "#93000a",
+            "outline-variant": "#c1c8c1",
+            "on-tertiary": "#ffffff",
+            "surface": "#fbf9f3",
+            "inverse-surface": "#30312d",
+            "inverse-on-surface": "#f3f1eb",
+            "on-error": "#ffffff",
+            "inverse-primary": "#a9d0b4",
+            "primary-container": "#365943",
+            "on-tertiary-fixed": "#321015"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    /* Estilo de régua sutil de caderno editorial */
+    .ledger-ruled {
+      background-image: linear-gradient(to bottom, transparent 96%, rgba(193, 200, 193, 0.35) 96%);
+      background-size: 100% 48px;
+    }
+    /* Material Symbols setup */
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-body antialiased flex justify-center min-h-screen">
+<!-- Mobile Viewport Container (390px canonical) -->
+<div class="w-full max-w-[390px] bg-surface min-h-screen flex flex-col relative pb-32">
+<!-- 1. Barra Superior Material 3 Editorial -->
+<header class="sticky top-0 z-40 bg-surface/95 backdrop-blur-sm border-b border-outline-variant/40 px-3 py-2">
+<div class="flex items-center justify-between min-h-[48px]">
+<!-- Ação Voltar (alvo 48dp) -->
+<button aria-label="Voltar para Minhas Listas" class="w-12 h-12 flex items-center justify-center -ml-2 rounded-full hover:bg-surface-container active:scale-95 transition-all text-on-surface">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<!-- Título e Subtítulo Editorial -->
+<div class="flex-1 px-1">
+<h1 class="font-headline text-[21px] leading-tight font-medium tracking-tight text-on-surface">
+            Compras da semana <span class="font-normal italic text-secondary text-[17px]">(Casa)</span>
+</h1>
+<div class="flex items-center gap-1.5 text-[11px] text-secondary font-label mt-0.5">
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+<span>Sincronizado há 3 min</span>
+<span class="text-outline-variant">·</span>
+<span>3 participantes</span>
+</div>
+</div>
+<!-- Ações à Direita -->
+<div class="flex items-center">
+<button aria-label="Convidar membro" class="w-11 h-11 flex items-center justify-center rounded-full hover:bg-surface-container active:scale-95 transition text-on-surface" title="Convidar participante">
+<span class="material-symbols-outlined text-[22px]">person_add</span>
+</button>
+<button aria-label="Opções da lista" class="w-11 h-11 flex items-center justify-center rounded-full hover:bg-surface-container active:scale-95 transition text-on-surface -mr-1">
+<span class="material-symbols-outlined text-[22px]">more_vert</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 px-4 pt-3.5 space-y-4">
+<!-- 2. Bloco de Membros, Colaboração e Status -->
+<section class="bg-surface-container-low rounded-lg p-3 border border-outline-variant/60 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<!-- Avatares em pilha sutil -->
+<div class="flex -space-x-2 overflow-hidden items-center">
+<div class="inline-flex items-center justify-center w-8 h-8 rounded-full ring-2 ring-surface bg-primary text-on-primary text-[11px] font-semibold tracking-tighter" title="Você (VC)">
+              VC
+            </div>
+<div class="inline-flex items-center justify-center w-8 h-8 rounded-full ring-2 ring-surface bg-secondary text-on-secondary text-[11px] font-semibold tracking-tighter" title="Pedro (PC)">
+              PC
+            </div>
+<div class="inline-flex items-center justify-center w-8 h-8 rounded-full ring-2 ring-surface bg-surface-container-highest text-on-surface-variant text-[11px] font-semibold tracking-tighter" title="Ana (AL)">
+              AL
+            </div>
+</div>
+<div>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-surface-container text-primary border border-outline-variant/60">
+<span class="material-symbols-outlined text-[14px]">group</span>
+              Lista colaborativa ativa
+            </span>
+</div>
+</div>
+<!-- Botão Convidar / Copiar Link -->
+<button aria-label="Ver código e convidar" class="h-9 px-2.5 inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-surface-container hover:bg-surface-container-high rounded transition-colors active:scale-95" title="Código: CASA-7821"><span class="material-symbols-outlined text-[16px]">key</span><span>Código: CASA</span></button>
+</section>
+<!-- 3. Painel Contábil e Orçamento (Balanço compartilhado no estilo etiqueta/caderno) -->
+<section class="border border-outline-variant/80 rounded-lg p-3.5 bg-surface-container-lowest">
+<!-- Cabeçalho Contábil -->
+<div class="flex items-baseline justify-between border-b border-outline-variant/40 pb-2">
+<span class="text-[11px] tracking-wide text-secondary uppercase font-semibold">Balanço Compartilhado</span>
+<span class="text-xs text-secondary">Teto: <span class="tabular-nums font-semibold text-on-surface">R$ 250,00</span></span>
+</div>
+<!-- Faixa Tipográfica Principal -->
+<div class="grid grid-cols-2 gap-3 pt-2.5 pb-2">
+<div>
+<div class="text-[11px] text-secondary font-medium">Estimado atual</div>
+<div class="text-2xl font-headline font-semibold text-on-surface tabular-nums tracking-tight">
+<span class="text-sm font-sans font-normal text-secondary mr-0.5">R$</span>184,30
+            </div>
+</div>
+<div class="border-l border-outline-variant/40 pl-3">
+<div class="text-[11px] text-secondary font-medium">Disponível em caixa</div>
+<div class="text-2xl font-headline font-semibold text-primary tabular-nums tracking-tight">
+<span class="text-sm font-sans font-normal text-primary/70 mr-0.5">R$</span>65,70
+            </div>
+</div>
+</div>
+<!-- Barra de Progresso Material Minimalista -->
+<div class="space-y-1.5 pt-1">
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full rounded-full transition-all duration-300" style="width: 63%;"></div>
+</div>
+<div class="flex justify-between items-center text-[11px] text-secondary">
+<span>8 pendentes · 6 comprados</span>
+<span class="font-medium text-primary">63% da lista</span>
+</div>
+</div>
+<!-- Lembrete / Nota afixada de Pedro -->
+</section>
+<!-- 4. Ações Primárias Rápidas (48dp target) -->
+<section class="grid grid-cols-1 gap-2 pt-1"><button class="h-12 w-full bg-primary text-on-primary rounded-lg font-medium text-sm flex items-center justify-center gap-2 shadow-none hover:bg-primary-container transition active:scale-[0.99]"><span class="material-symbols-outlined text-[20px]">shopping_cart</span><span>Modo compra compartilhado</span></button><button class="h-11 w-full bg-surface-container border border-outline-variant rounded-lg text-primary text-xs font-semibold flex items-center justify-center gap-2 hover:bg-surface-container-high transition active:scale-[0.99]"><span class="material-symbols-outlined text-[18px]">check_circle</span><span>Fechar compra</span></button></section>
+<!-- 5. Seletor de Visualização / Filtro Rápido (Chips sem preenchimento pesado) -->
+<section class="pt-1">
+<div class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs"><button class="h-8 px-3 rounded-full bg-primary text-on-primary font-medium shrink-0 flex items-center gap-1.5"><span>Pendentes</span><span class="tabular-nums text-[11px] px-1.5 py-0.2 rounded-full bg-white/20">8</span></button><button class="h-8 px-3 rounded-full bg-surface-container border border-outline-variant text-on-surface font-medium shrink-0 flex items-center gap-1.5 hover:border-outline"><span>Comprados</span><span class="tabular-nums text-[11px] text-secondary">6</span></button><button class="h-8 px-3 rounded-full bg-surface-container border border-outline-variant text-on-surface font-medium shrink-0 flex items-center gap-1.5 hover:border-outline"><span>Todos</span><span class="tabular-nums text-[11px] text-secondary">14</span></button></div>
+</section>
+<!-- 6. Lista Editorial de Itens (Caderno de Mercadorias) -->
+<section class="space-y-4 pt-1"><div><div class="flex items-baseline justify-between pb-1.5 border-b-2 border-primary/40"><h2 class="text-xs font-semibold tracking-wider text-primary uppercase">A PEGAR (8 ITENS)</h2><span class="text-xs text-secondary font-medium tabular-nums">Subtotal: R$ 118,60</span></div><div class="divide-y divide-outline-variant/40"><div class="py-2.5 flex items-start gap-2.5"><label class="w-10 h-10 -ml-1 flex items-center justify-center shrink-0 cursor-pointer"><input class="w-5 h-5 rounded border-outline text-primary focus:ring-0 cursor-pointer" type="checkbox"/></label><div class="flex-1 min-w-0 pr-1"><div class="flex justify-between items-start"><div class="font-medium text-sm text-on-surface leading-tight">Café especial torrado e moído 250g</div><div class="text-sm font-semibold tabular-nums text-on-surface shrink-0 ml-2">R$ 37,80</div></div><div class="flex items-center justify-between text-xs text-secondary mt-0.5"><span>2 un <span class="text-[11px] text-secondary/80">(R$ 18,90/un)</span></span><span class="px-1.5 py-0.5 rounded text-[10px] bg-surface-container font-normal text-secondary">Mercearia</span></div></div></div><div class="py-2.5 flex items-start gap-2.5"><label class="w-10 h-10 -ml-1 flex items-center justify-center shrink-0 cursor-pointer"><input class="w-5 h-5 rounded border-outline text-primary focus:ring-0 cursor-pointer" type="checkbox"/></label><div class="flex-1 min-w-0 pr-1"><div class="flex justify-between items-start"><div class="font-medium text-sm text-on-surface leading-tight">Azeite de oliva extravirgem 500ml</div><div class="text-sm font-semibold tabular-nums text-on-surface shrink-0 ml-2">R$ 38,90</div></div><div class="flex items-center justify-between text-xs text-secondary mt-0.5"><span>1 un</span><span class="px-1.5 py-0.5 rounded text-[10px] bg-surface-container font-normal text-secondary">Mercearia</span></div></div></div><div class="py-2.5 flex items-start gap-2.5"><label class="w-10 h-10 -ml-1 flex items-center justify-center shrink-0 cursor-pointer"><input class="w-5 h-5 rounded border-outline text-primary focus:ring-0 cursor-pointer" type="checkbox"/></label><div class="flex-1 min-w-0 pr-1"><div class="flex justify-between items-start"><div class="font-medium text-sm text-on-surface leading-tight">Tomate italiano selecionado</div><div class="text-sm font-semibold tabular-nums text-on-surface shrink-0 ml-2">R$ 6,80</div></div><div class="flex items-center justify-between text-xs text-secondary mt-0.5"><span>0,8 kg <span class="text-[11px] text-secondary/80">(R$ 8,50/kg)</span></span><span class="px-1.5 py-0.5 rounded text-[10px] bg-surface-container font-normal text-secondary">Hortifrúti</span></div></div></div><div class="py-2.5 flex items-start gap-2.5"><label class="w-10 h-10 -ml-1 flex items-center justify-center shrink-0 cursor-pointer"><input class="w-5 h-5 rounded border-outline text-primary focus:ring-0 cursor-pointer" type="checkbox"/></label><div class="flex-1 min-w-0 pr-1"><div class="flex justify-between items-start"><div class="font-medium text-sm text-on-surface leading-tight">Banana prata madura</div><div class="text-sm font-semibold tabular-nums text-on-surface shrink-0 ml-2">R$ 10,20</div></div><div class="flex items-center justify-between text-xs text-secondary mt-0.5"><span>1,2 kg <span class="text-[11px] text-secondary/80">(R$ 8,50/kg)</span></span><span class="px-1.5 py-0.5 rounded text-[10px] bg-surface-container font-normal text-secondary">Hortifrúti</span></div></div></div><div class="py-2.5 flex items-start gap-2.5"><label class="w-10 h-10 -ml-1 flex items-center justify-center shrink-0 cursor-pointer"><input class="w-5 h-5 rounded border-outline text-primary focus:ring-0 cursor-pointer" type="checkbox"/></label><div class="flex-1 min-w-0 pr-1"><div class="flex justify-between items-start"><div class="font-medium text-sm text-on-surface leading-tight">Pão de fermentação natural</div><div class="text-sm font-semibold tabular-nums text-on-surface shrink-0 ml-2">R$ 16,50</div></div><div class="flex items-center justify-between text-xs text-secondary mt-0.5"><span>1 un</span><span class="px-1.5 py-0.5 rounded text-[10px] bg-surface-container font-normal text-secondary">Padaria</span></div></div></div><div class="py-2.5 flex items-start gap-2.5"><label class="w-10 h-10 -ml-1 flex items-center justify-center shrink-0 cursor-pointer"><input class="w-5 h-5 rounded border-outline text-primary focus:ring-0 cursor-pointer" type="checkbox"/></label><div class="flex-1 min-w-0 pr-1"><div class="flex justify-between items-start"><div class="font-medium text-sm text-on-surface leading-tight">Leite integral pasteurizado tipo A 1L</div><div class="text-sm font-semibold tabular-nums text-on-surface shrink-0 ml-2">R$ 8,40</div></div><div class="flex items-center justify-between text-xs text-secondary mt-0.5"><span>1 un</span><span class="px-1.5 py-0.5 rounded text-[10px] bg-surface-container font-normal text-secondary">Laticínios</span></div></div></div></div></div><div class="pt-2"><div class="flex items-baseline justify-between pb-1.5 border-b border-outline-variant/60"><h2 class="text-xs font-semibold tracking-wider text-secondary uppercase flex items-center gap-1"><span class="material-symbols-outlined text-[16px] text-primary">check_circle</span>COMPRADOS (6 ITENS)</h2><span class="text-xs text-secondary font-medium tabular-nums">Total: R$ 65,70</span></div><div class="divide-y divide-outline-variant/30"><div class="py-2.5 flex items-center justify-between opacity-75"><div class="flex items-center gap-2 min-w-0 pr-2"><span class="material-symbols-outlined text-[20px] text-primary shrink-0">check_box</span><div class="min-w-0"><div class="text-xs line-through text-secondary font-medium truncate">Ovos caipiras vermelhos (10 un)</div><div class="text-[10px] text-secondary/80">1 un · R$ 16,90</div></div></div><div class="text-xs tabular-nums text-secondary font-medium shrink-0">R$ 16,90</div></div><div class="py-2.5 flex items-center justify-between opacity-75"><div class="flex items-center gap-2 min-w-0 pr-2"><span class="material-symbols-outlined text-[20px] text-primary shrink-0">check_box</span><div class="min-w-0"><div class="text-xs line-through text-secondary font-medium truncate">Queijo minas frescal (300g)</div><div class="text-[10px] text-secondary/80">1 un · R$ 13,20</div></div></div><div class="text-xs tabular-nums text-secondary font-medium shrink-0">R$ 13,20</div></div><div class="py-2.5 flex items-center justify-between opacity-75"><div class="flex items-center gap-2 min-w-0 pr-2"><span class="material-symbols-outlined text-[20px] text-primary shrink-0">check_box</span><div class="min-w-0"><div class="text-xs line-through text-secondary font-medium truncate">Detergente biodegradável (3 un)</div><div class="text-[10px] text-secondary/80">3 un · R$ 3,19/un</div></div></div><div class="text-xs tabular-nums text-secondary font-medium shrink-0">R$ 9,57</div></div><div class="py-2.5 flex items-center justify-between opacity-75"><div class="flex items-center gap-2 min-w-0 pr-2"><span class="material-symbols-outlined text-[20px] text-primary shrink-0">check_box</span><div class="min-w-0"><div class="text-xs line-through text-secondary font-medium truncate">Arroz integral agulhinha 1kg</div><div class="text-[10px] text-secondary/80">1 un · R$ 8,90</div></div></div><div class="text-xs tabular-nums text-secondary font-medium shrink-0">R$ 8,90</div></div><div class="py-2.5 flex items-center justify-between opacity-75"><div class="flex items-center gap-2 min-w-0 pr-2"><span class="material-symbols-outlined text-[20px] text-primary shrink-0">check_box</span><div class="min-w-0"><div class="text-xs line-through text-secondary font-medium truncate">Feijão preto orgânico 1kg</div><div class="text-[10px] text-secondary/80">1 un · R$ 9,30</div></div></div><div class="text-xs tabular-nums text-secondary font-medium shrink-0">R$ 9,30</div></div><div class="py-2.5 flex items-center justify-between opacity-75"><div class="flex items-center gap-2 min-w-0 pr-2"><span class="material-symbols-outlined text-[20px] text-primary shrink-0">check_box</span><div class="min-w-0"><div class="text-xs line-through text-secondary font-medium truncate">Maçã fuji selecionada 1kg</div><div class="text-[10px] text-secondary/80">1 kg · R$ 7,83</div></div></div><div class="text-xs tabular-nums text-secondary font-medium shrink-0">R$ 7,83</div></div></div></div></section>
+</main>
+<!-- 7. Barra Inferior de Entrada Rápida (Docked acima da BottomNav) -->
+<div class="fixed bottom-0 left-0 w-full z-40 flex justify-center px-3 pb-3 pt-2 bg-gradient-to-t from-surface via-surface/90 to-transparent pointer-events-none"><div class="w-full max-w-[390px] pointer-events-auto"><div class="bg-surface-container-lowest/95 backdrop-blur-md border border-outline-variant/80 rounded-xl p-1.5 shadow-sm flex items-center gap-1.5"><input class="flex-1 bg-transparent border-none text-xs text-on-surface placeholder:text-secondary focus:ring-0 py-2 pl-2" placeholder="Adicionar item à lista compartilhada..." type="text"/><div class="flex items-center gap-0.5"><button aria-label="Inserir por voz" class="w-9 h-9 flex items-center justify-center text-secondary hover:text-on-surface active:scale-95 transition" title="Voz"><span class="material-symbols-outlined text-[20px]">mic</span></button><button aria-label="Escanear código de barras" class="w-9 h-9 flex items-center justify-center text-secondary hover:text-on-surface active:scale-95 transition" title="Código de barras"><span class="material-symbols-outlined text-[20px]">barcode_scanner</span></button><button aria-label="Adicionar item" class="w-9 h-9 rounded-lg bg-primary text-on-primary flex items-center justify-center active:scale-95 transition hover:bg-primary-container"><span class="material-symbols-outlined text-[20px]">add</span></button></div></div></div></div>
+<!-- 8. Bottom Navigation Bar Padrão (Shared Component: Listas Ativa) -->
+</div>
+</body></html>

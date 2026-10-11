@@ -43,7 +43,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Despensa'), findsOneWidget);
-      expect(find.text('2 para repor'), findsOneWidget);
+      expect(find.text('Está acabando'), findsWidgets);
+      expect(find.text('Acabou'), findsWidgets);
       expect(find.text('Café'), findsOneWidget);
       expect(find.text('Detergente'), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -81,6 +82,8 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: PantryPage(store: store)));
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('Adicionar à lista'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Adicionar à lista'));
     await tester.pumpAndSettle();
 

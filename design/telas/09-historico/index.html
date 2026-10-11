@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Minhas Compras — Histórico de compras</title>
+<!-- Google Fonts: Newsreader & Public Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-secondary": "#ffffff",
+            "surface-tint": "#43664f",
+            "surface-container-low": "#f5f3ed",
+            "surface": "#fbf9f3",
+            "surface-container-high": "#eae8e2",
+            "error-container": "#ffdad6",
+            "tertiary-container": "#724549",
+            "secondary-fixed-dim": "#c4c9b4",
+            "on-primary": "#ffffff",
+            "surface-variant": "#e4e2dd",
+            "outline": "#727972",
+            "primary": "#1f412d",
+            "outline-variant": "#c1c8c1",
+            "on-secondary-container": "#616655",
+            "on-error": "#ffffff",
+            "surface-bright": "#fbf9f3",
+            "on-background": "#1b1c18",
+            "tertiary-fixed": "#ffdadb",
+            "surface-container-lowest": "#ffffff",
+            "surface-container": "#f0eee8",
+            "primary-fixed-dim": "#a9d0b4",
+            "inverse-surface": "#30312d",
+            "inverse-primary": "#a9d0b4",
+            "on-surface-variant": "#424843",
+            "on-primary-fixed": "#002110",
+            "background": "#fbf9f3",
+            "surface-dim": "#dcdad4",
+            "on-error-container": "#93000a",
+            "tertiary": "#582f33",
+            "on-surface": "#1b1c18",
+            "primary-container": "#365943",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "secondary-container": "#e0e5cf",
+            "secondary": "#5b604f",
+            "on-tertiary-container": "#f2b6ba",
+            "on-tertiary": "#ffffff",
+            "primary-fixed": "#c4eccf",
+            "on-secondary-fixed": "#191d10",
+            "on-tertiary-fixed": "#321015",
+            "on-primary-container": "#a7ceb2",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "secondary-fixed": "#e0e5cf",
+            "on-primary-fixed-variant": "#2b4e39",
+            "on-secondary-fixed-variant": "#444939",
+            "inverse-on-surface": "#f3f1eb",
+            "error": "#ba1a1a",
+            "surface-container-highest": "#e4e2dd"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      }
+    }
+  </script>
+<style>
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      line-height: 1;
+    }
+    .material-symbols-outlined.fill-icon {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    /* Estilo sutil de rolagem horizontal */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-body antialiased flex justify-center min-h-screen">
+<!-- Mobile Container (Max 390px - padrão iPhone 14/15/Flutter viewport) -->
+<div class="w-full max-w-[390px] min-h-screen bg-surface flex flex-col relative select-none">
+<!-- TopAppBar (Baseado estritamente no Shared Components JSON) -->
+<header class="w-full sticky top-0 z-40 bg-surface border-b border-outline-variant"><div class="flex justify-between items-center w-full px-4 py-3 max-w-md mx-auto"><div class="flex items-center gap-2"><button aria-label="Voltar" class="min-w-[48px] min-h-[48px] flex items-center justify-center text-on-surface hover:text-primary transition-colors active:opacity-75" onclick="history.back()" type="button"><span class="material-symbols-outlined text-[24px]">arrow_back</span></button><h1 class="font-headline text-xl font-normal text-on-surface tracking-tight">Histórico de compras</h1></div><button aria-label="Limpar histórico" class="text-xs font-medium text-secondary hover:text-error transition-colors px-2 py-1.5 flex items-center gap-1 active:opacity-75" onclick="confirmClearHistory()" type="button"><span class="material-symbols-outlined text-[18px]">delete_sweep</span><span>Limpar</span></button></div></header>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col"><!-- Campo de Busca por Lista ou Produto --><section class="px-4 py-3 border-b border-outline-variant bg-surface"><div class="relative w-full"><span class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-secondary"><span class="material-symbols-outlined text-[20px]">search</span></span><input class="w-full h-11 pl-9 pr-3 text-sm bg-surface-container-lowest border border-outline-variant rounded-lg text-on-surface placeholder:text-secondary focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container font-body transition-colors" placeholder="Buscar por lista ou produto..." type="search"/></div></section><!-- Mês: Outubro 2024 --><section class="flex flex-col"><!-- Cabeçalho do Mês & Resumo Contábil Real --><div class="bg-surface-container-low px-4 py-3 border-b border-outline-variant"><div class="flex justify-between items-baseline mb-2"><h2 class="font-headline text-base font-semibold text-on-surface">Outubro 2024</h2><span class="text-xs text-secondary font-normal">3 fechamentos</span></div><div class="grid grid-cols-2 gap-4 pt-2 border-t border-outline-variant/60 text-xs"><div><p class="text-[11px] uppercase tracking-wider text-secondary font-medium">Total planejado (teto)</p><p class="font-headline text-lg text-secondary tabular-nums mt-0.5">R$ 750,00</p></div><div class="text-right"><p class="text-[11px] uppercase tracking-wider text-secondary font-medium">Total comprado (real)</p><p class="font-headline text-lg font-semibold text-on-surface tabular-nums mt-0.5">R$ 795,30</p></div></div></div><!-- Itens de Outubro --><div class="divide-y divide-outline-variant border-b border-outline-variant bg-surface-container-lowest"><!-- Item 1 --><article class="p-4 hover:bg-surface-container-low transition-colors"><div class="flex justify-between items-start"><div class="flex-1 pr-2"><h3 class="font-headline text-base font-semibold text-on-surface">Feira de sábado</h3><p class="text-xs text-secondary mt-0.5">Fechada em 26 de Outubro de 2024</p><p class="text-xs text-secondary mt-1"><span class="font-medium text-on-surface">14</span> itens comprados</p></div><div class="text-right flex flex-col items-end"><span class="font-headline text-base font-semibold text-on-surface tabular-nums">R$ 184,30</span><div class="flex items-center gap-1 mt-3"><button aria-label="Ver detalhes da compra" class="p-1.5 text-secondary hover:text-primary active:opacity-75 transition-colors" onclick="openDetails('Feira de sábado', '26 de Outubro de 2024', '14 itens', 'R$ 184,30')" title="Ver detalhes" type="button"><span class="material-symbols-outlined text-[20px]">visibility</span></button><button aria-label="Excluir fechamento" class="p-1.5 text-secondary hover:text-error active:opacity-75 transition-colors" onclick="confirmDeleteClosure('Feira de sábado')" title="Excluir fechamento" type="button"><span class="material-symbols-outlined text-[20px]">delete_outline</span></button></div></div></div></article><!-- Item 2 --><article class="p-4 hover:bg-surface-container-low transition-colors"><div class="flex justify-between items-start"><div class="flex-1 pr-2"><h3 class="font-headline text-base font-semibold text-on-surface">Compras do mês</h3><p class="text-xs text-secondary mt-0.5">Fechada em 15 de Outubro de 2024</p><p class="text-xs text-secondary mt-1"><span class="font-medium text-on-surface">32</span> itens comprados</p></div><div class="text-right flex flex-col items-end"><span class="font-headline text-base font-semibold text-on-surface tabular-nums">R$ 512,40</span><div class="flex items-center gap-1 mt-3"><button aria-label="Ver detalhes da compra" class="p-1.5 text-secondary hover:text-primary active:opacity-75 transition-colors" onclick="openDetails('Compras do mês', '15 de Outubro de 2024', '32 itens', 'R$ 512,40')" title="Ver detalhes" type="button"><span class="material-symbols-outlined text-[20px]">visibility</span></button><button aria-label="Excluir fechamento" class="p-1.5 text-secondary hover:text-error active:opacity-75 transition-colors" onclick="confirmDeleteClosure('Compras do mês')" title="Excluir fechamento" type="button"><span class="material-symbols-outlined text-[20px]">delete_outline</span></button></div></div></div></article><!-- Item 3 --><article class="p-4 hover:bg-surface-container-low transition-colors"><div class="flex justify-between items-start"><div class="flex-1 pr-2"><h3 class="font-headline text-base font-semibold text-on-surface">Reposição e Limpeza</h3><p class="text-xs text-secondary mt-0.5">Fechada em 08 de Outubro de 2024</p><p class="text-xs text-secondary mt-1"><span class="font-medium text-on-surface">10</span> itens comprados</p></div><div class="text-right flex flex-col items-end"><span class="font-headline text-base font-semibold text-on-surface tabular-nums">R$ 98,60</span><div class="flex items-center gap-1 mt-3"><button aria-label="Ver detalhes da compra" class="p-1.5 text-secondary hover:text-primary active:opacity-75 transition-colors" onclick="openDetails('Reposição e Limpeza', '08 de Outubro de 2024', '10 itens', 'R$ 98,60')" title="Ver detalhes" type="button"><span class="material-symbols-outlined text-[20px]">visibility</span></button><button aria-label="Excluir fechamento" class="p-1.5 text-secondary hover:text-error active:opacity-75 transition-colors" onclick="confirmDeleteClosure('Reposição e Limpeza')" title="Excluir fechamento" type="button"><span class="material-symbols-outlined text-[20px]">delete_outline</span></button></div></div></div></article></div></section><!-- Mês: Setembro 2024 --><section class="flex flex-col mt-4"><!-- Cabeçalho do Mês & Resumo Contábil Real --><div class="bg-surface-container-low px-4 py-3 border-y border-outline-variant"><div class="flex justify-between items-baseline mb-2"><h2 class="font-headline text-base font-semibold text-on-surface">Setembro 2024</h2><span class="text-xs text-secondary font-normal">2 fechamentos</span></div><div class="grid grid-cols-2 gap-4 pt-2 border-t border-outline-variant/60 text-xs"><div><p class="text-[11px] uppercase tracking-wider text-secondary font-medium">Total planejado (teto)</p><p class="font-headline text-lg text-secondary tabular-nums mt-0.5">R$ 420,00</p></div><div class="text-right"><p class="text-[11px] uppercase tracking-wider text-secondary font-medium">Total comprado (real)</p><p class="font-headline text-lg font-semibold text-on-surface tabular-nums mt-0.5">R$ 432,25</p></div></div></div><!-- Itens de Setembro --><div class="divide-y divide-outline-variant border-b border-outline-variant bg-surface-container-lowest"><!-- Item 4 --><article class="p-4 hover:bg-surface-container-low transition-colors"><div class="flex justify-between items-start"><div class="flex-1 pr-2"><h3 class="font-headline text-base font-semibold text-on-surface">Churrasco de domingo</h3><p class="text-xs text-secondary mt-0.5">Fechada em 28 de Setembro de 2024</p><p class="text-xs text-secondary mt-1"><span class="font-medium text-on-surface">16</span> itens comprados</p></div><div class="text-right flex flex-col items-end"><span class="font-headline text-base font-semibold text-on-surface tabular-nums">R$ 319,45</span><div class="flex items-center gap-1 mt-3"><button aria-label="Ver detalhes da compra" class="p-1.5 text-secondary hover:text-primary active:opacity-75 transition-colors" onclick="openDetails('Churrasco de domingo', '28 de Setembro de 2024', '16 itens', 'R$ 319,45')" title="Ver detalhes" type="button"><span class="material-symbols-outlined text-[20px]">visibility</span></button><button aria-label="Excluir fechamento" class="p-1.5 text-secondary hover:text-error active:opacity-75 transition-colors" onclick="confirmDeleteClosure('Churrasco de domingo')" title="Excluir fechamento" type="button"><span class="material-symbols-outlined text-[20px]">delete_outline</span></button></div></div></div></article><!-- Item 5 --><article class="p-4 hover:bg-surface-container-low transition-colors"><div class="flex justify-between items-start"><div class="flex-1 pr-2"><h3 class="font-headline text-base font-semibold text-on-surface">Café da manhã &amp; Feira</h3><p class="text-xs text-secondary mt-0.5">Fechada em 14 de Setembro de 2024</p><p class="text-xs text-secondary mt-1"><span class="font-medium text-on-surface">8</span> itens comprados</p></div><div class="text-right flex flex-col items-end"><span class="font-headline text-base font-semibold text-on-surface tabular-nums">R$ 112,80</span><div class="flex items-center gap-1 mt-3"><button aria-label="Ver detalhes da compra" class="p-1.5 text-secondary hover:text-primary active:opacity-75 transition-colors" onclick="openDetails('Café da manhã &amp; Feira', '14 de Setembro de 2024', '8 itens', 'R$ 112,80')" title="Ver detalhes" type="button"><span class="material-symbols-outlined text-[20px]">visibility</span></button><button aria-label="Excluir fechamento" class="p-1.5 text-secondary hover:text-error active:opacity-75 transition-colors" onclick="confirmDeleteClosure('Café da manhã &amp; Feira')" title="Excluir fechamento" type="button"><span class="material-symbols-outlined text-[20px]">delete_outline</span></button></div></div></div></article></div></section><!-- Rodapé Limpo --><div class="py-8 px-4 text-center"><p class="font-headline italic text-xs text-secondary">Fechamentos mantidos no histórico local</p></div></main>
+<!-- Bottom Sheet Modal para Detalhes / Ação Rápida da Compra -->
+<div class="hidden fixed inset-0 z-50 bg-black/40 flex items-end justify-center" id="receiptModal"><div class="w-full max-w-[390px] bg-surface rounded-t-xl border-t border-outline-variant p-5 animate-slide-up flex flex-col gap-4"><div class="w-12 h-1 bg-outline-variant rounded-full mx-auto"></div><div class="flex justify-between items-start border-b border-outline-variant pb-3"><div><span class="text-[11px] font-medium uppercase tracking-wider text-secondary">Detalhe do fechamento</span><h4 class="font-headline text-lg font-bold text-on-surface" id="modalTitle">Feira de sábado</h4><p class="text-xs text-secondary" id="modalMarketDate">26 de Outubro de 2024</p></div><button class="min-w-[48px] min-h-[48px] -mr-2 -mt-2 flex items-center justify-center text-secondary hover:text-on-surface" onclick="closeDetails()"><span class="material-symbols-outlined">close</span></button></div><div class="grid grid-cols-2 gap-2 text-xs bg-surface-container p-3 rounded-lg border border-outline-variant"><div><p class="text-secondary text-[11px]">Total Pago (Real)</p><p class="font-headline text-xl font-bold text-on-surface" id="modalTotal">R$ 184,30</p></div><div><p class="text-secondary text-[11px]">Itens Comprados</p><p class="font-headline text-xl font-bold text-on-surface" id="modalItemCount">14 itens</p></div></div><div class="flex flex-col gap-2 pt-1"><button class="w-full h-12 bg-primary text-on-primary rounded-lg font-body font-medium text-sm flex items-center justify-center gap-2 active:opacity-90 transition-opacity" onclick="toastAction('Abrindo itens comprados...'); closeDetails();" type="button"><span class="material-symbols-outlined text-[18px]">receipt_long</span>Ver itens fechados</button><button class="w-full h-11 border border-outline-variant bg-surface-container-lowest text-error rounded-lg font-body font-medium text-xs flex items-center justify-center gap-1.5 active:bg-error-container/20" onclick="deleteCurrentModalClosure()" type="button"><span class="material-symbols-outlined text-[18px]">delete</span>Excluir este fechamento</button></div></div></div>
+<!-- Toast de Notificação Micro-interação -->
+<div class="hidden fixed bottom-16 left-1/2 -translate-x-1/2 z-50 bg-inverse-surface text-inverse-on-surface text-xs px-4 py-2.5 rounded-lg shadow-sm font-body" id="toastMessage">
+      Ação executada com sucesso
+    </div>
+<!-- BottomNavBar (Baseado estritamente no Shared Components JSON) -->
+<!-- Destination 4: "Histórico" está ATIVO conforme o mapeamento semântico da tela atual -->
+</div>
+<!-- Inline Micro-interactions -->
+<script>
+    // Menu Overflow
+    const overflowMenuBtn = document.getElementById('overflowMenuBtn');
+    const overflowMenu = document.getElementById('overflowMenu');
+
+    overflowMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      overflowMenu.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', () => {
+      if (!overflowMenu.classList.contains('hidden')) {
+        overflowMenu.classList.add('hidden');
+      }
+    });
+
+    // Detalhes / Modal
+    const modal = document.getElementById('receiptModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalMarketDate = document.getElementById('modalMarketDate');
+    const modalTotal = document.getElementById('modalTotal');
+    const modalItemCount = document.getElementById('modalItemCount');
+
+    function openDetails(title, date, market, total, count) {
+      modalTitle.textContent = title;
+      modalMarketDate.textContent = `${market} • ${date}`;
+      modalTotal.textContent = total;
+      modalItemCount.textContent = `${count} itens comprados`;
+      modal.classList.remove('hidden');
+    }
+
+    function closeDetails() {
+      modal.classList.add('hidden');
+    }
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeDetails();
+      }
+    });
+
+    // Toast de confirmação simples
+    function toastAction(text) {
+      closeDetails();
+      const toast = document.getElementById('toastMessage');
+      toast.textContent = text;
+      toast.classList.remove('hidden');
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 2500);
+    }
+
+    function toggleFilterPeriod() {
+      toastAction('Filtro por período selecionado');
+    }
+
+    function exportData() {
+      toastAction('Exportando arquivo CSV e PDF...');
+    }
+
+    function confirmClearHistory() {
+      if (confirm('Deseja realmente limpar todo o histórico de compras? Esta ação não pode ser desfeita.')) {
+        toastAction('Histórico de compras excluído');
+      }
+    }
+  </script>
+</body></html>

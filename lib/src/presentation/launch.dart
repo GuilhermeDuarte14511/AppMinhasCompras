@@ -1,7 +1,10 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
+
+import 'theme/editorial_workspace_theme.dart';
+import 'splash/notebook_painter.dart';
+import 'splash/splash_motion.dart';
 
 class LoadingScreen extends StatelessWidget {
   const LoadingScreen({super.key, this.showReadyHint = false});
@@ -9,9 +12,8 @@ class LoadingScreen extends StatelessWidget {
   final bool showReadyHint;
 
   @override
-  Widget build(BuildContext context) {
-    return SplashPage(showReadyHint: showReadyHint);
-  }
+  Widget build(BuildContext context) =>
+      SplashPage(showReadyHint: showReadyHint);
 }
 
 class SplashPage extends StatefulWidget {
@@ -32,512 +34,218 @@ class SplashPage extends StatefulWidget {
 
 class _SplashPageState extends State<SplashPage>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
   Timer? _completionTimer;
+  late final AnimationController _entrance;
+  bool _reduceMotion = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    _entrance = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2600),
+      duration: SplashMotion.duration,
     );
-    _completionTimer = Timer(widget.displayDuration, () {
-      if (mounted) {
-        widget.onCompleted?.call();
-      }
-    });
+    if (widget.onCompleted != null) {
+      _completionTimer = Timer(widget.displayDuration, () {
+        if (mounted) widget.onCompleted?.call();
+      });
+    }
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final reduceMotion =
-        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    if (reduceMotion) {
-      _controller.value = 1;
-      _controller.stop();
-    } else if (!_controller.isAnimating) {
-      _controller.repeat();
+    _reduceMotion = MediaQuery.disableAnimationsOf(context);
+    if (_reduceMotion) {
+      _entrance.value = 1;
+    } else {
+      if (_entrance.value < 1 && !_entrance.isAnimating) _entrance.forward();
     }
   }
 
   @override
   void dispose() {
     _completionTimer?.cancel();
-    _controller.dispose();
+    _entrance.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _SplashBackground(
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final compact = constraints.maxHeight < 620;
-              return Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 28,
-                      vertical: compact ? 18 : 28,
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _SplashAnimationStage(controller: _controller),
-                        SizedBox(height: compact ? 22 : 30),
-                        const _SplashBrandCopy(),
-                        SizedBox(height: compact ? 18 : 26),
-                        _SplashLoadingHint(showReadyHint: widget.showReadyHint),
-                      ],
-                    ),
-                  ),
+    return Theme(
+      data: editorialWorkspaceTheme(Theme.of(context)),
+      child: Builder(
+        builder: (context) {
+          final theme = Theme.of(context);
+          final colors = theme.colorScheme;
+          final reduceMotion = _reduceMotion;
+          return Scaffold(
+            body: CustomPaint(
+              painter: _NotebookLines(
+                colors.outlineVariant.withValues(alpha: .13),
+              ),
+              child: SafeArea(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxHeight < 620;
+                    return Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: compact ? 24 : 48,
+                      ),
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: Center(
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    RepaintBoundary(
+                                      child: AnimatedBuilder(
+                                        animation: _entrance,
+                                        builder: (context, _) {
+                                          final entry = SplashMotion.entrance
+                                              .transform(_entrance.value);
+                                          return Opacity(
+                                            opacity: entry,
+                                            child: Transform.translate(
+                                              offset: Offset(
+                                                0,
+                                                12 * (1 - entry),
+                                              ),
+                                              child: SizedBox(
+                                                key: const ValueKey(
+                                                  'splash-notebook',
+                                                ),
+                                                width: 180,
+                                                height: 156,
+                                                child: CustomPaint(
+                                                  painter:
+                                                      SplashNotebookPainter(
+                                                        colors: colors,
+                                                        progress:
+                                                            _entrance.value,
+                                                      ),
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(height: 24),
+                                    Text(
+                                      'Minhas Compras',
+                                      textAlign: TextAlign.center,
+                                      style: theme.textTheme.titleLarge
+                                          ?.copyWith(
+                                            fontSize: 38,
+                                            height: 1.25,
+                                            letterSpacing: -.85,
+                                            fontWeight: FontWeight.w400,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Planeje. Marque. Leve.',
+                                      textAlign: TextAlign.center,
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color: colors.onSurfaceVariant,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Semantics(
+                            liveRegion: true,
+                            child: Text(
+                              widget.showReadyHint
+                                  ? 'Sincronizando compras'
+                                  : 'Preparando sua lista...',
+                              key: ValueKey(
+                                widget.showReadyHint
+                                    ? 'splash-ready'
+                                    : 'splash-loading',
+                              ),
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            key: const ValueKey('splash-animation-stage'),
+                            width: 160,
+                            height: 2,
+                            child: reduceMotion
+                                ? _StaticLoadingTrack(colors: colors)
+                                : LinearProgressIndicator(
+                                    color: colors.primary,
+                                    backgroundColor: colors.outlineVariant
+                                        .withValues(alpha: .35),
+                                    minHeight: 2,
+                                  ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SplashBackground extends StatelessWidget {
-  const _SplashBackground({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(color: colorScheme.surface),
-      child: child,
-    );
-  }
-}
-
-class _SplashAnimationStage extends StatelessWidget {
-  const _SplashAnimationStage({required this.controller});
-
-  final Animation<double> controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: AspectRatio(
-        aspectRatio: 1.18,
-        child: AnimatedBuilder(
-          key: const ValueKey('splash-animation-stage'),
-          animation: controller,
-          builder: (context, _) {
-            final colorScheme = Theme.of(context).colorScheme;
-            final t = controller.value;
-            return Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
-                Positioned.fill(
-                  child: CustomPaint(
-                    painter: _SplashOrbitPainter(
-                      progress: t,
-                      color: colorScheme.primary.withValues(alpha: 0.18),
-                    ),
-                  ),
-                ),
-                _AnimatedProductChip(
-                  progress: t,
-                  delay: 0,
-                  label: 'Frutas',
-                  icon: Icons.spa_rounded,
-                  color: const Color(0xFFF2B84B),
-                  begin: const Alignment(-1.02, -0.76),
-                  end: const Alignment(-0.26, -0.08),
-                ),
-                _AnimatedProductChip(
-                  progress: t,
-                  delay: 0.12,
-                  label: 'Leite',
-                  icon: Icons.local_drink_rounded,
-                  color: const Color(0xFF4F9EDB),
-                  begin: const Alignment(1.04, -0.55),
-                  end: const Alignment(0.2, -0.02),
-                ),
-                _AnimatedProductChip(
-                  progress: t,
-                  delay: 0.24,
-                  label: 'Paes',
-                  icon: Icons.bakery_dining_rounded,
-                  color: const Color(0xFFD9A45B),
-                  begin: const Alignment(-1.08, 0.44),
-                  end: const Alignment(-0.08, 0.1),
-                ),
-                _AnimatedProductChip(
-                  progress: t,
-                  delay: 0.34,
-                  label: 'Legumes',
-                  icon: Icons.eco_rounded,
-                  color: const Color(0xFF55A66F),
-                  begin: const Alignment(1.08, 0.34),
-                  end: const Alignment(0.18, 0.08),
-                ),
-                _ShoppingBagMark(progress: t),
-                _ChecklistCard(progress: t),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _AnimatedProductChip extends StatelessWidget {
-  const _AnimatedProductChip({
-    required this.progress,
-    required this.delay,
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.begin,
-    required this.end,
-  });
-
-  final double progress;
-  final double delay;
-  final String label;
-  final IconData icon;
-  final Color color;
-  final Alignment begin;
-  final Alignment end;
-
-  @override
-  Widget build(BuildContext context) {
-    final local = ((progress - delay) / 0.48).clamp(0.0, 1.0);
-    final eased = Curves.easeOutCubic.transform(local);
-    final fadeOut = ((progress - delay - 0.46) / 0.16).clamp(0.0, 1.0);
-    final opacity = sin(local * pi).clamp(0.0, 1.0) * (1 - fadeOut);
-    final alignment = Alignment.lerp(begin, end, eased) ?? end;
-    final scale = 0.84 + (0.16 * sin(local * pi).clamp(0.0, 1.0));
-
-    return Align(
-      alignment: alignment,
-      child: Opacity(
-        opacity: opacity,
-        child: Transform.scale(
-          scale: scale,
-          child: _ProductChip(label: label, icon: icon, color: color),
-        ),
-      ),
-    );
-  }
-}
-
-class _ProductChip extends StatelessWidget {
-  const _ProductChip({
-    required this.label,
-    required this.icon,
-    required this.color,
-  });
-
-  final String label;
-  final IconData icon;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.22)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 17),
-            const SizedBox(width: 7),
-            Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800),
+              ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 }
 
-class _ShoppingBagMark extends StatelessWidget {
-  const _ShoppingBagMark({required this.progress});
-
-  final double progress;
+class _StaticLoadingTrack extends StatelessWidget {
+  const _StaticLoadingTrack({required this.colors});
+  final ColorScheme colors;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final checkProgress = ((progress - 0.54) / 0.2).clamp(0.0, 1.0);
-    return DecoratedBox(
-      key: const ValueKey('splash-shopping-bag'),
-      decoration: BoxDecoration(
-        color: colorScheme.primary,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: SizedBox(
-        width: 124,
-        height: 124,
-        child: Stack(
+    // This segment is a quiet activity cue, never a claimed load percentage.
+    return ExcludeSemantics(
+      child: ColoredBox(
+        color: colors.outlineVariant.withValues(alpha: .35),
+        child: Align(
           alignment: Alignment.center,
-          children: [
-            Icon(
-              Icons.shopping_bag_outlined,
-              color: colorScheme.onPrimary,
-              size: 70,
-            ),
-            Positioned(
-              bottom: 35,
-              child: Opacity(
-                opacity: checkProgress,
-                child: Icon(
-                  Icons.check_rounded,
-                  color: const Color(0xFFFFE08A),
-                  size: 42,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ChecklistCard extends StatelessWidget {
-  const _ChecklistCard({required this.progress});
-
-  final double progress;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final local = ((progress - 0.58) / 0.34).clamp(0.0, 1.0);
-    final eased = Curves.easeOutCubic.transform(local);
-    return Align(
-      alignment: const Alignment(0.72, 0.64),
-      child: Opacity(
-        opacity: eased,
-        child: DecoratedBox(
-          key: const ValueKey('splash-checklist'),
-          decoration: BoxDecoration(
-            color: colorScheme.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: colorScheme.primary.withValues(alpha: 0.14),
-            ),
-          ),
-          child: const SizedBox(
-            width: 112,
-            child: Padding(
-              padding: EdgeInsets.all(13),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _ChecklistRow(widthFactor: 0.9),
-                  SizedBox(height: 9),
-                  _ChecklistRow(widthFactor: 0.7),
-                  SizedBox(height: 9),
-                  _ChecklistRow(widthFactor: 0.82),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ChecklistRow extends StatelessWidget {
-  const _ChecklistRow({required this.widthFactor});
-
-  final double widthFactor;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        Icon(Icons.check_circle_rounded, color: colorScheme.primary, size: 15),
-        const SizedBox(width: 7),
-        Expanded(
           child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: widthFactor,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: colorScheme.primary.withValues(alpha: 0.22),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: const SizedBox(height: 5),
-            ),
+            widthFactor: .28,
+            heightFactor: 1,
+            child: ColoredBox(color: colors.primary),
           ),
         ),
-      ],
-    );
-  }
-}
-
-class _SplashBrandCopy extends StatelessWidget {
-  const _SplashBrandCopy();
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Column(
-      children: [
-        Text(
-          'Minha Lista de Compras',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0,
-            color: colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Organize suas compras de forma simples',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SplashLoadingHint extends StatelessWidget {
-  const _SplashLoadingHint({required this.showReadyHint});
-
-  final bool showReadyHint;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 220),
-      child: showReadyHint
-          ? _SplashStatusRow(
-              key: const ValueKey('splash-ready'),
-              icon: Icons.sync_rounded,
-              iconColor: colorScheme.primary,
-              label: 'Sincronizando compras',
-            )
-          : _SplashStatusRow(
-              key: const ValueKey('splash-loading'),
-              leading: SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.2,
-                  color: colorScheme.primary,
-                ),
-              ),
-              label: 'Abrindo painel',
-            ),
-    );
-  }
-}
-
-class _SplashStatusRow extends StatelessWidget {
-  const _SplashStatusRow({
-    super.key,
-    required this.label,
-    this.icon,
-    this.iconColor,
-    this.leading,
-  });
-
-  final String label;
-  final IconData? icon;
-  final Color? iconColor;
-  final Widget? leading;
-
-  @override
-  Widget build(BuildContext context) {
-    final leadingWidget = leading ?? Icon(icon, color: iconColor, size: 18);
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 320),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          leadingWidget,
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              label,
-              softWrap: true,
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
       ),
     );
   }
 }
 
-class _SplashOrbitPainter extends CustomPainter {
-  const _SplashOrbitPainter({required this.progress, required this.color});
-
-  final double progress;
+class _NotebookLines extends CustomPainter {
+  const _NotebookLines(this.color);
   final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final shortest = min(size.width, size.height);
     final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round
-      ..color = color;
-
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: shortest * 0.38),
-      -pi / 2,
-      pi * 1.35 * progress,
-      false,
-      paint,
-    );
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: shortest * 0.29),
-      pi * 0.18,
-      pi * 1.1 * (1 - progress),
-      false,
-      paint..color = color.withValues(alpha: 0.55),
-    );
+      ..color = color
+      ..strokeWidth = 1;
+    for (var y = 31.0; y < size.height; y += 32) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
   }
 
   @override
-  bool shouldRepaint(covariant _SplashOrbitPainter oldDelegate) {
-    return oldDelegate.progress != progress || oldDelegate.color != color;
-  }
+  bool shouldRepaint(_NotebookLines oldDelegate) => oldDelegate.color != color;
 }
 
 class AppGradientScene extends StatelessWidget {

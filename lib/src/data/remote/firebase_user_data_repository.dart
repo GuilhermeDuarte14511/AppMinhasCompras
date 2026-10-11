@@ -2,6 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
+import '../../application/sync/snapshot_cleanup_policy.dart';
+import '../../application/sync/snapshot_patch.dart';
+import '../../application/sync/sync_task_runner.dart';
 import '../../domain/models_and_utils.dart';
 import '../../domain/pantry.dart';
 
@@ -187,6 +190,7 @@ class FirestoreUserDataSnapshot {
     required this.pantry,
     required this.settings,
     this.profile,
+    this.deletedEntityIds = const {},
   });
 
   final List<ShoppingListModel> lists;
@@ -195,6 +199,7 @@ class FirestoreUserDataSnapshot {
   final List<PantryItem> pantry;
   final FirestoreUserAppSettings settings;
   final FirestoreUserProfile? profile;
+  final Map<String, dynamic> deletedEntityIds;
 
   bool get hasCoreData =>
       lists.isNotEmpty ||
@@ -273,7 +278,7 @@ class FirestoreUserDataRepository {
   Future<FirestoreUserDataSnapshot> loadUserSnapshot(String uid) async {
     return _runWithDatabaseFallback((firestore) async {
       try {
-        return _loadUserSnapshotWithSource(firestore, uid);
+        return await _loadUserSnapshotWithSource(firestore, uid);
       } on FirebaseException catch (error) {
         if (!_isTransientError(error)) {
           rethrow;
@@ -321,6 +326,11 @@ class FirestoreUserDataRepository {
       getOptions == null
           ? _settingsDocRef(firestore, uid).get()
           : _settingsDocRef(firestore, uid).get(getOptions),
+      firestore
+          .collection('users')
+          .doc(uid)
+          .collection('sync_deletions')
+          .get(getOptions ?? const GetOptions(source: Source.serverAndCache)),
     ]);
     final listsSnapshot = responses[0] as QuerySnapshot<Map<String, dynamic>>;
     final historySnapshot = responses[1] as QuerySnapshot<Map<String, dynamic>>;
@@ -328,9 +338,24 @@ class FirestoreUserDataRepository {
     final pantrySnapshot = responses[3] as QuerySnapshot<Map<String, dynamic>>;
     final settingsSnapshot =
         responses[4] as DocumentSnapshot<Map<String, dynamic>>;
+    final deletionSnapshot =
+        responses[5] as QuerySnapshot<Map<String, dynamic>>;
+    final deletedEntityIds = <String, dynamic>{};
+    for (final doc in deletionSnapshot.docs) {
+      final data = doc.data();
+      final key = data['entityType'];
+      final id = data['entityId'];
+      if (snapshotEntityKeys.contains(key) && id is String) {
+        (deletedEntityIds.putIfAbsent(key as String, () => <String>[]) as List)
+            .add(id);
+      }
+    }
+    bool deleted(String key, String id) =>
+        (deletedEntityIds[key] as List? ?? const []).contains(id);
 
     final lists = <ShoppingListModel>[];
     for (final doc in listsSnapshot.docs) {
+      if (deleted('lists', doc.id)) continue;
       final data = doc.data();
       data.putIfAbsent('id', () => doc.id);
       lists.add(ShoppingListModel.fromJson(data));
@@ -338,6 +363,7 @@ class FirestoreUserDataRepository {
 
     final history = <CompletedPurchase>[];
     for (final doc in historySnapshot.docs) {
+      if (deleted('purchaseHistory', doc.id)) continue;
       final data = doc.data();
       data.putIfAbsent('id', () => doc.id);
       history.add(CompletedPurchase.fromJson(data));
@@ -345,6 +371,7 @@ class FirestoreUserDataRepository {
 
     final catalog = <CatalogProduct>[];
     for (final doc in catalogSnapshot.docs) {
+      if (deleted('catalog', doc.id)) continue;
       final data = doc.data();
       data.putIfAbsent('id', () => doc.id);
       catalog.add(CatalogProduct.fromJson(data));
@@ -352,6 +379,7 @@ class FirestoreUserDataRepository {
 
     final pantry = <PantryItem>[];
     for (final doc in pantrySnapshot.docs) {
+      if (deleted('pantry', doc.id)) continue;
       final data = doc.data();
       data.putIfAbsent('id', () => doc.id);
       final item = PantryItem.fromJson(data);
@@ -380,7 +408,94 @@ class FirestoreUserDataRepository {
       pantry: List.unmodifiable(pantry),
       settings: settings,
       profile: profile,
+      deletedEntityIds: deletedEntityIds,
     );
+  }
+
+  /// Sends explicit durable mutations, never deletes an unknown remote record.
+  /// A deletion marker prevents stale devices from resurrecting the same ID.
+  Future<void> applyUserPatch({
+    required String uid,
+    required Map<String, dynamic> patch,
+    FirestoreUserProfile? profile,
+  }) async {
+    final collectionNames = {
+      'lists': 'lists',
+      'purchaseHistory': 'history',
+      'catalog': 'catalog',
+      'pantry': 'pantry',
+    };
+    final user = _firestore.collection('users').doc(uid);
+    for (final key in snapshotEntityKeys) {
+      final changes = patch[key];
+      if (changes is! Map) continue;
+      final collection = user.collection(collectionNames[key]!);
+      final deletions = changes['deletedIds'];
+      debugPrint(
+        '[CloudSync][patch] $key: deletions=${deletions is List ? deletions.length : 0}, upserts=${changes['upserts'] is List ? (changes['upserts'] as List).length : 0}',
+      );
+      if (deletions is List) {
+        final ids = deletions.whereType<String>().toSet().toList();
+        // Each deletion uses two writes; 200 records stay below 500 writes.
+        // No reads are needed: the marker and deletion commit atomically.
+        for (var start = 0; start < ids.length; start += 200) {
+          final batch = _firestore.batch();
+          for (final id in ids.skip(start).take(200)) {
+            batch.set(user.collection('sync_deletions').doc('${key}_$id'), {
+              'entityType': key,
+              'entityId': id,
+              'deletedAt': FieldValue.serverTimestamp(),
+            });
+            batch.delete(collection.doc(id));
+          }
+          await runSyncTasks([batch.commit]);
+          debugPrint('[CloudSync][patch] $key deletion group complete');
+        }
+      }
+      final upserts = changes['upserts'];
+      if (upserts is List) {
+        await runSyncTasks(
+          upserts.whereType<Map>().map(
+            (entry) => () async {
+              final data = Map<String, dynamic>.from(entry);
+              final id = data['id'] as String;
+              await _firestore.runTransaction(
+                (transaction) async {
+                  final tombstone = await transaction.get(
+                    user.collection('sync_deletions').doc('${key}_$id'),
+                  );
+                  if (tombstone.exists) return;
+                  final remote = await transaction.get(collection.doc(id));
+                  final remoteDate = DateTime.tryParse(
+                    '${remote.data()?['updatedAt']}',
+                  );
+                  final incomingDate = DateTime.tryParse(
+                    '${data['updatedAt']}',
+                  );
+                  if (remoteDate != null &&
+                      incomingDate != null &&
+                      remoteDate.isAfter(incomingDate)) {
+                    return;
+                  }
+                  transaction.set(collection.doc(id), data);
+                },
+                timeout: const Duration(seconds: 15),
+                maxAttempts: 3,
+              );
+            },
+          ),
+        );
+        debugPrint('[CloudSync][patch] $key upserts complete');
+      }
+    }
+    final settings = patch['settings'];
+    if (settings is Map) {
+      await _settingsDocRef(_firestore, uid).set({
+        ...Map<String, dynamic>.from(settings),
+        'updatedAt': DateTime.now().toIso8601String(),
+      }, SetOptions(merge: true));
+    }
+    if (profile != null) await saveUserProfile(profile: profile);
   }
 
   Future<void> saveUserSnapshot({
@@ -398,37 +513,21 @@ class FirestoreUserDataRepository {
       final catalogCollection = _catalogRef(firestore, uid);
       final pantryCollection = _pantryRef(firestore, uid);
 
-      QuerySnapshot<Map<String, dynamic>>? remoteLists;
-      QuerySnapshot<Map<String, dynamic>>? remoteHistory;
-      QuerySnapshot<Map<String, dynamic>>? remoteCatalog;
-      QuerySnapshot<Map<String, dynamic>>? remotePantry;
-      try {
-        // A primeira chamada é sequencial para garantir que o delegate interno
-        // do Firestore Web seja inicializado antes das chamadas paralelas.
-        // Fazer todas simultâneas com Future.wait causa LateInitializationError.
-        remoteLists = await listsCollection.get();
-        final remoteResponses = await Future.wait<dynamic>([
-          historyCollection.get(),
-          catalogCollection.get(),
-          pantryCollection.get(),
-        ]);
-        remoteHistory =
-            remoteResponses[0] as QuerySnapshot<Map<String, dynamic>>;
-        remoteCatalog =
-            remoteResponses[1] as QuerySnapshot<Map<String, dynamic>>;
-        remotePantry =
-            remoteResponses[2] as QuerySnapshot<Map<String, dynamic>>;
-      } on FirebaseException catch (error) {
-        if (!_isTransientError(error)) {
-          rethrow;
-        }
-        // Backend temporarily unavailable. Continue with upserts so local cache can
-        // queue writes and sync later. Cleanup deletes run again when reads recover.
-        remoteLists = null;
-        remoteHistory = null;
-        remoteCatalog = null;
-        remotePantry = null;
-      }
+      // The first read stays sequential because the Firestore Web delegate can
+      // still be initializing. A failed read must abort this push: without a
+      // complete remote snapshot, acknowledging the outbox would lose deletes.
+      final remoteLists = await listsCollection.get();
+      final remoteResponses = await Future.wait<dynamic>([
+        historyCollection.get(),
+        catalogCollection.get(),
+        pantryCollection.get(),
+      ]);
+      final remoteHistory =
+          remoteResponses[0] as QuerySnapshot<Map<String, dynamic>>;
+      final remoteCatalog =
+          remoteResponses[1] as QuerySnapshot<Map<String, dynamic>>;
+      final remotePantry =
+          remoteResponses[2] as QuerySnapshot<Map<String, dynamic>>;
 
       final localListIds = lists.map((entry) => entry.id).toSet();
       final localHistoryIds = history.map((entry) => entry.id).toSet();
@@ -436,11 +535,13 @@ class FirestoreUserDataRepository {
       final localPantryIds = pantry.map((entry) => entry.id).toSet();
       final operations = <void Function(WriteBatch batch)>[];
 
-      if (remoteLists != null) {
-        for (final doc in remoteLists.docs) {
-          if (!localListIds.contains(doc.id)) {
-            operations.add((batch) => batch.delete(doc.reference));
-          }
+      final deletedListIds = planSnapshotDeletes(
+        localIds: localListIds,
+        remoteIds: remoteLists.docs.map((doc) => doc.id).toSet(),
+      );
+      for (final doc in remoteLists.docs) {
+        if (deletedListIds.contains(doc.id)) {
+          operations.add((batch) => batch.delete(doc.reference));
         }
       }
       for (final entry in lists) {
@@ -449,11 +550,13 @@ class FirestoreUserDataRepository {
         );
       }
 
-      if (remoteHistory != null) {
-        for (final doc in remoteHistory.docs) {
-          if (!localHistoryIds.contains(doc.id)) {
-            operations.add((batch) => batch.delete(doc.reference));
-          }
+      final deletedHistoryIds = planSnapshotDeletes(
+        localIds: localHistoryIds,
+        remoteIds: remoteHistory.docs.map((doc) => doc.id).toSet(),
+      );
+      for (final doc in remoteHistory.docs) {
+        if (deletedHistoryIds.contains(doc.id)) {
+          operations.add((batch) => batch.delete(doc.reference));
         }
       }
       for (final entry in history) {
@@ -462,11 +565,13 @@ class FirestoreUserDataRepository {
         );
       }
 
-      if (remoteCatalog != null) {
-        for (final doc in remoteCatalog.docs) {
-          if (!localCatalogIds.contains(doc.id)) {
-            operations.add((batch) => batch.delete(doc.reference));
-          }
+      final deletedCatalogIds = planSnapshotDeletes(
+        localIds: localCatalogIds,
+        remoteIds: remoteCatalog.docs.map((doc) => doc.id).toSet(),
+      );
+      for (final doc in remoteCatalog.docs) {
+        if (deletedCatalogIds.contains(doc.id)) {
+          operations.add((batch) => batch.delete(doc.reference));
         }
       }
       for (final entry in catalog) {
@@ -475,11 +580,13 @@ class FirestoreUserDataRepository {
         );
       }
 
-      if (remotePantry != null) {
-        for (final doc in remotePantry.docs) {
-          if (!localPantryIds.contains(doc.id)) {
-            operations.add((batch) => batch.delete(doc.reference));
-          }
+      final deletedPantryIds = planSnapshotDeletes(
+        localIds: localPantryIds,
+        remoteIds: remotePantry.docs.map((doc) => doc.id).toSet(),
+      );
+      for (final doc in remotePantry.docs) {
+        if (deletedPantryIds.contains(doc.id)) {
+          operations.add((batch) => batch.delete(doc.reference));
         }
       }
       for (final entry in pantry) {

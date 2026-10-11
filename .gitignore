@@ -32,6 +32,7 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+/test/presentation/failures/
 .firebase/
 .superpowers/
 .worktrees

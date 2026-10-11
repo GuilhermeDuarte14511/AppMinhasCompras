@@ -32,14 +32,9 @@ class EditorItemCardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final secondaryColor = item.isPurchased
-        ? colorScheme.onSurfaceVariant.withValues(alpha: 0.78)
-        : colorScheme.onSurfaceVariant;
-
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Semantics(
           label: item.isPurchased
@@ -54,23 +49,14 @@ class EditorItemCardHeader extends StatelessWidget {
                   },
           ),
         ),
-        const SizedBox(width: 2),
         Expanded(
           child: Semantics(
             button: true,
             expanded: expanded,
-            label: item.name,
-            value:
-                '${item.isPurchased ? 'Comprado' : 'Pendente'}, '
-                '${item.category.label}, ${item.quantity} unidades, '
-                '${formatCurrency(item.subtotal)}',
+            onTap: onToggleExpanded,
             hint: expanded
                 ? 'Recolher detalhes'
-                : readOnly
-                ? 'Ver detalhes'
                 : 'Ajustar quantidade e ver detalhes',
-            onTap: onToggleExpanded,
-            excludeSemantics: true,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -78,80 +64,54 @@ class EditorItemCardHeader extends StatelessWidget {
                   item.name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: textTheme.titleSmall?.copyWith(
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
                     color: item.isPurchased
-                        ? colorScheme.onSurfaceVariant
-                        : colorScheme.onSurface,
-                    fontWeight: FontWeight.w800,
+                        ? colors.onSurfaceVariant
+                        : colors.onSurface,
                     decoration: item.isPurchased
                         ? TextDecoration.lineThrough
                         : null,
-                    decorationThickness: 1.4,
                   ),
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '${item.category.label} • ${item.quantity} × ${formatCurrency(item.unitPrice)}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: secondaryColor,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  '${item.quantity} × ${formatCurrency(item.unitPrice)}',
+                  style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
                 ),
               ],
             ),
           ),
         ),
         const SizedBox(width: 8),
-        ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 70, maxWidth: 86),
+        SizedBox(
+          width: 74,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              ExcludeSemantics(
-                child: SizedBox(
-                  width: 86,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      formatCurrency(item.subtotal),
-                      maxLines: 1,
-                      softWrap: false,
-                      style: textTheme.titleSmall?.copyWith(
-                        color: item.isPurchased
-                            ? colorScheme.onSurfaceVariant
-                            : colorScheme.primary,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  formatCurrency(item.subtotal),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ExcludeSemantics(
-                    child: AnimatedRotation(
-                      turns: expanded ? 0.5 : 0,
-                      duration: motionDuration,
-                      child: Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        size: 20,
-                        color: secondaryColor,
-                      ),
-                    ),
-                  ),
-                  _ItemActionsMenu(
-                    readOnly: readOnly,
-                    onSelected: _handleAction,
-                  ),
-                ],
+              Text(
+                item.category.label.toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontSize: 9,
+                  letterSpacing: .3,
+                ),
               ),
             ],
           ),
         ),
+        _ItemActionsMenu(readOnly: readOnly, onSelected: _handleAction),
       ],
     );
   }

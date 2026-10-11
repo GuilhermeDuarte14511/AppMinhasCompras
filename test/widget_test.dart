@@ -3,9 +3,32 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lista_compras_material/src/app/shopping_list_app.dart';
 import 'package:lista_compras_material/src/application/ports.dart';
 import 'package:lista_compras_material/src/domain/classifications.dart';
+import 'package:lista_compras_material/src/presentation/shopping_list_editor/widgets/editor_item_card.dart';
+import 'package:lista_compras_material/src/presentation/dialogs/widgets/item_editor_category_picker.dart';
 import 'package:lista_compras_material/src/domain/models_and_utils.dart';
 
 void main() {
+  testWidgets('Dashboard continues an existing list in market mode', (
+    tester,
+  ) async {
+    await _pumpApp(tester);
+    await _createListFromDashboard(tester, 'Compra em andamento');
+    await _addItem(
+      tester,
+      name: 'Arroz',
+      quantity: '1',
+      unitValueDigits: '1000',
+    );
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Continuar compra'));
+    await tester.tap(find.text('Continuar compra'));
+    await tester.pumpAndSettle();
+    expect(find.text('Modo compra'), findsOneWidget);
+    expect(find.text('Arroz'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Initial menu renders expected options', (
     WidgetTester tester,
   ) async {
@@ -108,11 +131,14 @@ void main() {
       ]),
     );
 
+    await tester.ensureVisible(
+      find.widgetWithText(FilledButton, 'Criar lista').first,
+    );
     await tester.tap(find.widgetWithText(FilledButton, 'Criar lista').first);
     await tester.pumpAndSettle();
 
     expect(find.text('Reposição inteligente'), findsWidgets);
-    await tester.tap(find.widgetWithText(FilledButton, 'Criar lista').last);
+    await tester.tap(find.widgetWithText(FilledButton, 'Criar lista (1)'));
     await tester.pumpAndSettle();
 
     expect(find.text('Nova lista por reposição inteligente'), findsOneWidget);
@@ -126,7 +152,7 @@ void main() {
     expect(find.text('Lista recorrente teste'), findsOneWidget);
     expect(find.text('Arroz'), findsOneWidget);
 
-    await tester.tap(find.byType(FloatingActionButton));
+    await tester.tap(find.byKey(const ValueKey('editor_add_item')));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(TextFormField, 'Item'), findsOneWidget);
   });
@@ -186,7 +212,7 @@ void main() {
     );
     expect(find.text('Arroz'), findsOneWidget);
 
-    await tester.tap(find.byType(FloatingActionButton));
+    await tester.tap(find.byKey(const ValueKey('editor_add_item')));
     await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'Arroz');
     await tester.enterText(
@@ -220,6 +246,8 @@ void main() {
       find.widgetWithText(TextFormField, 'Valor unitário'),
       '1000',
     );
+    await tester.ensureVisible(find.text('Já peguei este item'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Já peguei este item'));
     await tester.pumpAndSettle();
     await _tapVisibleButton<FilledButton>(tester, 'Adicionar item');
@@ -237,7 +265,7 @@ void main() {
     expect(find.text('Arroz'), findsOneWidget);
     final purchasedCard = find.ancestor(
       of: find.text('Arroz'),
-      matching: find.byType(Card),
+      matching: find.byType(EditorShoppingItemCard),
     );
     final purchasedCheckbox = find.descendant(
       of: purchasedCard,
@@ -272,8 +300,6 @@ void main() {
       unitValueDigits: '800',
     );
 
-    await tester.tap(find.byTooltip('Expandir busca e filtros'));
-    await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).first, 'arr');
     await tester.pumpAndSettle();
 
@@ -402,6 +428,8 @@ void main() {
     await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'lei');
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('Leite Integral'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Leite Integral'));
     await tester.pumpAndSettle();
     await tester.enterText(
@@ -455,13 +483,13 @@ void main() {
     expect(find.text('Detalhes do produto'), findsOneWidget);
     expect(find.text('Arroz Integral'), findsWidgets);
     expect(_textContains('6% maior'), findsOneWidget);
-    expect(find.text('Assistente de preço'), findsOneWidget);
+    expect(find.text('ANÁLISE LOCAL DE PREÇO'), findsOneWidget);
     expect(find.text('Maior preço registrado'), findsOneWidget);
     expect(
       find.text('Está 31% acima da média. Vale conferir antes de comprar.'),
       findsOneWidget,
     );
-    expect(find.text('Histórico de preços'), findsOneWidget);
+    expect(find.text('Histórico de preço'), findsOneWidget);
     expect(find.text('Últimos 6 meses com preço'), findsOneWidget);
     expect(
       find.text('Um ponto por mês: sempre o último preço salvo.'),
@@ -645,10 +673,10 @@ void main() {
     );
     expect(
       tester
-          .widget<DropdownButtonFormField<ShoppingCategory>>(
-            find.byType(DropdownButtonFormField<ShoppingCategory>),
+          .widget<ItemEditorCategoryPicker>(
+            find.byType(ItemEditorCategoryPicker),
           )
-          .initialValue,
+          .value,
       ShoppingCategory.cleaning,
     );
   });
@@ -980,6 +1008,8 @@ void main() {
 
     await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'lei');
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Leite Integral'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Leite Integral'));
     await tester.pumpAndSettle();
 
@@ -1071,6 +1101,8 @@ void main() {
 
     await tester.enterText(find.widgetWithText(TextFormField, 'Item'), 'lei');
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Leite Integral'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Leite Integral'));
     await tester.pumpAndSettle();
     await _tapVisibleButton<FilledButton>(tester, 'Adicionar item');
@@ -1081,6 +1113,8 @@ void main() {
     await tester.tap(find.text('Banana Prata'));
     await tester.pumpAndSettle();
     expect(find.text('7890000001111'), findsOneWidget);
+    await tester.ensureVisible(find.text('Leite Integral'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Leite Integral'));
     await tester.pumpAndSettle();
     expect(find.text('7890000001111'), findsNothing);
@@ -1171,7 +1205,7 @@ void main() {
     expect(find.text('Cebola'), findsOneWidget);
   });
 
-  testWidgets('Delete multiple lists from My Lists', (
+  testWidgets('Delete multiple lists and undo from My Lists', (
     WidgetTester tester,
   ) async {
     await _pumpApp(tester);
@@ -1219,6 +1253,54 @@ void main() {
       find.widgetWithText(FilledButton, 'Criar primeira lista'),
       findsOneWidget,
     );
+    expect(find.text('Desfazer'), findsOneWidget);
+
+    await tester.tap(find.text('Desfazer'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lista A'), findsOneWidget);
+    expect(find.text('Lista B'), findsOneWidget);
+  });
+
+  testWidgets('Trash shows a deleted list and restores it', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(tester);
+    await _createListFromDashboard(tester, 'Lista recuperável');
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('dash_action_lists')));
+    await tester.pumpAndSettle();
+    final menuRounded = find.byIcon(Icons.more_vert_rounded);
+    final menuDefault = find.byIcon(Icons.more_vert);
+    await tester.tap(
+      menuRounded.evaluate().isNotEmpty ? menuRounded.first : menuDefault.first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(_textContains('Selecionar v').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Lista recuperável'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Excluir selecionadas'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Excluir'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('my_lists_trash')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lixeira'), findsOneWidget);
+    expect(find.text('Lista recuperável'), findsOneWidget);
+    expect(find.text('Restaurar'), findsOneWidget);
+
+    await tester.tap(find.text('Restaurar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('A lixeira está vazia'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Lista recuperável'), findsOneWidget);
   });
 
   testWidgets('Finalize purchase stores entry in monthly history', (
@@ -1240,7 +1322,11 @@ void main() {
     expect(_textContains('item comprado oculto'), findsOneWidget);
 
     await _openListEditorMenuAction(tester, 'Fechar compra');
-    await tester.tap(find.widgetWithText(FilledButton, 'Fechar compra'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Confirmar fechamento'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Compra concluída'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Concluir'));
     await tester.pumpAndSettle();
 
     expect(find.text('Minhas Compras'), findsOneWidget);
@@ -1365,7 +1451,11 @@ Future<void> _tapItemActionIcon(
   required IconData icon,
 }) async {
   final itemText = find.text(itemName).first;
-  final card = find.ancestor(of: itemText, matching: find.byType(Card)).first;
+  await tester.ensureVisible(itemText);
+  await tester.pumpAndSettle();
+  final card = find
+      .ancestor(of: itemText, matching: find.byType(EditorShoppingItemCard))
+      .first;
   final directAction = find.descendant(of: card, matching: find.byIcon(icon));
 
   if (directAction.evaluate().isNotEmpty) {

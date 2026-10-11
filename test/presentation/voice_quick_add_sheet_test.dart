@@ -47,7 +47,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Revise os produtos'), findsOneWidget);
-    expect(find.text('Detergente Minuano 500 ml'), findsOneWidget);
+    expect(find.text('Detergente Minuano 500 ml'), findsWidgets);
+    expect(find.text('Correspondência no catálogo'), findsOneWidget);
     expect(find.textContaining('2 un.'), findsOneWidget);
     expect(find.textContaining('4,99'), findsOneWidget);
     expect(find.text('Match seguro'), findsOneWidget);
@@ -62,6 +63,58 @@ void main() {
     expect(submitted!.single.unitPrice, 4.99);
     expect(submitted!.single.barcode, '7891234567895');
   });
+
+  testWidgets(
+    'penne suggestion stays available after selection and keeps units',
+    (tester) async {
+      List<ShoppingItemDraft>? submitted;
+      final penne = CatalogProduct(
+        id: 'penne',
+        name: 'Penne Barilla 500g',
+        category: ShoppingCategory.grainsAndPasta,
+        unitPrice: 12,
+        updatedAt: DateTime(2026, 10, 11),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => FilledButton(
+                onPressed: () async {
+                  submitted = await showVoiceQuickAddSheet(
+                    context,
+                    voiceRecognitionService: _FakeVoiceRecognitionService(),
+                    catalogProducts: [penne],
+                    currentItems: const [],
+                    initialTranscript: 'macarrão PENNE duas unidades',
+                    autoStart: false,
+                  );
+                },
+                child: const Text('Abrir voz'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Abrir voz'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Analisar itens'));
+      await tester.pumpAndSettle();
+      expect(find.text('Escolha necessária'), findsOneWidget);
+      await tester.tap(find.byType(DropdownButtonFormField<CatalogProduct>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(penne.name).last);
+      await tester.pumpAndSettle();
+      expect(find.text('Correspondência no catálogo'), findsOneWidget);
+      expect(find.text('Catálogo confirmado'), findsOneWidget);
+      expect(find.textContaining('2 un.'), findsOneWidget);
+      await tester.tap(find.text('Adicionar 1 produto'));
+      await tester.pumpAndSettle();
+      expect(submitted!.single.name, penne.name);
+      expect(submitted!.single.quantity, 2);
+      expect(submitted!.single.unitPrice, 12);
+    },
+  );
 
   testWidgets('blocks submission of a new product without a price', (
     tester,

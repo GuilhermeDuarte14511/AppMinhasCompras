@@ -1,0 +1,4 @@
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android" android:drawable="@drawable/splash_notebook">
+    <target android:name="notebook" android:animation="@animator/splash_open" />
+    <target android:name="checks" android:animation="@animator/splash_checks" />
+</animated-vector>

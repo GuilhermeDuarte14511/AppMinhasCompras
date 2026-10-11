@@ -4,24 +4,39 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../application/finance_integration.dart';
+import '../application/market_shopping_session.dart';
 import '../core/utils/format_utils.dart';
 import '../domain/classifications.dart';
 import '../domain/models_and_utils.dart';
-import 'launch.dart';
+import 'theme/editorial_workspace_theme.dart';
+import 'dialogs_and_sheets.dart';
+import 'dialogs/sheets/item_unit_price_sheet.dart';
+import 'shopping_list_editor/widgets/market_payment_preview.dart';
+import 'market_mode/market_editorial_widgets.dart';
 import 'theme/app_tokens.dart';
 import 'utils/app_toast.dart';
 
 class ShoppingMarketModePage extends StatefulWidget {
-  const ShoppingMarketModePage({super.key, required this.initialList});
+  const ShoppingMarketModePage({
+    super.key,
+    required this.initialList,
+    required this.onSave,
+    this.financeRepository,
+  });
 
   final ShoppingListModel initialList;
+  final Future<void> Function(ShoppingListModel) onSave;
+  final FinanceIntegrationRepository? financeRepository;
 
   @override
   State<ShoppingMarketModePage> createState() => _ShoppingMarketModePageState();
 }
 
 class _ShoppingMarketModePageState extends State<ShoppingMarketModePage> {
-  late ShoppingListModel _list;
+  late final MarketShoppingSession _session;
+  ShoppingListModel get _list => _session.list;
+  bool _leaving = false;
   late final TextEditingController _searchController;
   bool _showOnlyPending = true;
 
@@ -71,7 +86,10 @@ class _ShoppingMarketModePageState extends State<ShoppingMarketModePage> {
   @override
   void initState() {
     super.initState();
-    _list = widget.initialList.deepCopy();
+    _session = MarketShoppingSession(
+      initialList: widget.initialList,
+      onSave: widget.onSave,
+    )..addListener(_onSessionChanged);
     _searchController = TextEditingController()
       ..addListener(() {
         if (mounted) {
@@ -82,8 +100,14 @@ class _ShoppingMarketModePageState extends State<ShoppingMarketModePage> {
 
   @override
   void dispose() {
+    _session.removeListener(_onSessionChanged);
+    _session.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSessionChanged() {
+    if (mounted) setState(() {});
   }
 
   void _togglePurchased(ShoppingItem item, bool isPurchased) {
@@ -91,11 +115,7 @@ class _ShoppingMarketModePageState extends State<ShoppingMarketModePage> {
     if (index == -1) {
       return;
     }
-    final updatedItems = [..._list.items];
-    updatedItems[index] = item.copyWith(isPurchased: isPurchased);
-    setState(() {
-      _list = _list.copyWith(items: updatedItems);
-    });
+    _session.updateItem(item.copyWith(isPurchased: isPurchased));
     HapticFeedback.selectionClick();
     AppToast.show(
       context,
@@ -110,380 +130,400 @@ class _ShoppingMarketModePageState extends State<ShoppingMarketModePage> {
     if (index == -1) {
       return;
     }
-    final updatedItems = [..._list.items];
     final nextQuantity = max(1, item.quantity + delta);
-    updatedItems[index] = item.copyWith(quantity: nextQuantity);
-    setState(() {
-      _list = _list.copyWith(items: updatedItems);
-    });
+    _session.updateItem(item.copyWith(quantity: nextQuantity));
   }
 
-  void _finishAndReturn() {
+  Future<void> _editPrice(ShoppingItem item) async {
+    final price = await showItemUnitPriceSheet(
+      context,
+      name: item.name,
+      unitPrice: item.unitPrice,
+    );
+    if (!mounted || price == null) return;
+    final current = _list.items
+        .where((entry) => entry.id == item.id)
+        .firstOrNull;
+    if (current != null) {
+      _session.updateItem(current.copyWith(unitPrice: price));
+    }
+  }
+
+  Future<void> _editBalances() async {
+    final result = await showPaymentBalancesEditorDialog(
+      context,
+      initialValues: _list.paymentBalances,
+      financeRepository: widget.financeRepository,
+    );
+    if (!mounted || result == null) return;
+    _session.updateBalances(result.clear ? [] : result.value ?? []);
+  }
+
+  Future<void> _finishAndReturn() async {
+    if (_leaving) return;
+    setState(() => _leaving = true);
+    final saved = await _session.flush();
+    if (!mounted) return;
+    if (!saved) {
+      setState(() => _leaving = false);
+      return;
+    }
     HapticFeedback.mediumImpact();
-    Navigator.pop(context, _list.copyWith(updatedAt: DateTime.now()));
+    Navigator.pop(context, _list);
   }
 
   @override
   Widget build(BuildContext context) {
     final visibleItems = _visibleItems;
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) {
-          return;
-        }
-        _finishAndReturn();
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            onPressed: _finishAndReturn,
-            icon: const Icon(Icons.arrow_back_rounded),
-          ),
-          title: const Text('Modo compra'),
-          actions: [
-            IconButton(
-              tooltip: _showOnlyPending
-                  ? 'Mostrar todos os itens'
-                  : 'Mostrar apenas pendentes',
-              onPressed: () {
-                HapticFeedback.selectionClick();
-                setState(() {
-                  _showOnlyPending = !_showOnlyPending;
-                });
-              },
-              icon: Icon(
-                _showOnlyPending
-                    ? Icons.visibility_rounded
-                    : Icons.visibility_off_rounded,
+    return Theme(
+      data: editorialWorkspaceTheme(Theme.of(context)),
+      child: Builder(
+        builder: (context) => PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop) {
+              return;
+            }
+            _finishAndReturn();
+          },
+          child: Scaffold(
+            appBar: AppBar(
+              leading: IconButton(
+                tooltip: 'Voltar',
+                onPressed: _leaving ? null : _finishAndReturn,
+                icon: const Icon(Icons.arrow_back_rounded),
               ),
-            ),
-            TextButton.icon(
-              onPressed: _finishAndReturn,
-              icon: const Icon(Icons.check_circle_rounded),
-              label: const Text('Concluir'),
-            ),
-          ],
-        ),
-        body: AppGradientScene(
-          child: SafeArea(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
-                  child: _MarketModeSummaryCard(
-                    completion: _completion,
-                    pendingProductsCount: _pendingProductsCount,
-                    purchasedProductsCount: _purchasedProductsCount,
-                    pendingUnits: _pendingUnits,
-                    pendingValue: _pendingValue,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  child: _MarketModeContentPanel(
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Buscar item na compra',
-                        prefixIcon: const Icon(Icons.search_rounded),
-                        suffixIcon: _searchController.text.isEmpty
-                            ? null
-                            : IconButton(
-                                onPressed: _searchController.clear,
-                                icon: const Icon(Icons.close_rounded),
-                              ),
-                        filled: true,
-                      ),
-                    ),
-                  ),
-                ),
-                if (_showOnlyPending && _purchasedProductsCount > 0)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                    child: _MarketModeInlineInfoBanner(
-                      icon: Icons.visibility_outlined,
-                      message: _purchasedProductsCount == 1
-                          ? '1 item pego está oculto para facilitar a compra.'
-                          : '$_purchasedProductsCount itens pegos estão ocultos para facilitar a compra.',
-                      actionLabel: 'Mostrar',
-                      onAction: () {
-                        HapticFeedback.selectionClick();
-                        setState(() {
-                          _showOnlyPending = false;
-                        });
-                      },
-                    ),
-                  ),
-                Expanded(
-                  child: visibleItems.isEmpty
-                      ? _EmptyMarketModeState(
-                          showOnlyPending: _showOnlyPending,
-                          hasQuery: _searchQuery.isNotEmpty,
-                          onShowAllPressed: () {
-                            HapticFeedback.selectionClick();
-                            setState(() {
-                              _showOnlyPending = false;
-                            });
-                          },
-                          onClearSearch: _searchController.clear,
-                        )
-                      : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-                          itemCount: visibleItems.length,
-                          separatorBuilder: (context, index) =>
-                              const SizedBox(height: 6),
-                          itemBuilder: (context, index) {
-                            final item = visibleItems[index];
-                            return _MarketModeEntryAnimation(
-                              key: ValueKey('market_entry_${item.id}'),
-                              delay: Duration(
-                                milliseconds: min(140, index * 20),
-                              ),
-                              child: Dismissible(
-                                key: ValueKey('market_${item.id}'),
-                                direction: DismissDirection.horizontal,
-                                confirmDismiss: (_) async {
-                                  _togglePurchased(item, !item.isPurchased);
-                                  return false;
-                                },
-                                background: _MarketModeSwipeBackground(
-                                  icon: item.isPurchased
-                                      ? Icons.undo_rounded
-                                      : Icons.check_rounded,
-                                  label: item.isPurchased
-                                      ? 'Marcar pendente'
-                                      : 'Marcar como pego',
-                                  alignRight: false,
-                                ),
-                                secondaryBackground: _MarketModeSwipeBackground(
-                                  icon: item.isPurchased
-                                      ? Icons.undo_rounded
-                                      : Icons.check_rounded,
-                                  label: item.isPurchased
-                                      ? 'Marcar pendente'
-                                      : 'Marcar como pego',
-                                  alignRight: true,
-                                ),
-                                child: _MarketModeItemCard(
-                                  item: item,
-                                  onTogglePurchased: () =>
-                                      _togglePurchased(item, !item.isPurchased),
-                                  onIncrement: () => _changeQuantity(item, 1),
-                                  onDecrement: () => _changeQuantity(item, -1),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MarketModeSummaryCard extends StatelessWidget {
-  const _MarketModeSummaryCard({
-    required this.completion,
-    required this.pendingProductsCount,
-    required this.purchasedProductsCount,
-    required this.pendingUnits,
-    required this.pendingValue,
-  });
-
-  final double completion;
-  final int pendingProductsCount;
-  final int purchasedProductsCount;
-  final int pendingUnits;
-  final double pendingValue;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final percent = (completion * 100).clamp(0, 100).round();
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppTokens.radiusXl),
-        color: colorScheme.surface,
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.56),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    pendingProductsCount == 0
-                        ? 'Compra concluída'
-                        : pendingProductsCount == 1
-                        ? 'Falta 1 item'
-                        : 'Faltam $pendingProductsCount itens',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                Text(
-                  '$percent%',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: colorScheme.primary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 7),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: LinearProgressIndicator(
-                minHeight: 8,
-                value: completion,
-                backgroundColor: colorScheme.surfaceContainerHighest,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _MarketModePillLabel(
-                  icon: Icons.pending_actions_rounded,
-                  text: '$pendingProductsCount pendentes',
-                ),
-                _MarketModePillLabel(
-                  icon: Icons.check_circle_rounded,
-                  text: '$purchasedProductsCount pegos',
-                ),
-                _MarketModePillLabel(
-                  icon: Icons.confirmation_number_rounded,
-                  text: '$pendingUnits unidades',
-                ),
-                _MarketModePillLabel(
-                  icon: Icons.payments_rounded,
-                  text: 'Falta ${formatCurrency(pendingValue)}',
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MarketModeItemCard extends StatelessWidget {
-  const _MarketModeItemCard({
-    required this.item,
-    required this.onTogglePurchased,
-    required this.onIncrement,
-    required this.onDecrement,
-  });
-
-  final ShoppingItem item;
-  final VoidCallback onTogglePurchased;
-  final VoidCallback onIncrement;
-  final VoidCallback onDecrement;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Semantics(
-      container: true,
-      button: true,
-      label: item.name,
-      value: item.isPurchased ? 'Pego' : 'Pendente',
-      hint: 'Toque para alternar o status do item.',
-      child: _MarketModeContentPanel(
-        padding: EdgeInsets.zero,
-        child: AnimatedOpacity(
-          duration: _marketModeAdaptiveMotionDuration(
-            context,
-            const Duration(milliseconds: 180),
-          ),
-          opacity: item.isPurchased ? 0.58 : 1,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-            onTap: onTogglePurchased,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-              child: Row(
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  IconButton.filledTonal(
-                    tooltip: item.isPurchased
-                        ? 'Marcar como pendente'
-                        : 'Marcar como pego',
-                    onPressed: onTogglePurchased,
-                    icon: Icon(
-                      item.isPurchased
-                          ? Icons.check_circle_rounded
-                          : Icons.radio_button_unchecked_rounded,
-                    ),
+                  const Text(
+                    'Modo compra',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                decoration: item.isPurchased
-                                    ? TextDecoration.lineThrough
-                                    : null,
+                  Text(
+                    _list.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(fontSize: 11),
+                  ),
+                ],
+              ),
+              actions: [
+                IconButton(
+                  tooltip: _showOnlyPending
+                      ? 'Mostrar todos os itens'
+                      : 'Mostrar apenas pendentes',
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    setState(() {
+                      _showOnlyPending = !_showOnlyPending;
+                    });
+                  },
+                  icon: Icon(
+                    _showOnlyPending
+                        ? Icons.visibility_rounded
+                        : Icons.visibility_off_rounded,
+                  ),
+                ),
+              ],
+            ),
+            body: AbsorbPointer(
+              absorbing: _leaving,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: SafeArea(
+                    child: CustomScrollView(
+                      key: const Key('market_scroll'),
+                      slivers: [
+                        ...<Widget>[
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+                            child: MarketEditorialSummary(
+                              list: _list,
+                              completion: _completion,
+                              pendingProductsCount: _pendingProductsCount,
+                              purchasedProductsCount: _purchasedProductsCount,
+                              pendingUnits: _pendingUnits,
+                              pendingValue: _pendingValue,
+                            ),
+                          ),
+                          if (_list.hasPaymentBalances)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                              child: MarketPaymentPreview(
+                                list: _list,
+                                onEditBalances: _editBalances,
+                                repository: widget.financeRepository,
                               ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${item.quantity} un. • ${item.category.label} • ${formatCurrency(item.unitPrice)}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: colorScheme.onSurfaceVariant),
-                        ),
-                        Text(
-                          formatCurrency(item.subtotal),
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(
-                                color: colorScheme.primary,
-                                fontWeight: FontWeight.w800,
+                            ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                TextField(
+                                  controller: _searchController,
+                                  decoration: InputDecoration(
+                                    hintText: 'Buscar item na compra',
+                                    prefixIcon: const Icon(
+                                      Icons.search_rounded,
+                                      size: 18,
+                                    ),
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 10,
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(4),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    fillColor: Theme.of(
+                                      context,
+                                    ).colorScheme.surfaceContainerLow,
+                                    suffixIcon: _searchController.text.isEmpty
+                                        ? null
+                                        : IconButton(
+                                            onPressed: _searchController.clear,
+                                            icon: const Icon(
+                                              Icons.close_rounded,
+                                            ),
+                                          ),
+                                    filled: true,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 6,
+                                  children: [
+                                    ChoiceChip(
+                                      label: Text(
+                                        'Apenas pendentes ($_pendingProductsCount)',
+                                      ),
+                                      selected: _showOnlyPending,
+                                      showCheckmark: false,
+                                      onSelected: (_) => setState(
+                                        () => _showOnlyPending = true,
+                                      ),
+                                    ),
+                                    ChoiceChip(
+                                      label: Text(
+                                        'Todos (${_list.items.length})',
+                                      ),
+                                      selected: !_showOnlyPending,
+                                      showCheckmark: false,
+                                      onSelected: (_) => setState(
+                                        () => _showOnlyPending = false,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  alignment: WrapAlignment.spaceBetween,
+                                  spacing: 8,
+                                  children: [
+                                    Text(
+                                      '${_showOnlyPending ? 'PENDENTES' : 'ITENS'} · ${formatItemCount(visibleItems.length)}',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            fontSize: 11,
+                                            letterSpacing: .6,
+                                          ),
+                                    ),
+                                    Text(
+                                      'Subtotal: ${formatCurrency(visibleItems.fold<double>(0, (sum, item) => sum + item.subtotal))}',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(fontSize: 11),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (_showOnlyPending && _purchasedProductsCount > 0)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                              child: _MarketModeInlineInfoBanner(
+                                icon: Icons.visibility_outlined,
+                                message: _purchasedProductsCount == 1
+                                    ? '1 item pego está oculto para facilitar a compra.'
+                                    : '$_purchasedProductsCount itens pegos estão ocultos para facilitar a compra.',
+                                actionLabel: 'Mostrar',
+                                onAction: () {
+                                  HapticFeedback.selectionClick();
+                                  setState(() {
+                                    _showOnlyPending = false;
+                                  });
+                                },
                               ),
+                            ),
+                        ].map((child) => SliverToBoxAdapter(child: child)),
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                          sliver: visibleItems.isEmpty
+                              ? SliverToBoxAdapter(
+                                  child: _EmptyMarketModeState(
+                                    showOnlyPending: _showOnlyPending,
+                                    hasQuery: _searchQuery.isNotEmpty,
+                                    onShowAllPressed: () {
+                                      HapticFeedback.selectionClick();
+                                      setState(() {
+                                        _showOnlyPending = false;
+                                      });
+                                    },
+                                    onClearSearch: _searchController.clear,
+                                  ),
+                                )
+                              : SliverList.separated(
+                                  itemCount: visibleItems.length,
+                                  separatorBuilder: (context, index) =>
+                                      const Divider(height: 1),
+                                  itemBuilder: (context, index) {
+                                    final item = visibleItems[index];
+                                    return _MarketModeEntryAnimation(
+                                      key: ValueKey('market_entry_${item.id}'),
+                                      delay: Duration(
+                                        milliseconds: min(140, index * 20),
+                                      ),
+                                      child: Dismissible(
+                                        key: ValueKey('market_${item.id}'),
+                                        direction: DismissDirection.horizontal,
+                                        confirmDismiss: (_) async {
+                                          _togglePurchased(
+                                            item,
+                                            !item.isPurchased,
+                                          );
+                                          return false;
+                                        },
+                                        background: _MarketModeSwipeBackground(
+                                          icon: item.isPurchased
+                                              ? Icons.undo_rounded
+                                              : Icons.check_rounded,
+                                          label: item.isPurchased
+                                              ? 'Marcar pendente'
+                                              : 'Marcar como pego',
+                                          alignRight: false,
+                                        ),
+                                        secondaryBackground:
+                                            _MarketModeSwipeBackground(
+                                              icon: item.isPurchased
+                                                  ? Icons.undo_rounded
+                                                  : Icons.check_rounded,
+                                              label: item.isPurchased
+                                                  ? 'Marcar pendente'
+                                                  : 'Marcar como pego',
+                                              alignRight: true,
+                                            ),
+                                        child: MarketEditorialItemRow(
+                                          item: item,
+                                          onTogglePurchased: () =>
+                                              _togglePurchased(
+                                                item,
+                                                !item.isPurchased,
+                                              ),
+                                          onIncrement: () =>
+                                              _changeQuantity(item, 1),
+                                          onDecrement: () =>
+                                              _changeQuantity(item, -1),
+                                          onEditPrice: () => _editPrice(item),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton.filledTonal(
-                        tooltip: 'Diminuir quantidade',
-                        onPressed: item.quantity > 1 ? onDecrement : null,
-                        icon: const Icon(Icons.remove_rounded),
-                      ),
-                      IconButton.filledTonal(
-                        tooltip: 'Aumentar quantidade',
-                        onPressed: onIncrement,
-                        icon: const Icon(Icons.add_rounded),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
+              ),
+            ),
+            bottomNavigationBar: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'VALOR PEGO',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(fontSize: 10, letterSpacing: .8),
+                              ),
+                              Text(
+                                formatCurrency(
+                                  _list.items
+                                      .where((item) => item.isPurchased)
+                                      .fold<double>(
+                                        0,
+                                        (sum, item) => sum + item.subtotal,
+                                      ),
+                                ),
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                        FilledButton.icon(
+                          onPressed: _leaving ? null : _finishAndReturn,
+                          icon: const Icon(Icons.check, size: 16),
+                          label: Text(_leaving ? 'Salvando…' : 'Concluir'),
+                        ),
+                      ],
+                    ),
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      children: [
+                        Semantics(
+                          liveRegion: true,
+                          child: _session.saveError != null
+                              ? _MarketModeInlineInfoBanner(
+                                  icon: Icons.error_outline,
+                                  message:
+                                      'Não foi possível salvar no aparelho.',
+                                  actionLabel: 'Tentar novamente',
+                                  onAction: _session.retrySave,
+                                )
+                              : Text(
+                                  _session.isSaving
+                                      ? 'Salvando…'
+                                      : 'Salvo no aparelho',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                        ),
+                        TextButton(
+                          onPressed: _leaving ? null : _editBalances,
+                          child: Text(
+                            'Meios de pagamento',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -560,78 +600,6 @@ class _EmptyMarketModeState extends StatelessWidget {
                 icon: const Icon(Icons.visibility_rounded),
                 label: const Text('Mostrar todos'),
               ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-Duration _marketModeAdaptiveMotionDuration(
-  BuildContext context,
-  Duration fallback,
-) {
-  final mediaQuery = MediaQuery.maybeOf(context);
-  if (mediaQuery?.disableAnimations ?? false) {
-    return Duration.zero;
-  }
-  return fallback;
-}
-
-class _MarketModeContentPanel extends StatelessWidget {
-  const _MarketModeContentPanel({
-    required this.child,
-    this.padding = const EdgeInsets.all(10),
-  });
-
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.54),
-        ),
-      ),
-      child: Padding(padding: padding, child: child),
-    );
-  }
-}
-
-class _MarketModePillLabel extends StatelessWidget {
-  const _MarketModePillLabel({required this.icon, required this.text});
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final foregroundColor = colorScheme.onSurface;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: foregroundColor),
-            const SizedBox(width: 5),
-            Text(
-              text,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: foregroundColor,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
           ],
         ),
       ),

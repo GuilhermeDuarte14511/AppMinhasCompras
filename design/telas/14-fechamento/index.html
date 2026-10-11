@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Fechamento de compra — Minhas Compras</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400&amp;family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            background: "#fcfbf7",
+            primary: "#1f412d",
+            "primary-container": "#2c4e38",
+            "on-primary": "#ffffff",
+            "on-primary-container": "#a7ceb2",
+            secondary: "#5b604f",
+            "secondary-container": "#e0e5cf",
+            "on-secondary": "#ffffff",
+            "on-secondary-container": "#191d10",
+            surface: "#fcfbf7",
+            "on-surface": "#1b1c18",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#f6f4ee",
+            "surface-container": "#f0ede5",
+            "surface-container-high": "#eae7df",
+            "surface-container-highest": "#e4e1d7",
+            outline: "#727972",
+            "outline-variant": "#c5ccc4",
+            "on-surface-variant": "#424843"
+          },
+          borderRadius: {
+            DEFAULT: "0.25rem",
+            lg: "0.5rem",
+            xl: "0.75rem",
+            full: "9999px"
+          },
+          fontFamily: {
+            headline: ["Newsreader", "serif"],
+            display: ["Newsreader", "serif"],
+            body: ["Public Sans", "sans-serif"],
+            label: ["Public Sans", "sans-serif"]
+          }
+        }
+      }
+    };
+  </script>
+<style>
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-body antialiased flex justify-center min-h-screen selection:bg-primary/10">
+<!-- Mobile Flow Container: tela real do Flutter -->
+<main class="w-full max-w-[390px] min-h-screen bg-background flex flex-col px-4 pt-3 pb-8">
+<!-- 1. Cabeçalho com voltar e título "Fechamento de compra" -->
+<header class="w-full pt-1 pb-3 flex items-center gap-2.5 border-b border-outline-variant/60">
+<button aria-label="Voltar" class="w-9 h-9 -ml-1 rounded flex items-center justify-center text-primary active:opacity-60 transition-opacity" type="button">
+<span class="material-symbols-outlined text-[22px]">arrow_back</span>
+</button>
+<div class="flex flex-col">
+<h1 class="font-headline text-[22px] leading-tight text-on-surface font-normal">
+          Fechamento de compra
+        </h1>
+<p class="font-body text-[12px] text-secondary tracking-normal">
+          Revisão final antes de fechar
+        </p>
+</div>
+</header>
+<div class="flex-1 space-y-6 pt-5">
+<!-- 2. Seção Itens da Lista -->
+<section aria-labelledby="section-items" class="space-y-3">
+<div class="flex items-baseline justify-between border-b border-outline-variant/60 pb-1.5">
+<h2 class="font-headline text-lg text-on-surface font-normal" id="section-items">
+            Itens comprados
+          </h2>
+<span class="font-body text-xs text-secondary tabular-nums">5 itens conferidos</span>
+</div>
+<!-- Opção: Incluir itens pendentes (com checkbox) -->
+<label class="flex items-start gap-3 p-3 bg-surface-container-low border border-outline-variant/50 rounded-lg cursor-pointer hover:bg-surface-container transition-colors">
+<input class="mt-0.5 h-4 w-4 rounded text-primary focus:ring-0 focus:ring-offset-0 border-outline" type="checkbox"/>
+<div class="flex flex-col">
+<span class="font-body text-xs font-semibold text-on-surface">Incluir itens pendentes</span>
+<span class="font-body text-[11px] text-secondary leading-snug mt-0.5">
+              Trazer itens pendentes não marcados para esta finalização
+            </span>
+</div>
+</label>
+<!-- Lista de itens com checkbox (quais foram realmente comprados), quantidade, preço unitário/total e atalho "Corrigir" -->
+<div class="divide-y divide-outline-variant/40">
+<!-- Item 1 -->
+<article class="py-2.5 flex items-start gap-2.5">
+<div class="pt-0.5 shrink-0">
+<input aria-label="Café especial comprado" checked="" class="h-4 w-4 rounded text-primary focus:ring-0 focus:ring-offset-0 border-outline" type="checkbox"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-start justify-between gap-2">
+<h3 class="font-body text-sm font-medium text-on-surface leading-tight">
+                  Café especial torrado e moído 250g
+                </h3>
+<span class="font-headline text-sm font-semibold text-on-surface tabular-nums shrink-0">R$ 37,80</span>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<span class="font-body text-[11px] text-secondary">2 un × R$ 18,90</span>
+<span class="text-outline-variant text-[10px]">•</span>
+<button class="font-body text-xs font-semibold text-primary hover:underline underline-offset-2 flex items-center gap-0.5" type="button">
+<span class="material-symbols-outlined text-[13px]">edit</span>
+                  Corrigir
+                </button>
+</div>
+</div>
+</article>
+<!-- Item 2 -->
+<article class="py-2.5 flex items-start gap-2.5">
+<div class="pt-0.5 shrink-0">
+<input aria-label="Azeite de oliva extravirgem comprado" checked="" class="h-4 w-4 rounded text-primary focus:ring-0 focus:ring-offset-0 border-outline" type="checkbox"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-start justify-between gap-2">
+<h3 class="font-body text-sm font-medium text-on-surface leading-tight">
+                  Azeite de oliva extravirgem 500ml
+                </h3>
+<span class="font-headline text-sm font-semibold text-on-surface tabular-nums shrink-0">R$ 38,90</span>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<span class="font-body text-[11px] text-secondary">1 un × R$ 38,90</span>
+<span class="text-outline-variant text-[10px]">•</span>
+<button class="font-body text-xs font-semibold text-primary hover:underline underline-offset-2 flex items-center gap-0.5" type="button">
+<span class="material-symbols-outlined text-[13px]">edit</span>
+                  Corrigir
+                </button>
+</div>
+</div>
+</article>
+<!-- Item 3 -->
+<article class="py-2.5 flex items-start gap-2.5">
+<div class="pt-0.5 shrink-0">
+<input aria-label="Tomate italiano comprado" checked="" class="h-4 w-4 rounded text-primary focus:ring-0 focus:ring-offset-0 border-outline" type="checkbox"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-start justify-between gap-2">
+<h3 class="font-body text-sm font-medium text-on-surface leading-tight">
+                  Tomate italiano selecionado
+                </h3>
+<span class="font-headline text-sm font-semibold text-on-surface tabular-nums shrink-0">R$ 6,80</span>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<span class="font-body text-[11px] text-secondary">0,8 kg × R$ 8,50/kg</span>
+<span class="text-outline-variant text-[10px]">•</span>
+<button class="font-body text-xs font-semibold text-primary hover:underline underline-offset-2 flex items-center gap-0.5" type="button">
+<span class="material-symbols-outlined text-[13px]">edit</span>
+                  Corrigir
+                </button>
+</div>
+</div>
+</article>
+<!-- Item 4 -->
+<article class="py-2.5 flex items-start gap-2.5">
+<div class="pt-0.5 shrink-0">
+<input aria-label="Banana prata comprada" checked="" class="h-4 w-4 rounded text-primary focus:ring-0 focus:ring-offset-0 border-outline" type="checkbox"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-start justify-between gap-2">
+<h3 class="font-body text-sm font-medium text-on-surface leading-tight">
+                  Banana prata madura
+                </h3>
+<span class="font-headline text-sm font-semibold text-on-surface tabular-nums shrink-0">R$ 10,20</span>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<span class="font-body text-[11px] text-secondary">1,2 kg × R$ 8,50/kg</span>
+<span class="text-outline-variant text-[10px]">•</span>
+<button class="font-body text-xs font-semibold text-primary hover:underline underline-offset-2 flex items-center gap-0.5" type="button">
+<span class="material-symbols-outlined text-[13px]">edit</span>
+                  Corrigir
+                </button>
+</div>
+</div>
+</article>
+<!-- Item 5 -->
+<article class="py-2.5 flex items-start gap-2.5">
+<div class="pt-0.5 shrink-0">
+<input aria-label="Pão de fermentação comprado" checked="" class="h-4 w-4 rounded text-primary focus:ring-0 focus:ring-offset-0 border-outline" type="checkbox"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-start justify-between gap-2">
+<h3 class="font-body text-sm font-medium text-on-surface leading-tight">
+                  Pão de fermentação natural
+                </h3>
+<span class="font-headline text-sm font-semibold text-on-surface tabular-nums shrink-0">R$ 16,50</span>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<span class="font-body text-[11px] text-secondary">1 un × R$ 16,50</span>
+<span class="text-outline-variant text-[10px]">•</span>
+<button class="font-body text-xs font-semibold text-primary hover:underline underline-offset-2 flex items-center gap-0.5" type="button">
+<span class="material-symbols-outlined text-[13px]">edit</span>
+                  Corrigir
+                </button>
+</div>
+</div>
+</article>
+</div>
+</section>
+<!-- 3. Resumo Financeiro -->
+<section aria-labelledby="section-finance" class="pt-1">
+<div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3.5 space-y-3">
+<div class="flex items-baseline justify-between">
+<span class="font-body text-xs text-secondary" id="section-finance">Total calculado</span>
+<span class="font-headline text-xl font-medium text-on-surface tabular-nums">R$ 110,20</span>
+</div>
+<div class="pt-2.5 border-t border-outline-variant/40 space-y-1.5">
+<div class="flex items-center justify-between">
+<label class="font-body text-xs font-medium text-secondary" for="altered-amount">Alterar valor final pago</label>
+<span class="font-body text-[11px] text-secondary">Valor efetivo no caixa</span>
+</div>
+<!-- Campo editável "Alterar valor final pago" -->
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 font-body text-xs font-medium text-secondary">R$</span>
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-md py-2 pl-9 pr-3 text-sm text-on-surface tabular-nums font-medium focus:border-primary focus:ring-0 focus:outline-none" id="altered-amount" type="text" value="110,20"/>
+</div>
+</div>
+</div>
+</section>
+<!-- 4. Meio de Pagamento, Categoria e Minhas Finanças -->
+<section aria-labelledby="section-payment-cat" class="space-y-3.5 pt-1">
+<h2 class="font-headline text-lg text-on-surface font-normal border-b border-outline-variant/60 pb-1.5" id="section-payment-cat">
+          Pagamento e categoria
+        </h2>
+<!-- Meio de pagamento com seletor real e atalho "Dividir pagamento" -->
+<div class="space-y-1.5">
+<div class="flex items-center justify-between">
+<label class="font-body text-xs font-medium text-secondary" for="payment-method">Meio de pagamento</label>
+<button class="font-body text-xs font-semibold text-primary underline underline-offset-2 hover:opacity-80" type="button">
+              Dividir pagamento
+            </button>
+</div>
+<div class="relative">
+<select class="w-full appearance-none bg-surface-container-lowest border border-outline-variant/80 rounded-md py-2 px-3 pr-8 text-sm text-on-surface font-body focus:border-primary focus:ring-0 focus:outline-none" id="payment-method">
+<option disabled="" value="">Selecione o meio de pagamento</option>
+<option selected="" value="debito">Cartão de débito</option>
+<option value="credito">Cartão de crédito</option>
+<option value="pix">Pix</option>
+<option value="dinheiro">Dinheiro</option>
+</select>
+<span class="material-symbols-outlined pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-secondary text-[18px]">
+              expand_more
+            </span>
+</div>
+</div>
+<!-- Categoria com seletor real -->
+<div class="space-y-1.5">
+<label class="font-body text-xs font-medium text-secondary" for="expense-category">Categoria</label>
+<div class="relative">
+<select class="w-full appearance-none bg-surface-container-lowest border border-outline-variant/80 rounded-md py-2 px-3 pr-8 text-sm text-on-surface font-body focus:border-primary focus:ring-0 focus:outline-none" id="expense-category">
+<option disabled="" value="">Selecione uma categoria</option>
+<option selected="" value="mercado-alimentacao">Alimentação &amp; Mercado</option>
+<option value="hortifruti">Hortifrúti</option>
+<option value="limpeza">Casa &amp; Limpeza</option>
+<option value="geral">Geral</option>
+</select>
+<span class="material-symbols-outlined pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-secondary text-[18px]">
+              expand_more
+            </span>
+</div>
+</div>
+<!-- Checkbox: Lançar no Minhas Finanças (se conectado) -->
+<div class="pt-0.5">
+<label class="flex items-center justify-between p-3 bg-surface-container-low border border-outline-variant/60 rounded-lg cursor-pointer hover:bg-surface-container transition-colors">
+<div class="flex flex-col pr-2">
+<div class="flex items-center gap-1.5">
+<span class="font-body text-xs font-semibold text-on-surface">Lançar no Minhas Finanças</span>
+<span class="text-[10px] font-body text-secondary bg-surface-container px-1 py-0.2 rounded border border-outline-variant/50">
+                  se conectado
+                </span>
+</div>
+<span class="font-body text-[11px] text-secondary mt-0.5">
+                Registra a despesa automaticamente
+              </span>
+</div>
+<input checked="" class="h-4 w-4 rounded text-primary focus:ring-0 focus:ring-offset-0 border-outline shrink-0" type="checkbox"/>
+</label>
+</div>
+</section>
+<!-- 5. Ação principal: Botão "Confirmar fechamento" integrado no fluxo mobile -->
+<div class="pt-2">
+<button class="w-full py-3 px-4 bg-primary text-on-primary font-body text-sm font-semibold rounded-lg active:opacity-90 flex items-center justify-center gap-2 transition-opacity" type="button">
+<span class="material-symbols-outlined text-[18px]">check</span>
+          Confirmar fechamento
+        </button>
+</div>
+</div>
+</main>
+</body></html>
