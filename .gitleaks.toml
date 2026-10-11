@@ -6,5 +6,6 @@ description = "Exact non-secret storage key and synthetic token used only in moc
 regexTarget = "secret"
 regexes = [
   '''^finance_integration_token_v1$''',
+  '''^finance_integration_pending_purchases_v1$''',
   '''^abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNO12$''',
 ]
