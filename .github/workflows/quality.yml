@@ -107,10 +107,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Scan the delivered tree/new commit. The repository has an accepted
-          # historical exposure documented separately, so a full-history scan
-          # would keep every future quality run permanently red.
-          fetch-depth: 1
+          # The scanner needs the PR base and head commits to inspect its diff.
+          fetch-depth: 0
 
       - name: Scan repository
         uses: gitleaks/gitleaks-action@v2
