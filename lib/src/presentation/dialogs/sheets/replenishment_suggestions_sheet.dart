@@ -262,44 +262,44 @@ class _ReplenishmentSuggestionsSheetState
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                     child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(48, 48),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(48, 48),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Cancelar'),
                           ),
                         ),
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancelar'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size(48, 48),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(48, 48),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            onPressed: selected.isEmpty
+                                ? null
+                                : () => Navigator.pop(context, selected),
+                            icon: const Icon(Icons.playlist_add, size: 20),
+                            label: Text('Criar lista (${selected.length})'),
                           ),
                         ),
-                        onPressed: selected.isEmpty
-                            ? null
-                            : () => Navigator.pop(context, selected),
-                        icon: const Icon(Icons.playlist_add, size: 20),
-                        label: Text('Criar lista (${selected.length})'),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
-    );
+        );
       },
     );
   }

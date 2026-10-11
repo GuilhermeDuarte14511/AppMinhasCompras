@@ -47,7 +47,8 @@ void main() {
       final addBtnRect = tester.getRect(addBtnFinder);
       final continueBtnRect = tester.getRect(continueBtnFinder);
 
-      final screenHeight = tester.view.physicalSize.height / tester.view.devicePixelRatio;
+      final screenHeight =
+          tester.view.physicalSize.height / tester.view.devicePixelRatio;
       final navBarTop = screenHeight - 48;
 
       // Os botoes devem estar completamente acima da barra virtual do Android

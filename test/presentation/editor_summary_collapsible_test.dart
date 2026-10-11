@@ -247,10 +247,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.descendant(
-          of: toggleFinder,
-          matching: find.text('Sem orçamento'),
-        ),
+        find.descendant(of: toggleFinder, matching: find.text('Sem orçamento')),
         findsOneWidget,
       );
     },

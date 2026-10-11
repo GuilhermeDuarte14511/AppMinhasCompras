@@ -54,8 +54,9 @@ class _EditorEditorialSummaryState extends State<EditorEditorialSummary> {
 
     final disableMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    final motionDuration =
-        disableMotion ? Duration.zero : const Duration(milliseconds: 240);
+    final motionDuration = disableMotion
+        ? Duration.zero
+        : const Duration(milliseconds: 240);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 6),
@@ -160,22 +161,24 @@ class _EditorEditorialSummaryState extends State<EditorEditorialSummary> {
                                   ? Text(
                                       list.isOverBudget
                                           ? 'Excesso ${formatCurrency(list.overBudgetAmount)}'
-                                          : formatCurrency(list.budgetRemaining),
-                                      style:
-                                          theme.textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w800,
-                                        color: list.isOverBudget
-                                            ? colors.error
-                                            : colors.primary,
-                                      ),
+                                          : formatCurrency(
+                                              list.budgetRemaining,
+                                            ),
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                            color: list.isOverBudget
+                                                ? colors.error
+                                                : colors.primary,
+                                          ),
                                     )
                                   : Text(
                                       'Sem orçamento',
-                                      style:
-                                          theme.textTheme.bodyMedium?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                        color: colors.onSurfaceVariant,
-                                      ),
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: colors.onSurfaceVariant,
+                                          ),
                                     ),
                             ),
                           ],
@@ -312,13 +315,15 @@ class _EditorEditorialSummaryState extends State<EditorEditorialSummary> {
                       children: [
                         Text(
                           '${formatCountLabel(count - bought, 'pendente', 'pendentes')} · ${formatCountLabel(bought, 'comprado', 'comprados')} (${list.totalItems} un.)',
-                          style:
-                              theme.textTheme.bodySmall?.copyWith(fontSize: 11),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontSize: 11,
+                          ),
                         ),
                         Text(
                           '${(progress * 100).round()}% do total',
-                          style:
-                              theme.textTheme.bodySmall?.copyWith(fontSize: 11),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontSize: 11,
+                          ),
                         ),
                       ],
                     ),

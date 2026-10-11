@@ -1007,8 +1007,12 @@ class _ShoppingItemEditorSheetState extends State<_ShoppingItemEditorSheet> {
                                   Expanded(
                                     child: OutlinedButton.icon(
                                       onPressed: _addAndContinue,
-                                      icon: const Icon(Icons.playlist_add_rounded),
-                                      label: const Text('Adicionar e continuar'),
+                                      icon: const Icon(
+                                        Icons.playlist_add_rounded,
+                                      ),
+                                      label: const Text(
+                                        'Adicionar e continuar',
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 10),

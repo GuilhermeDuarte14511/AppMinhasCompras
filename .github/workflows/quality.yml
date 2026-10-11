@@ -99,6 +99,9 @@ jobs:
     name: Secret scanning
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
 
     steps:
       - name: Checkout repository
@@ -111,6 +114,9 @@ jobs:
 
       - name: Scan repository
         uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false
 
   firestore-rules:
     name: Firestore security matrix

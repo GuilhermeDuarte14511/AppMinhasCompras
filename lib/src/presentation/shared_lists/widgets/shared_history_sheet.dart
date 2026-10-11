@@ -73,154 +73,154 @@ class _SharedHistorySheetState extends State<SharedHistorySheet> {
                 top: false,
                 child: Column(
                   children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 0, 16, 8),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          tooltip: 'Fechar histórico',
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.close),
-                        ),
-                        Expanded(
-                          child: Text(
-                            'Histórico compartilhado',
-                            style: text.titleLarge,
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 0, 16, 8),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            tooltip: 'Fechar histórico',
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.close),
                           ),
-                        ),
-                      ],
+                          Expanded(
+                            child: Text(
+                              'Histórico compartilhado',
+                              style: text.titleLarge,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const Divider(height: 1),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Compras fechadas da lista “${widget.list.name}”.',
-                        style: text.bodySmall?.copyWith(
-                          color: colors.onSurfaceVariant,
+                    const Divider(height: 1),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Compras fechadas da lista “${widget.list.name}”.',
+                          style: text.bodySmall?.copyWith(
+                            color: colors.onSurfaceVariant,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const Divider(height: 1),
-                  Expanded(
-                    child: StreamBuilder<List<CompletedPurchase>>(
-                      stream: _history,
-                      builder: (context, snapshot) {
-                        if (snapshot.hasError) {
-                          return const _HistoryState(
-                            icon: Icons.cloud_off_outlined,
-                            title: 'Não foi possível carregar o histórico.',
-                            message:
-                                'Feche e abra novamente para tentar de novo.',
-                          );
-                        }
-                        if (!snapshot.hasData &&
-                            snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                          return const Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                CircularProgressIndicator(),
-                                SizedBox(height: 16),
-                                Text('Carregando histórico…'),
-                              ],
-                            ),
-                          );
-                        }
-                        final entries = List<CompletedPurchase>.of(
-                          snapshot.data ?? [],
-                        )..sort((a, b) => b.closedAt.compareTo(a.closedAt));
-                        if (entries.isEmpty) {
-                          return const _HistoryState(
-                            icon: Icons.receipt_long_outlined,
-                            title: 'Nenhuma compra fechada ainda.',
-                            message:
-                                'As compras finalizadas desta lista aparecerão aqui.',
-                          );
-                        }
-                        final groups = <DateTime, List<CompletedPurchase>>{};
-                        for (final purchase in entries) {
-                          groups
-                              .putIfAbsent(
-                                DateTime(
-                                  purchase.closedAt.year,
-                                  purchase.closedAt.month,
-                                ),
-                                () => [],
-                              )
-                              .add(purchase);
-                        }
-                        return ListView(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    'Compras finalizadas',
-                                    style: text.labelLarge,
-                                  ),
-                                ),
-                                Text(
-                                  '${entries.length} ${entries.length == 1 ? 'registro' : 'registros'}',
-                                  style: text.bodySmall,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 18),
-                            for (final group in groups.entries) ...[
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: Text(
-                                  _month(group.key),
-                                  style: text.labelMedium?.copyWith(
-                                    color: colors.onSurfaceVariant,
-                                  ),
-                                ),
+                    const Divider(height: 1),
+                    Expanded(
+                      child: StreamBuilder<List<CompletedPurchase>>(
+                        stream: _history,
+                        builder: (context, snapshot) {
+                          if (snapshot.hasError) {
+                            return const _HistoryState(
+                              icon: Icons.cloud_off_outlined,
+                              title: 'Não foi possível carregar o histórico.',
+                              message:
+                                  'Feche e abra novamente para tentar de novo.',
+                            );
+                          }
+                          if (!snapshot.hasData &&
+                              snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                            return const Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  CircularProgressIndicator(),
+                                  SizedBox(height: 16),
+                                  Text('Carregando histórico…'),
+                                ],
                               ),
-                              for (final purchase in group.value)
-                                SharedHistoryCard(
-                                  key: ValueKey(purchase.id),
-                                  purchase: purchase,
-                                  initiallyExpanded:
-                                      purchase.id == entries.first.id,
+                            );
+                          }
+                          final entries = List<CompletedPurchase>.of(
+                            snapshot.data ?? [],
+                          )..sort((a, b) => b.closedAt.compareTo(a.closedAt));
+                          if (entries.isEmpty) {
+                            return const _HistoryState(
+                              icon: Icons.receipt_long_outlined,
+                              title: 'Nenhuma compra fechada ainda.',
+                              message:
+                                  'As compras finalizadas desta lista aparecerão aqui.',
+                            );
+                          }
+                          final groups = <DateTime, List<CompletedPurchase>>{};
+                          for (final purchase in entries) {
+                            groups
+                                .putIfAbsent(
+                                  DateTime(
+                                    purchase.closedAt.year,
+                                    purchase.closedAt.month,
+                                  ),
+                                  () => [],
+                                )
+                                .add(purchase);
+                          }
+                          return ListView(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'Compras finalizadas',
+                                      style: text.labelLarge,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${entries.length} ${entries.length == 1 ? 'registro' : 'registros'}',
+                                    style: text.bodySmall,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 18),
+                              for (final group in groups.entries) ...[
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: Text(
+                                    _month(group.key),
+                                    style: text.labelMedium?.copyWith(
+                                      color: colors.onSurfaceVariant,
+                                    ),
+                                  ),
                                 ),
-                              const SizedBox(height: 20),
+                                for (final purchase in group.value)
+                                  SharedHistoryCard(
+                                    key: ValueKey(purchase.id),
+                                    purchase: purchase,
+                                    initiallyExpanded:
+                                        purchase.id == entries.first.id,
+                                  ),
+                                const SizedBox(height: 20),
+                              ],
                             ],
-                          ],
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                  const Divider(height: 1),
-                  SafeArea(
-                    top: false,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          style: FilledButton.styleFrom(
-                            minimumSize: const Size(48, 48),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                    const Divider(height: 1),
+                    SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: FilledButton(
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(48, 48),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Fechar'),
                           ),
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Fechar'),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
         );
       },
     ),

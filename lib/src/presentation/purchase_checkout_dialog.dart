@@ -220,9 +220,7 @@ class _PurchaseCheckoutDialogState extends State<PurchaseCheckoutDialog> {
       child: Dialog(
         backgroundColor: editorial.colorScheme.surface,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         insetPadding: EdgeInsets.all(size.width < 600 ? 0 : 24),
         child: ConstrainedBox(
           constraints: BoxConstraints(

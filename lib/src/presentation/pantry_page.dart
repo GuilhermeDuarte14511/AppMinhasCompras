@@ -877,9 +877,12 @@ class _PantryCatalogPickerState extends State<_PantryCatalogPicker> {
                               ? 'O catálogo ainda está vazio. Finalize uma compra para salvar produtos automaticamente.'
                               : 'Todos os produtos encontrados já estão na despensa.',
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
                         ),
                       )
                     : ListView.separated(
