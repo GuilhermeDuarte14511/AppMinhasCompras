@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Dividir pagamento — Minhas Compras</title>
+<!-- Fonts: Newsreader (Editor) & Public Sans (Utilitário) -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&amp;family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration strictly matching design system -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-low": "#f5f3ed",
+            "surface-bright": "#fbf9f3",
+            "primary-fixed": "#c4eccf",
+            "surface-variant": "#e4e2dd",
+            "on-error": "#ffffff",
+            "secondary": "#5b604f",
+            "on-secondary": "#ffffff",
+            "surface-container": "#f0eee8",
+            "background": "#fbf9f3",
+            "on-surface-variant": "#424843",
+            "on-primary-fixed": "#002110",
+            "secondary-fixed": "#e0e5cf",
+            "inverse-surface": "#30312d",
+            "tertiary-fixed": "#ffdadb",
+            "primary": "#1f412d",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "outline": "#727972",
+            "tertiary-container": "#724549",
+            "secondary-container": "#e0e5cf",
+            "on-primary-fixed-variant": "#2b4e39",
+            "on-error-container": "#93000a",
+            "error": "#ba1a1a",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-high": "#eae8e2",
+            "tertiary": "#582f33",
+            "inverse-primary": "#a9d0b4",
+            "on-secondary-fixed": "#191d10",
+            "on-secondary-container": "#616655",
+            "on-primary": "#ffffff",
+            "primary-fixed-dim": "#a9d0b4",
+            "on-surface": "#1b1c18",
+            "surface": "#fbf9f3",
+            "secondary-fixed-dim": "#c4c9b4",
+            "outline-variant": "#c1c8c1",
+            "on-tertiary": "#ffffff",
+            "surface-dim": "#dcdad4",
+            "surface-container-highest": "#e4e2dd",
+            "on-primary-container": "#a7ceb2",
+            "on-background": "#1b1c18",
+            "inverse-on-surface": "#f3f1eb",
+            "error-container": "#ffdad6",
+            "on-tertiary-fixed": "#321015",
+            "on-tertiary-container": "#f2b6ba",
+            "on-secondary-fixed-variant": "#444939",
+            "primary-container": "#365943",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "surface-tint": "#43664f"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "2xl": "1rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-[#191d17]/60 text-on-surface font-body antialiased min-h-screen flex items-end justify-center p-0 m-0">
+<!-- Mobile Context Canvas (Strict 390px bottom sheet layout) -->
+<main class="w-full max-w-[390px] bg-surface rounded-t-2xl flex flex-col max-h-[813px] overflow-hidden shadow-2xl relative">
+<!-- Drag Handle Indicator -->
+<div class="w-full flex justify-center pt-2.5 pb-1">
+<div class="w-8 h-1 bg-outline-variant rounded-full"></div>
+</div>
+<!-- TopAppBar as defined in Shared Components JSON:
+         name: TopAppBar, type: small_center_aligned, headline: Dividir pagamento, leading_icon: close, trailing_action_text: Concluir
+         Injected classes strictly applied per protocol -->
+<header class="flex justify-between items-center w-full px-4 h-14 max-w-[390px] mx-auto border-b border-outline-variant bg-surface">
+<button aria-label="Fechar modal" class="w-10 h-10 -ml-2 inline-flex items-center justify-center text-on-surface hover:bg-surface-container transition-colors duration-150 rounded-full active:scale-[0.98]" type="button">
+<span class="material-symbols-outlined text-[22px]">close</span>
+</button>
+<h1 class="font-headline text-lg font-medium text-on-surface tracking-tight text-center truncate px-2">
+        Dividir pagamento
+      </h1>
+<button class="text-primary font-semibold font-label text-xs tracking-normal px-2 py-1.5 rounded hover:bg-surface-container transition-colors duration-150 active:scale-[0.98]" type="button">
+        Concluir
+      </button>
+</header>
+<!-- Scrollable Modal Body -->
+<div class="overflow-y-auto px-5 py-4 space-y-6">
+<!-- Context Explanation / Subtitle -->
+<p class="font-body text-xs text-secondary leading-relaxed">
+        Distribua o valor total da compra entre diferentes meios de pagamento antes do fechamento.
+      </p>
+<!-- Ledger Balance Summary: Resumo de conferência contábil em faixa tipográfica -->
+<section aria-labelledby="balance-ledger" class="bg-surface-container-low rounded-lg p-3.5 border border-outline-variant/60">
+<h2 class="sr-only" id="balance-ledger">Conferência contábil</h2>
+<div class="grid grid-cols-3 gap-2 divide-x divide-outline-variant/50 text-center">
+<!-- Total da Compra -->
+<div class="px-1 text-left">
+<span class="font-label text-[11px] text-secondary block leading-tight">Total compra</span>
+<span class="font-body text-sm font-semibold tabular-nums text-on-surface mt-1 block">R$ 184,30</span>
+</div>
+<!-- Total Alocado -->
+<div class="px-2 text-left">
+<span class="font-label text-[11px] text-secondary block leading-tight">Alocado</span>
+<span class="font-body text-sm font-semibold tabular-nums text-primary-container mt-1 block">R$ 130,00</span>
+</div>
+<!-- Restante -->
+<div class="pl-2 text-left">
+<div class="flex items-center gap-1">
+<span class="font-label text-[11px] text-secondary block leading-tight">Restante</span>
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+</div>
+<span class="font-body text-sm font-bold tabular-nums text-tertiary mt-1 block">R$ 54,30</span>
+</div>
+</div>
+<!-- Progress bar hairline track -->
+<div class="w-full bg-surface-variant h-1 rounded-full mt-3 overflow-hidden">
+<div class="bg-primary-container h-full rounded-full" style="width: 70.5%"></div>
+</div>
+</section>
+<!-- Parcelas Já Adicionadas -->
+<section aria-labelledby="allocated-list-heading" class="space-y-2">
+<div class="flex justify-between items-baseline">
+<h2 class="font-headline text-base font-medium text-on-surface" id="allocated-list-heading">
+            Valores já definidos
+          </h2>
+<span class="font-label text-xs tabular-nums text-secondary">2 lançamentos</span>
+</div>
+<div class="divide-y divide-outline-variant/40 border-y border-outline-variant/60">
+<!-- Entrada 1 -->
+<div class="py-3 flex items-center justify-between group">
+<div class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-secondary text-[20px] mt-0.5">credit_card</span>
+<div>
+<span class="font-body text-sm font-medium text-on-surface block leading-tight">Vale alimentação (VA)</span>
+<span class="font-label text-[11px] text-secondary">Identificação operacional</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="font-body text-sm font-semibold tabular-nums text-on-surface">R$ 80,00</span>
+<button aria-label="Remover Vale alimentação" class="text-secondary hover:text-error transition-colors p-1 -mr-1" type="button">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+<!-- Entrada 2 -->
+<div class="py-3 flex items-center justify-between group">
+<div class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-secondary text-[20px] mt-0.5">payments</span>
+<div>
+<span class="font-body text-sm font-medium text-on-surface block leading-tight">Cartão de débito</span>
+<span class="font-label text-[11px] text-secondary">Identificação operacional</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="font-body text-sm font-semibold tabular-nums text-on-surface">R$ 50,00</span>
+<button aria-label="Remover Cartão de débito" class="text-secondary hover:text-error transition-colors p-1 -mr-1" type="button">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Bloco de Inclusão de Nova Parcela -->
+<section aria-labelledby="add-portion-heading" class="bg-surface-container-lowest border border-outline-variant/60 rounded-lg p-3.5 space-y-3.5">
+<h2 class="font-headline text-base font-medium text-on-surface" id="add-portion-heading">
+          Novo pagamento
+        </h2>
+<div class="space-y-3">
+<!-- Dropdown seletor de meio -->
+<div>
+<label class="block font-label text-xs text-secondary mb-1" for="payment-method-select">
+              Meio de pagamento
+            </label>
+<div class="relative">
+<select class="w-full h-11 bg-surface border border-outline-variant rounded text-sm text-on-surface px-3 pr-8 focus:border-primary focus:ring-1 focus:ring-primary outline-none appearance-none font-body" id="payment-method-select">
+<option value="vr">Vale refeição (VR)</option>
+<option value="credito">Cartão de crédito</option>
+<option value="debito">Cartão de débito</option>
+<option value="va">Vale alimentação (VA)</option>
+</select>
+<span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-secondary text-[20px]">
+                expand_more
+              </span>
+</div>
+</div>
+<!-- Campo de entrada monetário com valor sugerido restante -->
+<div>
+<div class="flex justify-between items-baseline mb-1">
+<label class="block font-label text-xs text-secondary" for="payment-amount-input">
+                Valor desta parcela
+              </label>
+<button class="text-[11px] text-primary hover:underline font-label tabular-nums" type="button">
+                Usar restante (R$ 54,30)
+              </button>
+</div>
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 font-body text-sm text-secondary tabular-nums">
+                R$
+              </span>
+<input class="w-full h-11 bg-surface border border-outline-variant rounded pl-10 pr-3 font-body text-sm font-semibold tabular-nums text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none" id="payment-amount-input" type="text" value="54,30"/>
+</div>
+</div>
+<!-- Botão secundário de contorno: Adicionar pagamento -->
+<button class="w-full h-10 border border-primary text-primary hover:bg-surface-container rounded font-label text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors duration-150 active:scale-[0.98]" type="button">
+<span class="material-symbols-outlined text-[16px]">add</span>
+            Adicionar pagamento
+          </button>
+</div>
+</section>
+</div>
+<!-- Final Drawer Footer Actions (Polegar) -->
+<div class="p-4 bg-surface border-t border-outline-variant/60 flex flex-col gap-2">
+<!-- Botão primário verde folha: 8px raio (rounded-lg) -->
+<button class="w-full h-12 bg-primary-container hover:bg-primary text-on-primary rounded-lg font-label text-sm font-medium transition-colors duration-150 flex items-center justify-center gap-2 active:scale-[0.98]" type="button">
+<span class="material-symbols-outlined text-[18px]">check</span>
+        Confirmar divisão de pagamento
+      </button>
+<!-- Botão secundário texto sem preenchimento -->
+<button class="w-full h-10 text-secondary hover:text-on-surface font-label text-xs transition-colors duration-150 flex items-center justify-center active:scale-[0.98]" type="button">
+        Cancelar
+      </button>
+</div>
+</main>
+</body></html>

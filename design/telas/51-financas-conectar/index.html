@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Minhas Finanças — Conectar</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Newsreader & Public Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&amp;family=Public+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-tint": "#43664f",
+            "surface-container-highest": "#e4e2dd",
+            "on-secondary-fixed-variant": "#444939",
+            "on-tertiary-fixed": "#321015",
+            "surface-container-high": "#eae8e2",
+            "error-container": "#ffdad6",
+            "outline-variant": "#c1c8c1",
+            "inverse-surface": "#30312d",
+            "surface-bright": "#fbf9f3",
+            "on-error-container": "#93000a",
+            "tertiary-container": "#724549",
+            "primary-container": "#365943",
+            "primary-fixed-dim": "#a9d0b4",
+            "on-primary": "#ffffff",
+            "surface-container-low": "#f5f3ed",
+            "primary": "#1f412d",
+            "on-primary-fixed": "#002110",
+            "on-tertiary": "#ffffff",
+            "tertiary-fixed": "#ffdadb",
+            "primary-fixed": "#c4eccf",
+            "error": "#ba1a1a",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "on-surface": "#1b1c18",
+            "surface-dim": "#dcdad4",
+            "on-primary-container": "#a7ceb2",
+            "inverse-primary": "#a9d0b4",
+            "background": "#fbf9f3",
+            "on-surface-variant": "#424843",
+            "tertiary": "#582f33",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "secondary-container": "#e0e5cf",
+            "surface-container": "#f0eee8",
+            "secondary-fixed-dim": "#c4c9b4",
+            "on-tertiary-container": "#f2b6ba",
+            "surface": "#fbf9f3",
+            "surface-container-lowest": "#ffffff",
+            "outline": "#727972",
+            "on-secondary-container": "#616655",
+            "on-secondary-fixed": "#191d10",
+            "on-primary-fixed-variant": "#2b4e39",
+            "on-error": "#ffffff",
+            "on-background": "#1b1c18",
+            "inverse-on-surface": "#f3f1eb",
+            "surface-variant": "#e4e2dd",
+            "secondary": "#5b604f",
+            "on-secondary": "#ffffff",
+            "secondary-fixed": "#e0e5cf"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {},
+          "fontFamily": {
+            "headline": [
+              "Newsreader", "serif"
+            ],
+            "display": [
+              "Newsreader", "serif"
+            ],
+            "body": [
+              "Public Sans", "sans-serif"
+            ],
+            "label": [
+              "Public Sans", "sans-serif"
+            ]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-body antialiased min-h-screen flex justify-center selection:bg-primary selection:text-on-primary">
+<!-- Mobile Viewport Wrapper (390px) -->
+<div class="w-full max-w-[390px] min-h-screen bg-surface flex flex-col justify-between">
+<!-- Top Hierarchy & Content -->
+<div class="w-full flex flex-col">
+<!-- TopAppBar (from Shared Components JSON & Style Tokens) -->
+<header class="flex justify-between items-center w-full px-4 h-14 bg-surface docked full-width top-0 border-b border-outline-variant">
+<button aria-label="Voltar" class="p-2 -ml-2 rounded-full text-on-surface hover:bg-surface-container active:opacity-80 transition-colors inline-flex items-center justify-center" type="button">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<h1 class="font-headline text-2xl text-on-surface font-normal tracking-tight">Minhas Finanças</h1>
+</header>
+<!-- Main Integration Canvas -->
+<main class="px-5 pt-8 pb-6 flex flex-col">
+<!-- Header Symbol & Title Block -->
+<div class="flex flex-col items-start gap-4">
+<div class="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-[28px]" data-icon="account_balance_wallet">account_balance_wallet</span>
+</div>
+<div class="flex flex-col gap-2">
+<h2 class="font-headline text-[28px] leading-tight text-on-surface font-normal">
+              Conectar ao Minhas Finanças
+            </h2>
+<p class="font-body text-[15px] leading-relaxed text-on-surface-variant">
+              No app de Finanças, abra Configurações &gt; Minhas Compras e gere um código temporário.
+            </p>
+</div>
+</div>
+<!-- Connection Form -->
+<form class="mt-8 flex flex-col gap-5" onsubmit="event.preventDefault();">
+<div class="flex flex-col gap-2">
+<label class="font-label text-xs font-semibold tracking-wider text-on-surface-variant uppercase" for="connection-code">
+              CÓDIGO DE CONEXÃO
+            </label>
+<div class="relative">
+<input autocomplete="off" autocorrect="off" class="w-full h-12 px-3.5 bg-surface-container-lowest border border-outline rounded-lg font-mono text-[16px] tracking-widest text-on-surface placeholder:text-outline-variant focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container uppercase transition-colors" id="connection-code" maxlength="14" name="connection-code" placeholder="ABCD-EFGH-IJKL" spellcheck="false" type="text"/>
+</div>
+</div>
+<!-- Primary Submit Action -->
+<button class="w-full h-12 bg-primary-container text-on-primary font-label text-[15px] font-medium rounded-lg flex items-center justify-center hover:opacity-95 active:opacity-85 transition-opacity" type="submit">
+            Conectar
+          </button>
+</form>
+<!-- Informative Support Block -->
+<div class="mt-8 p-4 rounded-lg bg-surface-container-low border border-outline-variant flex gap-3 items-start">
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant flex-shrink-0 mt-0.5" data-icon="lock_outline">lock_outline</span>
+<p class="font-body text-[13px] leading-normal text-on-surface-variant">
+            O código expira em 10 minutos. A credencial permanente fica protegida no armazenamento seguro do aparelho.
+          </p>
+</div>
+</main>
+</div>
+<!-- Minimal Contextual Brand Anchor / Footnote -->
+</div>
+<script>
+    // Formatting mask for the temporary code ABCD-EFGH-IJKL
+    const codeInput = document.getElementById('connection-code');
+    if (codeInput) {
+      codeInput.addEventListener('input', (e) => {
+        let val = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        if (val.length > 12) val = val.substring(0, 12);
+        
+        const parts = [];
+        for (let i = 0; i < val.length; i += 4) {
+          parts.push(val.substring(i, i + 4));
+        }
+        e.target.value = parts.join('-');
+      });
+    }
+  </script>
+</body></html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Revisar itens — Minhas Compras</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Newsreader (Editorial Serif) & Public Sans (Clean Grotesk) -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-dim": "#dcdad4",
+            "surface-container-high": "#eae8e2",
+            "inverse-primary": "#a9d0b4",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "inverse-surface": "#30312d",
+            "error": "#ba1a1a",
+            "surface": "#fbf9f3",
+            "surface-container-highest": "#e4e2dd",
+            "primary-fixed": "#c4eccf",
+            "primary": "#1f412d",
+            "on-secondary-fixed-variant": "#444939",
+            "tertiary": "#582f33",
+            "surface-tint": "#43664f",
+            "outline": "#727972",
+            "on-secondary-fixed": "#191d10",
+            "surface-container": "#f0eee8",
+            "on-tertiary-container": "#f2b6ba",
+            "on-background": "#1b1c18",
+            "on-surface": "#1b1c18",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "primary-fixed-dim": "#a9d0b4",
+            "surface-variant": "#e4e2dd",
+            "inverse-on-surface": "#f3f1eb",
+            "background": "#fbf9f3",
+            "on-primary-fixed-variant": "#2b4e39",
+            "surface-container-lowest": "#ffffff",
+            "secondary": "#5b604f",
+            "tertiary-fixed": "#ffdadb",
+            "secondary-fixed": "#e0e5cf",
+            "error-container": "#ffdad6",
+            "tertiary-container": "#724549",
+            "surface-bright": "#fbf9f3",
+            "on-tertiary-fixed": "#321015",
+            "on-surface-variant": "#424843",
+            "outline-variant": "#c1c8c1",
+            "on-primary": "#ffffff",
+            "secondary-fixed-dim": "#c4c9b4",
+            "surface-container-low": "#f5f3ed",
+            "on-secondary-container": "#616655",
+            "secondary-container": "#e0e5cf",
+            "on-error-container": "#93000a",
+            "on-primary-container": "#a7ceb2",
+            "primary-container": "#365943",
+            "on-secondary": "#ffffff",
+            "on-primary-fixed": "#002110",
+            "on-error": "#ffffff",
+            "on-tertiary": "#ffffff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      line-height: 1;
+      text-transform: none;
+      letter-spacing: normal;
+      word-wrap: normal;
+      white-space: nowrap;
+      direction: ltr;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-[#1b1c18]/60 font-body text-on-surface antialiased min-h-screen flex items-end justify-center p-0 sm:p-4">
+<!-- Modal Bottom Sheet Container (Strict 390px mobile viewport format) -->
+<div class="w-full max-w-[390px] bg-surface rounded-t-xl overflow-hidden flex flex-col max-h-[813px] border-t border-outline-variant shadow-2xl relative">
+<!-- Drag Handle Indicator -->
+<div class="w-full pt-3 pb-1 flex justify-center items-center bg-surface">
+<div class="w-9 h-1 bg-outline-variant rounded-full"></div>
+</div>
+<!-- TopAppBar from Shared Components Specification -->
+<header class="flex justify-between items-center w-full px-4 h-14 bg-surface border-b border-outline-variant">
+<div class="flex items-center gap-2">
+<button aria-label="Fechar" class="min-w-[48px] min-h-[48px] flex items-center justify-center -ml-2 text-on-surface hover:bg-surface-container-high transition-colors duration-150 rounded-lg active:opacity-80" type="button">
+<span class="material-symbols-outlined text-[24px]">close</span>
+</button>
+<h1 class="font-headline text-2xl font-normal text-on-surface tracking-tight">Revisar itens</h1>
+</div>
+</header>
+<!-- Subtitle & Informative Alert Area -->
+<div class="px-5 pt-4 pb-3 flex flex-col gap-3.5 bg-surface"><p class="font-body text-[13px] leading-relaxed text-on-surface-variant">Altere preços ou exclua itens antes de concluir.</p></div>
+<!-- Pending Drafts List (Clean continuous border dividers, no floating mosaic cards) -->
+<main class="flex-1 overflow-y-auto px-5 divide-y divide-outline-variant bg-surface"><!-- Item 1: Café torrado e moído 500g -->
+<article class="py-3.5 flex items-center justify-between gap-3">
+<div class="flex-1 min-w-0 pr-1">
+<h2 class="font-body text-[15px] font-semibold text-on-surface tracking-tight truncate">
+      Café torrado e moído 500g
+    </h2>
+<div class="flex items-center gap-2 mt-1 text-xs text-secondary tabular-nums">
+<span>1 un</span>
+<span class="text-outline-variant">•</span>
+<button class="inline-flex items-center gap-1 text-primary font-medium hover:underline" type="button">
+<span>R$ 24,90/un</span>
+<span class="material-symbols-outlined text-[15px]">edit</span>
+</button>
+</div>
+</div>
+<div class="flex items-center gap-2.5 shrink-0">
+<span class="font-body text-[15px] font-semibold text-on-surface tabular-nums">R$ 24,90</span>
+<button aria-label="Excluir item" class="min-w-[40px] min-h-[40px] flex items-center justify-center text-outline hover:text-error hover:bg-surface-container-high transition-colors duration-150 rounded-lg active:opacity-80" type="button">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</article>
+<!-- Item 2: Queijo minas frescal -->
+<article class="py-3.5 flex items-center justify-between gap-3">
+<div class="flex-1 min-w-0 pr-1">
+<h2 class="font-body text-[15px] font-semibold text-on-surface tracking-tight truncate">
+      Queijo minas frescal
+    </h2>
+<div class="flex items-center gap-2 mt-1 text-xs text-secondary tabular-nums">
+<span>1 un</span>
+<span class="text-outline-variant">•</span>
+<button class="inline-flex items-center gap-1 text-primary font-medium hover:underline" type="button">
+<span>R$ 14,50/un</span>
+<span class="material-symbols-outlined text-[15px]">edit</span>
+</button>
+</div>
+</div>
+<div class="flex items-center gap-2.5 shrink-0">
+<span class="font-body text-[15px] font-semibold text-on-surface tabular-nums">R$ 14,50</span>
+<button aria-label="Excluir item" class="min-w-[40px] min-h-[40px] flex items-center justify-center text-outline hover:text-error hover:bg-surface-container-high transition-colors duration-150 rounded-lg active:opacity-80" type="button">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</article>
+<!-- Item 3: Azeite de oliva 500ml -->
+<article class="py-3.5 flex items-center justify-between gap-3">
+<div class="flex-1 min-w-0 pr-1">
+<h2 class="font-body text-[15px] font-semibold text-on-surface tracking-tight truncate">
+      Azeite de oliva 500ml
+    </h2>
+<div class="flex items-center gap-2 mt-1 text-xs text-secondary tabular-nums">
+<span>1 un</span>
+<span class="text-outline-variant">•</span>
+<button class="inline-flex items-center gap-1 text-primary font-medium hover:underline" type="button">
+<span>R$ 38,90/un</span>
+<span class="material-symbols-outlined text-[15px]">edit</span>
+</button>
+</div>
+</div>
+<div class="flex items-center gap-2.5 shrink-0">
+<span class="font-body text-[15px] font-semibold text-on-surface tabular-nums">R$ 38,90</span>
+<button aria-label="Excluir item" class="min-w-[40px] min-h-[40px] flex items-center justify-center text-outline hover:text-error hover:bg-surface-container-high transition-colors duration-150 rounded-lg active:opacity-80" type="button">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</article></main>
+<!-- Modal Docked Footer Actions -->
+<footer class="p-4 bg-surface border-t border-outline-variant flex flex-col gap-2.5"><!-- Resumo com contagem e total -->
+<div class="flex items-center justify-between px-1 text-sm font-body">
+<span class="text-on-surface-variant font-medium">3 itens rascunhados</span>
+<div class="tabular-nums text-on-surface">
+<span class="text-on-surface-variant mr-1">Total:</span>
+<span class="font-semibold text-[16px] text-primary">R$ 78,30</span>
+</div>
+</div>
+<!-- Botão Primário Verde Folha Contábil -->
+<button class="w-full min-h-[48px] px-4 py-3 bg-primary text-on-primary font-label text-sm font-semibold rounded-lg flex items-center justify-center gap-2 hover:bg-primary-container transition-colors duration-150 active:opacity-90 shadow-sm" type="button">
+<span class="material-symbols-outlined text-[18px]">add_circle</span>
+<span>Continuar adicionando</span>
+</button></footer>
+</div>
+</body></html>

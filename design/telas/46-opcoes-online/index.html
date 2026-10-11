@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Opções — Minhas Compras</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Fonts: Newsreader & Public Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400&amp;family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Theme Configuration -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-highest": "#e4e2dd",
+            "on-surface-variant": "#424843",
+            "on-background": "#1b1c18",
+            "surface-container-low": "#f5f3ed",
+            "tertiary-fixed": "#ffdadb",
+            "on-tertiary": "#ffffff",
+            "on-secondary-container": "#616655",
+            "on-error": "#ffffff",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "tertiary-container": "#724549",
+            "on-primary-fixed": "#002110",
+            "secondary-container": "#e0e5cf",
+            "secondary": "#5b604f",
+            "primary-fixed": "#c4eccf",
+            "surface-bright": "#fbf9f3",
+            "inverse-primary": "#a9d0b4",
+            "error": "#ba1a1a",
+            "on-error-container": "#93000a",
+            "surface-container": "#f0eee8",
+            "background": "#fbf9f3",
+            "surface-container-high": "#eae8e2",
+            "on-primary-container": "#a7ceb2",
+            "outline-variant": "#c1c8c1",
+            "primary": "#1f412d",
+            "on-surface": "#1b1c18",
+            "surface-dim": "#dcdad4",
+            "surface-tint": "#43664f",
+            "secondary-fixed": "#e0e5cf",
+            "on-tertiary-container": "#f2b6ba",
+            "on-secondary-fixed-variant": "#444939",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "on-tertiary-fixed": "#321015",
+            "on-primary-fixed-variant": "#2b4e39",
+            "secondary-fixed-dim": "#c4c9b4",
+            "surface-container-lowest": "#ffffff",
+            "surface-variant": "#e4e2dd",
+            "inverse-surface": "#30312d",
+            "on-secondary": "#ffffff",
+            "primary-fixed-dim": "#a9d0b4",
+            "inverse-on-surface": "#f3f1eb",
+            "on-primary": "#ffffff",
+            "primary-container": "#365943",
+            "error-container": "#ffdad6",
+            "surface": "#fbf9f3",
+            "on-secondary-fixed": "#191d10",
+            "tertiary": "#582f33",
+            "outline": "#727972"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    body {
+      background-color: #f7f5ef;
+      color: #1b1c18;
+      font-family: 'Public Sans', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-tabular {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen flex justify-center selection:bg-secondary-container">
+<!-- Mobile Viewport Container (390px) -->
+<div class="w-full max-w-[390px] min-h-screen flex flex-col bg-surface relative shadow-sm pb-8">
+<!-- 1. TopAppBar (Shared Component Source of Truth Execution) -->
+<header class="flex justify-between items-center w-full px-4 h-14 bg-surface text-on-surface sticky top-0 z-40 bg-opacity-95 backdrop-blur-sm border-b border-outline-variant/30">
+<button aria-label="Voltar" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors duration-150 active:opacity-80" type="button">
+<span class="material-symbols-outlined text-[24px] text-on-surface">arrow_back</span>
+</button>
+<h1 class="font-headline text-2xl font-bold tracking-tight text-on-surface">Opções</h1>
+</header>
+<!-- Main Content Canvas: Long Vertical Flow -->
+<main class="flex-1 px-4 pt-5 pb-8 space-y-7">
+<!-- 2. Subtítulo Inicial da Página -->
+<section class="space-y-1">
+<h2 class="font-headline text-3xl font-medium text-on-surface tracking-tight">Ajustes do app</h2>
+<p class="font-body text-sm text-on-surface-variant leading-relaxed">
+          Gerenciamento da sua conta, sincronização e preferências visuais.
+        </p>
+</section>
+<!-- 3. Seção CONTA -->
+<section class="space-y-2.5">
+<div class="flex items-center justify-between px-0.5">
+<span class="font-label text-[11px] font-semibold tracking-wider text-secondary">CONTA</span>
+</div>
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/60 overflow-hidden divide-y divide-outline-variant/40 shadow-none">
+<!-- Perfil resumido -->
+<div class="p-4 flex items-center gap-3.5">
+<div class="w-12 h-12 rounded-full bg-secondary-container text-primary font-body font-bold text-base flex items-center justify-center shrink-0 border border-outline-variant/40">
+              HR
+            </div>
+<div class="min-w-0 flex-1">
+<div class="font-body font-semibold text-base text-on-surface truncate">Helena Ramos</div>
+<div class="font-body text-xs text-on-surface-variant truncate font-tabular">helena.ramos@exemplo.com.br</div>
+</div>
+</div>
+<!-- Meus Dados -->
+<button class="w-full px-4 py-3.5 flex items-center justify-between text-left hover:bg-surface-container-low transition-colors duration-150 group" type="button">
+<div class="flex items-center gap-3 text-on-surface">
+<span class="material-symbols-outlined text-secondary text-[22px]">badge</span>
+<span class="font-body text-sm font-medium">Meus dados</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[20px] group-hover:translate-x-0.5 transition-transform duration-150">chevron_right</span>
+</button>
+<!-- Deslogar -->
+<button class="w-full px-4 py-3.5 flex items-center justify-between text-left hover:bg-surface-container-low transition-colors duration-150 group" type="button">
+<div class="flex items-center gap-3 text-tertiary">
+<span class="material-symbols-outlined text-[22px]">logout</span>
+<span class="font-body text-sm font-medium">Deslogar</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[20px]">chevron_right</span>
+</button>
+</div>
+</section>
+<!-- 4. Seção APARÊNCIA -->
+<section class="space-y-2.5">
+<div class="flex items-center justify-between px-0.5">
+<span class="font-label text-[11px] font-semibold tracking-wider text-secondary">APARÊNCIA</span>
+</div>
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/60 p-4 space-y-3">
+<!-- Segmented Control de Tema -->
+<div class="bg-surface-container p-1 rounded-lg flex items-center gap-1 border border-outline-variant/40">
+<!-- Claro (Ativo) -->
+<button class="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md bg-surface-container-lowest text-primary shadow-sm font-body text-xs font-semibold" type="button">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">light_mode</span>
+<span>Claro</span>
+</button>
+<!-- Escuro (Inativo) -->
+<button class="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-secondary hover:text-on-surface transition-colors duration-150 font-body text-xs font-medium" type="button">
+<span class="material-symbols-outlined text-[18px]">dark_mode</span>
+<span>Escuro</span>
+</button>
+</div>
+<div class="flex items-center gap-1.5 px-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+<span class="font-body text-xs text-on-surface-variant">Tema claro ativado</span>
+</div>
+</div>
+</section>
+<!-- 5. Seção DADOS (Estado Online Completo) -->
+<section class="space-y-2.5">
+<div class="flex items-center justify-between px-0.5">
+<span class="font-label text-[11px] font-semibold tracking-wider text-secondary">DADOS</span>
+<span class="font-label text-[11px] font-medium text-primary px-2 py-0.5 rounded bg-primary-fixed/40 border border-outline-variant/40">Em dia</span>
+</div>
+<!-- Painel "Tudo sincronizado" -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/60 p-4 space-y-4">
+<!-- Cabeçalho do Estado -->
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-full bg-primary-container/10 flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">cloud_done</span>
+</div>
+<div>
+<h3 class="font-body text-sm font-semibold text-on-surface">Tudo sincronizado</h3>
+<p class="font-body text-[11px] text-on-surface-variant font-tabular">Última sincronização: Há 2 minutos</p>
+</div>
+</div>
+<span class="text-[10px] font-label font-bold uppercase tracking-wider text-primary-container bg-primary-fixed/30 px-2 py-0.5 rounded">Estável</span>
+</div>
+<!-- Grade contábil de contadores -->
+<div class="grid grid-cols-3 gap-2 py-2 border-y border-outline-variant/40 bg-surface-container-low/40 rounded-lg px-2">
+<div class="text-center py-1">
+<div class="font-label text-[11px] text-secondary">Total</div>
+<div class="font-headline text-lg font-bold text-on-surface font-tabular">24</div>
+<div class="font-body text-[10px] text-on-surface-variant">registros</div>
+</div>
+<div class="text-center py-1 border-x border-outline-variant/30">
+<div class="font-label text-[11px] text-secondary">Sincronizados</div>
+<div class="font-headline text-lg font-bold text-primary font-tabular">24</div>
+<div class="font-body text-[10px] text-on-surface-variant">100%</div>
+</div>
+<div class="text-center py-1">
+<div class="font-label text-[11px] text-secondary">Faltando</div>
+<div class="font-headline text-lg font-bold text-on-surface font-tabular">0</div>
+<div class="font-body text-[10px] text-on-surface-variant">pendências</div>
+</div>
+</div>
+<!-- Repartição das coleções em tabela contábil -->
+<div class="space-y-1.5 pt-1">
+<div class="text-[11px] font-label font-semibold text-secondary uppercase tracking-tight">Detalhamento por Coleção</div>
+<div class="divide-y divide-outline-variant/30 text-xs font-body">
+<div class="flex justify-between py-1.5 items-center">
+<span class="text-on-surface">Listas</span>
+<span class="font-semibold text-on-surface font-tabular">4</span>
+</div>
+<div class="flex justify-between py-1.5 items-center">
+<span class="text-on-surface">Histórico</span>
+<span class="font-semibold text-on-surface font-tabular">6</span>
+</div>
+<div class="flex justify-between py-1.5 items-center">
+<span class="text-on-surface">Catálogo</span>
+<span class="font-semibold text-on-surface font-tabular">10</span>
+</div>
+<div class="flex justify-between py-1.5 items-center">
+<span class="text-on-surface">Despensa</span>
+<span class="font-semibold text-on-surface font-tabular">4</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Linhas operacionais complementares de DADOS -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/60 divide-y divide-outline-variant/40 overflow-hidden">
+<!-- Sincronização e diagnóstico -->
+<button class="w-full p-4 flex items-center justify-between text-left hover:bg-surface-container-low transition-colors duration-150 group" type="button">
+<div class="pr-2 space-y-0.5">
+<div class="font-body text-sm font-medium text-on-surface">Sincronização e diagnóstico</div>
+<div class="font-body text-xs text-on-surface-variant">Ver detalhes da conexão local e registros remotos.</div>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[20px] group-hover:translate-x-0.5 transition-transform duration-150 shrink-0">chevron_right</span>
+</button>
+<!-- SwitchListTile: Atualizar meu catálogo como dono -->
+<div class="p-4 flex items-center justify-between gap-3">
+<div class="space-y-0.5 min-w-0">
+<label class="font-body text-sm font-medium text-on-surface block cursor-pointer" for="catalog-owner-toggle">
+                Atualizar meu catálogo como dono
+              </label>
+<p class="font-body text-xs text-on-surface-variant leading-snug">
+                Aplica edições e novos itens globalmente no catálogo.
+              </p>
+</div>
+<!-- Switch Ativo Material 3 Style -->
+<label class="relative inline-flex items-center cursor-pointer shrink-0">
+<input checked="" class="sr-only peer" id="catalog-owner-toggle" type="checkbox"/>
+<div class="w-12 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<!-- Linha de integração: Minhas Finanças -->
+<button class="w-full p-4 flex items-center justify-between text-left hover:bg-surface-container-low transition-colors duration-150 group" type="button">
+<div class="space-y-0.5">
+<div class="font-body text-sm font-medium text-on-surface">Minhas Finanças</div>
+<div class="font-body text-xs text-on-surface-variant">Integração de pagamentos e fechamento contábil.</div>
+</div>
+<div class="flex items-center gap-1.5 shrink-0">
+<span class="font-label text-[11px] font-semibold text-primary px-2 py-0.5 rounded bg-primary-fixed/40">Conectado</span>
+<span class="material-symbols-outlined text-outline-variant text-[20px] group-hover:translate-x-0.5 transition-transform duration-150">chevron_right</span>
+</div>
+</button>
+</div>
+</section>
+<!-- 6. Seção AJUDA -->
+<section class="space-y-2.5">
+<div class="flex items-center justify-between px-0.5">
+<span class="font-label text-[11px] font-semibold tracking-wider text-secondary">AJUDA</span>
+</div>
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/60 overflow-hidden divide-y divide-outline-variant/40">
+<button class="w-full p-4 flex items-center justify-between text-left hover:bg-surface-container-low transition-colors duration-150 group" type="button">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary text-[22px]">restart_alt</span>
+<span class="font-body text-sm font-medium text-on-surface">Rever Onboarding</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[20px] group-hover:translate-x-0.5 transition-transform duration-150">chevron_right</span>
+</button>
+</div>
+</section>
+<!-- 7. Rodapé de Sistema -->
+</main>
+<!-- BottomNavBar (Shared Component Source of Truth Execution) -->
+<!-- Destination 4: "Opções" aligns directly with canonical top title and screen intent -->
+</div>
+</body></html>

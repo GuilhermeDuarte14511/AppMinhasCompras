@@ -1,21 +1,19 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 
 import '../application/ports.dart';
 import '../application/store_and_services.dart';
-import '../core/utils/format_utils.dart';
 import '../data/remote/shared_lists_repository.dart';
 import '../domain/models_and_utils.dart';
 import 'dialogs_and_sheets.dart';
-import 'launch.dart';
+import 'my_lists/my_lists_layout.dart';
+import 'my_lists/list_ledger_row.dart';
+import 'theme/mercado_editorial_theme.dart';
 import 'purchase_history_page.dart';
 import 'shared_lists_pages.dart';
 import 'shopping_list_editor_page.dart';
-import 'theme/app_tokens.dart';
+import 'trash_lists_page.dart';
 import 'utils/app_modal.dart';
 import 'utils/app_page_route.dart';
 import 'utils/app_toast.dart';
@@ -79,7 +77,7 @@ Future<ShoppingListModel?> _runMyListsSmartReplenishmentFlow(
     return null;
   }
 
-  final name = await showListNameDialog(
+  final setup = await showListSetupDialog(
     context,
     title: 'Nova lista por reposição inteligente',
     confirmLabel: 'Criar lista',
@@ -87,34 +85,34 @@ Future<ShoppingListModel?> _runMyListsSmartReplenishmentFlow(
       selectedSuggestions.first.source,
     ),
   );
-  if (!context.mounted || name == null) {
+  if (!context.mounted || setup == null) {
     return null;
   }
 
   return store.createListFromDrafts(
-    name: name,
+    name: setup.name,
+    budget: setup.budget,
+    paymentBalances: setup.paymentBalances,
     drafts: selectedSuggestions
         .map((suggestion) => suggestion.toDraft())
         .toList(growable: false),
   );
 }
 
-enum _MyListsFilter { all, active, closed, shared }
-
 List<ShoppingListModel> _filterMyLists(
   List<ShoppingListModel> lists, {
   required String searchQuery,
-  required _MyListsFilter activeFilter,
+  required MyListsFilter activeFilter,
   required Map<String, SharedShoppingListSummary> sharedBySource,
 }) {
   final normalizedQuery = normalizeQuery(searchQuery);
   return lists
       .where((list) {
         final matchesFilter = switch (activeFilter) {
-          _MyListsFilter.all => true,
-          _MyListsFilter.active => !list.isClosed,
-          _MyListsFilter.closed => list.isClosed,
-          _MyListsFilter.shared => sharedBySource.containsKey(list.id),
+          MyListsFilter.all => true,
+          MyListsFilter.active => !list.isClosed,
+          MyListsFilter.closed => list.isClosed,
+          MyListsFilter.shared => sharedBySource.containsKey(list.id),
         };
         if (!matchesFilter) {
           return false;
@@ -151,7 +149,7 @@ class _MyListsPageState extends State<MyListsPage> {
   bool _selectionMode = false;
   final Set<String> _selectedListIds = <String>{};
   late final TextEditingController _searchController;
-  _MyListsFilter _activeFilter = _MyListsFilter.all;
+  MyListsFilter _activeFilter = MyListsFilter.all;
 
   String get _searchQuery => _searchController.text.trim();
 
@@ -177,7 +175,7 @@ class _MyListsPageState extends State<MyListsPage> {
     setState(() {});
   }
 
-  void _setActiveFilter(_MyListsFilter filter) {
+  void _setActiveFilter(MyListsFilter filter) {
     if (_activeFilter == filter) {
       return;
     }
@@ -188,12 +186,12 @@ class _MyListsPageState extends State<MyListsPage> {
   }
 
   void _clearMyListsFilters() {
-    if (_searchController.text.isEmpty && _activeFilter == _MyListsFilter.all) {
+    if (_searchController.text.isEmpty && _activeFilter == MyListsFilter.all) {
       return;
     }
     _searchController.clear();
     setState(() {
-      _activeFilter = _MyListsFilter.all;
+      _activeFilter = MyListsFilter.all;
     });
   }
 
@@ -206,6 +204,13 @@ class _MyListsPageState extends State<MyListsPage> {
           voiceRecognitionService: widget.voiceRecognitionService,
         ),
       ),
+    );
+  }
+
+  Future<void> _openTrash() async {
+    await Navigator.push<void>(
+      context,
+      buildAppPageRoute(builder: (_) => TrashListsPage(store: widget.store)),
     );
   }
 
@@ -244,18 +249,26 @@ class _MyListsPageState extends State<MyListsPage> {
   }
 
   Future<void> _createFromSource(ShoppingListModel source) async {
-    final name = await showListNameDialog(
+    final setup = await showListSetupDialog(
       context,
       title: 'Criar lista baseada em "${source.name}"',
       confirmLabel: 'Criar lista',
       initialValue: '${source.name} - nova',
+      initialBudget: source.budget,
+      initialPaymentBalances: source.paymentBalances,
     );
 
-    if (!mounted || name == null) {
+    if (!mounted || setup == null) {
       return;
     }
 
-    final created = await widget.store.createList(name: name, basedOn: source);
+    final created = await widget.store.createList(
+      name: setup.name,
+      basedOn: source,
+      budget: setup.budget,
+      clearBudget: setup.budget == null,
+      paymentBalances: setup.paymentBalances,
+    );
 
     if (!mounted) {
       return;
@@ -283,17 +296,21 @@ class _MyListsPageState extends State<MyListsPage> {
   }
 
   Future<void> _createNewList() async {
-    final name = await showListNameDialog(
+    final setup = await showListSetupDialog(
       context,
       title: 'Nova lista de compras',
       confirmLabel: 'Criar lista',
     );
 
-    if (!mounted || name == null) {
+    if (!mounted || setup == null) {
       return;
     }
 
-    final created = await widget.store.createList(name: name);
+    final created = await widget.store.createList(
+      name: setup.name,
+      budget: setup.budget,
+      paymentBalances: setup.paymentBalances,
+    );
     if (!mounted) {
       return;
     }
@@ -322,7 +339,9 @@ class _MyListsPageState extends State<MyListsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Excluir lista?'),
-        content: Text('Deseja excluir "${list.name}"?'),
+        content: Text(
+          '“${list.name}” ficará na lixeira por 30 dias antes de ser excluída definitivamente.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -344,7 +363,7 @@ class _MyListsPageState extends State<MyListsPage> {
     if (!mounted) {
       return;
     }
-    _showSnack('Lista excluída.');
+    _showDeletionUndo({list.id}, 'Lista movida para a lixeira.');
   }
 
   Future<void> _reopenList(ShoppingListModel list) async {
@@ -403,8 +422,10 @@ class _MyListsPageState extends State<MyListsPage> {
         title: Text(clearAll ? 'Limpar todas as listas?' : 'Excluir listas?'),
         content: Text(
           clearAll
-              ? 'Essa ação vai remover todas as listas de compras.'
-              : 'Deseja excluir ${formatCountLabel(count, 'lista selecionada', 'listas selecionadas')}?',
+              ? 'Todas as listas serão movidas para a lixeira por 30 dias.'
+              : count == 1
+              ? 'A lista selecionada será movida para a lixeira por 30 dias.'
+              : '$count listas selecionadas serão movidas para a lixeira por 30 dias.',
         ),
         actions: [
           TextButton(
@@ -446,7 +467,12 @@ class _MyListsPageState extends State<MyListsPage> {
       return;
     }
     _exitSelectionMode();
-    _showSnack(count == 1 ? '1 lista removida.' : '$count listas removidas.');
+    _showDeletionUndo(
+      selectedIds,
+      count == 1
+          ? '1 lista movida para a lixeira.'
+          : '$count listas movidas para a lixeira.',
+    );
   }
 
   Future<void> _clearAllLists(List<ShoppingListModel> lists) async {
@@ -468,7 +494,12 @@ class _MyListsPageState extends State<MyListsPage> {
       return;
     }
     _exitSelectionMode();
-    _showSnack(count == 1 ? '1 lista removida.' : '$count listas removidas.');
+    _showDeletionUndo(
+      lists.map((list) => list.id).toSet(),
+      count == 1
+          ? '1 lista movida para a lixeira.'
+          : '$count listas movidas para a lixeira.',
+    );
   }
 
   Future<void> _exportBackup() async {
@@ -573,6 +604,27 @@ class _MyListsPageState extends State<MyListsPage> {
     );
   }
 
+  void _showDeletionUndo(Set<String> listIds, String message) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 6),
+        action: SnackBarAction(
+          label: 'Desfazer',
+          onPressed: () async {
+            await widget.store.restoreListsById(listIds);
+            if (mounted) {
+              _showSnack('Lista restaurada.', type: AppToastType.success);
+            }
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final repository = widget.sharedListsRepository;
@@ -618,213 +670,163 @@ class _MyListsPageState extends State<MyListsPage> {
         final allSelected =
             visibleLists.isNotEmpty &&
             visibleLists.every((entry) => _selectedListIds.contains(entry.id));
-        final openListsCount = lists.where((entry) => !entry.isClosed).length;
-        final closedListsCount = lists.where((entry) => entry.isClosed).length;
         final sharedListsCount = lists
             .where((entry) => sharedBySource.containsKey(entry.id))
             .length;
-        final hasActiveFilters =
-            _searchQuery.isNotEmpty || _activeFilter != _MyListsFilter.all;
 
-        return Scaffold(
-          appBar: AppBar(
-            leading: _selectionMode
-                ? IconButton(
-                    tooltip: 'Cancelar seleção',
-                    onPressed: _exitSelectionMode,
-                    icon: const Icon(Icons.close_rounded),
-                  )
-                : null,
-            title: Text(
-              _selectionMode
-                  ? selectedCount == 1
-                        ? '1 selecionada'
-                        : '$selectedCount selecionadas'
-                  : 'Minhas listas',
-            ),
-            actions: [
-              if (_selectionMode) ...[
-                IconButton(
-                  tooltip: allSelected ? 'Desmarcar todas' : 'Selecionar todas',
-                  onPressed: visibleLists.isEmpty
-                      ? null
-                      : () => _toggleSelectAll(visibleLists),
-                  icon: Icon(
-                    allSelected
-                        ? Icons.check_box_rounded
-                        : Icons.check_box_outline_blank_rounded,
-                  ),
+        final theme = mercadoEditorialTheme(Theme.of(context));
+        return Theme(
+          data: theme,
+          child: Builder(
+            builder: (context) => Scaffold(
+              appBar: AppBar(
+                leading: _selectionMode
+                    ? IconButton(
+                        tooltip: 'Cancelar seleção',
+                        onPressed: _exitSelectionMode,
+                        icon: const Icon(Icons.close_rounded),
+                      )
+                    : null,
+                title: Text(
+                  _selectionMode
+                      ? selectedCount == 1
+                            ? '1 selecionada'
+                            : '$selectedCount selecionadas'
+                      : 'Minhas listas',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                IconButton(
-                  tooltip: 'Excluir selecionadas',
-                  onPressed: selectedCount > 0 ? _deleteSelectedLists : null,
-                  icon: const Icon(Icons.delete_sweep_rounded),
-                ),
-              ] else ...[
-                IconButton(
-                  tooltip: 'Criar baseada em antiga',
-                  onPressed: _createFromPicker,
-                  icon: const Icon(Icons.copy_all_rounded),
-                ),
-                PopupMenuButton<_MyListsMenuAction>(
-                  onSelected: (action) {
-                    switch (action) {
-                      case _MyListsMenuAction.viewHistory:
-                        _openPurchaseHistory();
-                      case _MyListsMenuAction.smartReplenishment:
-                        _createSmartReplenishmentList();
-                      case _MyListsMenuAction.selectMany:
-                        _enterSelectionMode();
-                      case _MyListsMenuAction.importBackup:
-                        _importBackup();
-                      case _MyListsMenuAction.exportBackup:
-                        _exportBackup();
-                      case _MyListsMenuAction.clearAll:
-                        _clearAllLists(lists);
-                    }
-                  },
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(
-                      value: _MyListsMenuAction.viewHistory,
-                      child: Text('Histórico mensal'),
-                    ),
-                    PopupMenuItem(
-                      value: _MyListsMenuAction.smartReplenishment,
-                      child: Text('Reposição inteligente'),
-                    ),
-                    PopupMenuItem(
-                      value: _MyListsMenuAction.selectMany,
-                      child: Text('Selecionar várias'),
-                    ),
-                    PopupMenuItem(
-                      value: _MyListsMenuAction.importBackup,
-                      child: Text('Importar backup (JSON)'),
-                    ),
-                    PopupMenuItem(
-                      value: _MyListsMenuAction.exportBackup,
-                      child: Text('Exportar backup (JSON)'),
-                    ),
-                    PopupMenuItem(
-                      value: _MyListsMenuAction.clearAll,
-                      child: Text('Limpar todas as listas'),
-                    ),
-                  ],
-                ),
-              ],
-            ],
-          ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: _createNewList,
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Nova lista'),
-          ),
-          body: AppGradientScene(
-            child: SafeArea(
-              child: lists.isEmpty
-                  ? _EmptyListsState(onCreatePressed: _createNewList)
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (!_selectionMode) ...[
-                            _MyListsEntryAnimation(
-                              key: const ValueKey('my_lists_overview'),
-                              delay: Duration.zero,
-                              child: _MyListsOverviewCard(
-                                totalLists: lists.length,
-                                activeListsCount: openListsCount,
-                                closedListsCount: closedListsCount,
-                                sharedListsCount: sharedListsCount,
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            _MyListsEntryAnimation(
-                              key: const ValueKey('my_lists_controls'),
-                              delay: const Duration(milliseconds: 35),
-                              child: _MyListsControlsCard(
-                                controller: _searchController,
-                                activeFilter: _activeFilter,
-                                hasActiveFilters: hasActiveFilters,
-                                onFilterChanged: _setActiveFilter,
-                                onClearFilters: _clearMyListsFilters,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            _MyListsEntryAnimation(
-                              key: const ValueKey('my_lists_header'),
-                              delay: const Duration(milliseconds: 55),
-                              child: _MyListsSectionHeader(
-                                title: 'Suas listas',
-                                subtitle: hasActiveFilters
-                                    ? visibleLists.length == 1
-                                          ? '1 resultado filtrado.'
-                                          : '${visibleLists.length} resultados filtrados.'
-                                    : 'Abertas, fechadas e compartilhadas em um só lugar.',
-                                actionLabel: hasActiveFilters
-                                    ? 'Limpar filtros'
-                                    : null,
-                                onAction: hasActiveFilters
-                                    ? _clearMyListsFilters
-                                    : null,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                          ],
-                          if (visibleLists.isEmpty)
-                            _EmptyFilteredListsState(
-                              query: _searchQuery,
-                              onClearFilters: _clearMyListsFilters,
-                            )
-                          else
-                            ...visibleLists.asMap().entries.map((entry) {
-                              final index = entry.key;
-                              final list = entry.value;
-                              final sharedSummary = sharedBySource[list.id];
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: _MyListsEntryAnimation(
-                                  key: ValueKey(list.id),
-                                  delay: Duration(
-                                    milliseconds: min(140, index * 20),
-                                  ),
-                                  child: _MyListCard(
-                                    list: list,
-                                    sharedSummary: sharedSummary,
-                                    currentUserUid: widget.currentUserUid,
-                                    selectionMode: _selectionMode,
-                                    isSelected: _selectedListIds.contains(
-                                      list.id,
-                                    ),
-                                    onToggleSelection: () =>
-                                        _toggleListSelection(list.id),
-                                    onLongPress: () =>
-                                        _enterSelectionMode(list.id),
-                                    onOpen: () {
-                                      if (_selectionMode) {
-                                        _toggleListSelection(list.id);
-                                        return;
-                                      }
-                                      if (sharedSummary != null) {
-                                        _openSharedList(sharedSummary);
-                                        return;
-                                      }
-                                      _openList(list);
-                                    },
-                                    onOpenShared: sharedSummary == null
-                                        ? null
-                                        : () => _openSharedList(sharedSummary),
-                                    onReopen: () => _reopenList(list),
-                                    onCreateFromThis: () =>
-                                        _createFromSource(list),
-                                    onDelete: () => _deleteList(list),
-                                  ),
-                                ),
-                              );
-                            }),
-                        ],
+                actions: [
+                  if (_selectionMode) ...[
+                    IconButton(
+                      tooltip: allSelected
+                          ? 'Desmarcar todas'
+                          : 'Selecionar todas',
+                      onPressed: visibleLists.isEmpty
+                          ? null
+                          : () => _toggleSelectAll(visibleLists),
+                      icon: Icon(
+                        allSelected
+                            ? Icons.check_box_rounded
+                            : Icons.check_box_outline_blank_rounded,
                       ),
                     ),
+                    IconButton(
+                      tooltip: 'Excluir selecionadas',
+                      onPressed: selectedCount > 0
+                          ? _deleteSelectedLists
+                          : null,
+                      icon: const Icon(Icons.delete_sweep_rounded),
+                    ),
+                  ] else ...[
+                    IconButton(
+                      tooltip: 'Selecionar várias',
+                      onPressed: _enterSelectionMode,
+                      icon: const Icon(Icons.checklist),
+                    ),
+                    IconButton(
+                      key: const ValueKey('my_lists_trash'),
+                      tooltip: 'Abrir lixeira',
+                      onPressed: _openTrash,
+                      icon: Badge.count(
+                        count: widget.store.trashedLists.length,
+                        isLabelVisible: widget.store.trashedLists.isNotEmpty,
+                        child: const Icon(Icons.delete_outline_rounded),
+                      ),
+                    ),
+                    PopupMenuButton<_MyListsMenuAction>(
+                      onSelected: (action) {
+                        switch (action) {
+                          case _MyListsMenuAction.viewHistory:
+                            _openPurchaseHistory();
+                          case _MyListsMenuAction.smartReplenishment:
+                            _createSmartReplenishmentList();
+                          case _MyListsMenuAction.selectMany:
+                            _enterSelectionMode();
+                          case _MyListsMenuAction.importBackup:
+                            _importBackup();
+                          case _MyListsMenuAction.exportBackup:
+                            _exportBackup();
+                          case _MyListsMenuAction.clearAll:
+                            _clearAllLists(lists);
+                        }
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(
+                          value: _MyListsMenuAction.viewHistory,
+                          child: Text('Histórico mensal'),
+                        ),
+                        PopupMenuItem(
+                          value: _MyListsMenuAction.smartReplenishment,
+                          child: Text('Reposição inteligente'),
+                        ),
+                        PopupMenuItem(
+                          value: _MyListsMenuAction.selectMany,
+                          child: Text('Selecionar várias'),
+                        ),
+                        PopupMenuItem(
+                          value: _MyListsMenuAction.importBackup,
+                          child: Text('Importar backup (JSON)'),
+                        ),
+                        PopupMenuItem(
+                          value: _MyListsMenuAction.exportBackup,
+                          child: Text('Exportar backup (JSON)'),
+                        ),
+                        PopupMenuItem(
+                          value: _MyListsMenuAction.clearAll,
+                          child: Text('Limpar todas as listas'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+              body: SafeArea(
+                child: MyListsLayout(
+                  lists: lists,
+                  sharedCount: sharedListsCount,
+                  visibleCount: visibleLists.length,
+                  controller: _searchController,
+                  filter: _activeFilter,
+                  selectionMode: _selectionMode,
+                  onFilter: _setActiveFilter,
+                  onClear: _clearMyListsFilters,
+                  onCreate: _createNewList,
+                  onTemplate: _createFromPicker,
+                  onHistory: _openPurchaseHistory,
+                  onReplenishment: _createSmartReplenishmentList,
+                  rows: visibleLists.map((list) {
+                    final sharedSummary = sharedBySource[list.id];
+                    return ListLedgerRow(
+                      key: ValueKey(list.id),
+                      list: list,
+                      sharedSummary: sharedSummary,
+                      currentUserUid: widget.currentUserUid,
+                      selectionMode: _selectionMode,
+                      isSelected: _selectedListIds.contains(list.id),
+                      onToggleSelection: () => _toggleListSelection(list.id),
+                      onLongPress: () => _enterSelectionMode(list.id),
+                      onOpen: () {
+                        if (_selectionMode) {
+                          _toggleListSelection(list.id);
+                          return;
+                        }
+                        if (sharedSummary != null) {
+                          _openSharedList(sharedSummary);
+                          return;
+                        }
+                        _openList(list);
+                      },
+                      onOpenShared: sharedSummary == null
+                          ? null
+                          : () => _openSharedList(sharedSummary),
+                      onReopen: () => _reopenList(list),
+                      onCreateFromThis: () => _createFromSource(list),
+                      onDelete: () => _deleteList(list),
+                    );
+                  }).toList(),
+                ),
+              ),
             ),
           ),
         );
@@ -840,807 +842,4 @@ enum _MyListsMenuAction {
   importBackup,
   exportBackup,
   clearAll,
-}
-
-class _MyListsOverviewCard extends StatelessWidget {
-  const _MyListsOverviewCard({
-    required this.totalLists,
-    required this.activeListsCount,
-    required this.closedListsCount,
-    required this.sharedListsCount,
-  });
-
-  final int totalLists;
-  final int activeListsCount;
-  final int closedListsCount;
-  final int sharedListsCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppTokens.radiusXl),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.56),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Painel das listas',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              totalLists == 1
-                  ? 'Você tem 1 lista salva pronta para abrir, editar ou reutilizar.'
-                  : 'Você tem $totalLists listas salvas para acompanhar compras e históricos.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _MyListsSummaryPill(
-                  icon: Icons.inventory_2_rounded,
-                  label: 'Total',
-                  value: '$totalLists',
-                ),
-                _MyListsSummaryPill(
-                  icon: Icons.radio_button_checked_rounded,
-                  label: 'Abertas',
-                  value: '$activeListsCount',
-                ),
-                _MyListsSummaryPill(
-                  icon: Icons.lock_rounded,
-                  label: 'Fechadas',
-                  value: '$closedListsCount',
-                ),
-                _MyListsSummaryPill(
-                  icon: Icons.group_rounded,
-                  label: 'Compart.',
-                  value: '$sharedListsCount',
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MyListsControlsCard extends StatelessWidget {
-  const _MyListsControlsCard({
-    required this.controller,
-    required this.activeFilter,
-    required this.hasActiveFilters,
-    required this.onFilterChanged,
-    required this.onClearFilters,
-  });
-
-  final TextEditingController controller;
-  final _MyListsFilter activeFilter;
-  final bool hasActiveFilters;
-  final ValueChanged<_MyListsFilter> onFilterChanged;
-  final VoidCallback onClearFilters;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return _MyListsContentPanel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              hintText: 'Buscar lista pelo nome',
-              prefixIcon: const Icon(Icons.search_rounded),
-              suffixIcon: controller.text.isEmpty
-                  ? null
-                  : IconButton(
-                      tooltip: 'Limpar busca',
-                      onPressed: controller.clear,
-                      icon: const Icon(Icons.close_rounded),
-                    ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _MyListsFilterChip(
-                  label: 'Todas',
-                  selected: activeFilter == _MyListsFilter.all,
-                  onTap: () => onFilterChanged(_MyListsFilter.all),
-                ),
-                const SizedBox(width: 8),
-                _MyListsFilterChip(
-                  label: 'Abertas',
-                  selected: activeFilter == _MyListsFilter.active,
-                  onTap: () => onFilterChanged(_MyListsFilter.active),
-                ),
-                const SizedBox(width: 8),
-                _MyListsFilterChip(
-                  label: 'Fechadas',
-                  selected: activeFilter == _MyListsFilter.closed,
-                  onTap: () => onFilterChanged(_MyListsFilter.closed),
-                ),
-                const SizedBox(width: 8),
-                _MyListsFilterChip(
-                  label: 'Compartilhadas',
-                  selected: activeFilter == _MyListsFilter.shared,
-                  onTap: () => onFilterChanged(_MyListsFilter.shared),
-                ),
-              ],
-            ),
-          ),
-          if (hasActiveFilters) ...[
-            const SizedBox(height: 10),
-            TextButton.icon(
-              onPressed: onClearFilters,
-              icon: Icon(
-                Icons.filter_alt_off_rounded,
-                color: colorScheme.primary,
-              ),
-              label: const Text('Limpar busca e filtros'),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _MyListsFilterChip extends StatelessWidget {
-  const _MyListsFilterChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ChoiceChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) => onTap(),
-      showCheckmark: false,
-      visualDensity: VisualDensity.compact,
-    );
-  }
-}
-
-class _EmptyFilteredListsState extends StatelessWidget {
-  const _EmptyFilteredListsState({
-    required this.query,
-    required this.onClearFilters,
-  });
-
-  final String query;
-  final VoidCallback onClearFilters;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Card(
-      elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: colorScheme.secondaryContainer,
-                borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-              ),
-              child: const Padding(
-                padding: EdgeInsets.all(12),
-                child: Icon(Icons.search_off_rounded, size: 28),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Nenhuma lista encontrada',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              query.isEmpty
-                  ? 'Ajuste os filtros para ver mais listas.'
-                  : 'Não encontramos resultados para "$query".',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 14),
-            FilledButton.tonalIcon(
-              onPressed: onClearFilters,
-              icon: const Icon(Icons.filter_alt_off_rounded),
-              label: const Text('Limpar filtros'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyListsState extends StatelessWidget {
-  const _EmptyListsState({required this.onCreatePressed});
-
-  final VoidCallback onCreatePressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(26),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: colorScheme.primaryContainer,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Icon(
-                  Icons.inventory_2_rounded,
-                  size: 74,
-                  color: colorScheme.primary.withValues(alpha: 0.78),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              'Crie sua primeira lista',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Crie sua primeira lista e acompanhe quantidades e totais em tempo real.',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 18),
-            FilledButton.icon(
-              onPressed: onCreatePressed,
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Criar primeira lista'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MyListCard extends StatelessWidget {
-  const _MyListCard({
-    required this.list,
-    this.sharedSummary,
-    this.currentUserUid,
-    required this.selectionMode,
-    required this.isSelected,
-    required this.onToggleSelection,
-    required this.onLongPress,
-    required this.onOpen,
-    this.onOpenShared,
-    required this.onReopen,
-    required this.onCreateFromThis,
-    required this.onDelete,
-  });
-
-  final ShoppingListModel list;
-  final SharedShoppingListSummary? sharedSummary;
-  final String? currentUserUid;
-  final bool selectionMode;
-  final bool isSelected;
-  final VoidCallback onToggleSelection;
-  final VoidCallback onLongPress;
-  final VoidCallback onOpen;
-  final VoidCallback? onOpenShared;
-  final VoidCallback onReopen;
-  final VoidCallback onCreateFromThis;
-  final VoidCallback onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isShared = sharedSummary != null;
-    final lineItemsCount = list.items.length;
-    final purchasedCount = list.purchasedItemsCount;
-    final progress = lineItemsCount == 0
-        ? 0.0
-        : purchasedCount / lineItemsCount;
-    final resolvedUid = currentUserUid?.trim() ?? '';
-    final isSharedOwner = isShared && sharedSummary!.isOwner(resolvedUid);
-    final sharedRoleLabel = isSharedOwner ? 'Dono' : 'Membro';
-    final sharedRoleIcon = isSharedOwner
-        ? Icons.verified_user_rounded
-        : Icons.people_alt_rounded;
-    final sharedLabelBg = colorScheme.tertiaryContainer;
-    final sharedLabelFg = colorScheme.onTertiaryContainer;
-    final sharedMemberLabel =
-        '${sharedSummary?.memberCount ?? 0} membro${(sharedSummary?.memberCount ?? 0) == 1 ? '' : 's'}';
-    final isSelectedState = selectionMode && isSelected;
-    final backgroundColor = isSelectedState
-        ? colorScheme.primaryContainer
-        : list.isClosed
-        ? colorScheme.surfaceContainerLow
-        : isShared
-        ? colorScheme.tertiaryContainer
-        : colorScheme.surface;
-    final borderColor = isSelectedState
-        ? colorScheme.primary
-        : list.isClosed
-        ? colorScheme.outline.withValues(alpha: 0.5)
-        : isShared
-        ? colorScheme.tertiary
-        : colorScheme.outlineVariant.withValues(alpha: 0.54);
-
-    return Semantics(
-      container: true,
-      button: true,
-      label: selectionMode ? 'Selecionar ${list.name}' : 'Abrir ${list.name}',
-      value: list.isClosed ? 'Lista fechada' : 'Lista aberta',
-      hint: selectionMode
-          ? 'Toque para alternar a seleção.'
-          : 'Toque para abrir a lista.',
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        color: Colors.transparent,
-        elevation: 0,
-        child: AnimatedContainer(
-          duration: _myListsAdaptiveMotionDuration(
-            context,
-            const Duration(milliseconds: 220),
-          ),
-          curve: Curves.easeOutCubic,
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(AppTokens.radiusXl),
-            border: Border.all(color: borderColor),
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppTokens.radiusXl),
-            onTap: selectionMode ? onToggleSelection : onOpen,
-            onLongPress: onLongPress,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      if (selectionMode) ...[
-                        Checkbox(
-                          value: isSelected,
-                          onChanged: (_) => onToggleSelection(),
-                        ),
-                        const SizedBox(width: 6),
-                      ],
-                      Expanded(
-                        child: Text(
-                          list.name,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                      Text(
-                        formatShortDate(list.updatedAt),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: selectionMode
-                              ? colorScheme.primary
-                              : colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (sharedSummary != null) ...[
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _MyListsPillLabel(
-                          icon: Icons.group_rounded,
-                          text: 'Compartilhada',
-                          backgroundColor: sharedLabelBg,
-                          foregroundColor: sharedLabelFg,
-                          onTap: onOpenShared,
-                          tooltip: 'Abrir compartilhamento',
-                        ),
-                        _MyListsPillLabel(
-                          icon: sharedRoleIcon,
-                          text: sharedRoleLabel,
-                          backgroundColor: sharedLabelBg,
-                          foregroundColor: sharedLabelFg,
-                          onTap: onOpenShared,
-                          tooltip: 'Abrir compartilhamento',
-                        ),
-                        _MyListsPillLabel(
-                          icon: Icons.group_add_rounded,
-                          text: sharedMemberLabel,
-                          backgroundColor: sharedLabelBg,
-                          foregroundColor: sharedLabelFg,
-                          onTap: onOpenShared,
-                          tooltip: 'Abrir compartilhamento',
-                        ),
-                      ],
-                    ),
-                  ],
-                  const SizedBox(height: 10),
-                  Text(
-                    lineItemsCount == 0
-                        ? 'Sem itens ainda. Abra a lista para começar.'
-                        : list.isClosed
-                        ? purchasedCount == 1
-                              ? 'Compra fechada com 1 item comprado.'
-                              : 'Compra fechada com $purchasedCount itens comprados.'
-                        : '$purchasedCount de ${formatItemCount(lineItemsCount)} comprados até agora.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 7,
-                      color: list.isClosed
-                          ? colorScheme.tertiary
-                          : colorScheme.primary,
-                      backgroundColor: colorScheme.surfaceContainerHighest
-                          .withValues(alpha: 0.72),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      _MyListsPillLabel(
-                        icon: Icons.shopping_basket_rounded,
-                        text: '${list.totalItems} itens',
-                      ),
-                      const SizedBox(width: 8),
-                      _MyListsPillLabel(
-                        icon: Icons.attach_money_rounded,
-                        text: formatCurrency(list.totalValue),
-                      ),
-                      const SizedBox(width: 8),
-                      _MyListsPillLabel(
-                        icon: Icons.check_circle_outline_rounded,
-                        text: '$purchasedCount/$lineItemsCount comprados',
-                      ),
-                      if (list.isClosed) ...[
-                        const SizedBox(width: 8),
-                        const _MyListsPillLabel(
-                          icon: Icons.lock_rounded,
-                          text: 'Fechada',
-                        ),
-                      ],
-                      const Spacer(),
-                      if (!selectionMode) ...[
-                        if (list.isClosed)
-                          IconButton(
-                            tooltip: 'Reabrir lista',
-                            onPressed: onReopen,
-                            icon: const Icon(Icons.lock_open_rounded),
-                          ),
-                        IconButton(
-                          tooltip: 'Criar Baseada Nesta',
-                          onPressed: onCreateFromThis,
-                          icon: const Icon(Icons.copy_all_rounded),
-                        ),
-                        IconButton(
-                          tooltip: 'Excluir lista',
-                          onPressed: onDelete,
-                          icon: const Icon(Icons.delete_outline_rounded),
-                        ),
-                      ] else
-                        Text(
-                          isSelected ? 'Selecionada' : 'Toque para selecionar',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: colorScheme.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-Duration _myListsAdaptiveMotionDuration(
-  BuildContext context,
-  Duration fallback,
-) {
-  final mediaQuery = MediaQuery.maybeOf(context);
-  if (mediaQuery?.disableAnimations ?? false) {
-    return Duration.zero;
-  }
-  return fallback;
-}
-
-class _MyListsContentPanel extends StatelessWidget {
-  const _MyListsContentPanel({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppTokens.radiusXl),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.54),
-        ),
-      ),
-      child: Padding(padding: const EdgeInsets.all(14), child: child),
-    );
-  }
-}
-
-class _MyListsSummaryPill extends StatelessWidget {
-  const _MyListsSummaryPill({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Semantics(
-      label: '$label: $value',
-      readOnly: true,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-          border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.52),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 17),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(width: 6),
-              AnimatedSwitcher(
-                duration: _myListsAdaptiveMotionDuration(
-                  context,
-                  AppTokens.motionMedium,
-                ),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                child: Text(
-                  value,
-                  key: ValueKey('$label|$value'),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurface,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MyListsSectionHeader extends StatelessWidget {
-  const _MyListsSectionHeader({
-    required this.title,
-    required this.subtitle,
-    this.actionLabel,
-    this.onAction,
-  });
-
-  final String title;
-  final String subtitle;
-  final String? actionLabel;
-  final VoidCallback? onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (actionLabel != null && onAction != null) ...[
-          const SizedBox(width: 12),
-          TextButton(onPressed: onAction, child: Text(actionLabel!)),
-        ],
-      ],
-    );
-  }
-}
-
-class _MyListsPillLabel extends StatelessWidget {
-  const _MyListsPillLabel({
-    required this.icon,
-    required this.text,
-    this.backgroundColor,
-    this.foregroundColor,
-    this.onTap,
-    this.tooltip,
-  });
-
-  final IconData icon;
-  final String text;
-  final Color? backgroundColor;
-  final Color? foregroundColor;
-  final VoidCallback? onTap;
-  final String? tooltip;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final bg =
-        backgroundColor ??
-        colorScheme.surfaceContainerHighest.withValues(alpha: 0.7);
-    final fg = foregroundColor ?? colorScheme.onSurface;
-    final label = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: fg),
-          const SizedBox(width: 5),
-          Text(
-            text,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: fg,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (onTap == null) {
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: label,
-      );
-    }
-
-    final interactiveChip = Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Ink(
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: label,
-        ),
-      ),
-    );
-    if (tooltip == null || tooltip!.isEmpty) {
-      return interactiveChip;
-    }
-    return Tooltip(message: tooltip!, child: interactiveChip);
-  }
-}
-
-class _MyListsEntryAnimation extends StatelessWidget {
-  const _MyListsEntryAnimation({
-    super.key,
-    required this.child,
-    required this.delay,
-  });
-
-  final Widget child;
-  final Duration delay;
-
-  @override
-  Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.maybeOf(context);
-    if (mediaQuery?.disableAnimations ?? false) {
-      return child;
-    }
-    return child
-        .animate(delay: delay)
-        .fadeIn(duration: AppTokens.motionMedium, curve: Curves.easeOutCubic)
-        .slideY(
-          begin: 0.04,
-          end: 0,
-          duration: AppTokens.motionMedium,
-          curve: Curves.easeOutCubic,
-        )
-        .scaleXY(
-          begin: 0.985,
-          end: 1,
-          duration: AppTokens.motionMedium,
-          curve: Curves.easeOutBack,
-        );
-  }
 }

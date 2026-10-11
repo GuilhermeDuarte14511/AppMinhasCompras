@@ -42,8 +42,12 @@ jobs:
 
   flutter:
     name: Flutter analyze and test
-    runs-on: ubuntu-latest
+    # Golden references are generated on Windows; keep the rasterizer consistent.
+    runs-on: windows-latest
     timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Checkout repository
@@ -99,18 +103,22 @@ jobs:
     name: Secret scanning
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Scan the delivered tree/new commit. The repository has an accepted
-          # historical exposure documented separately, so a full-history scan
-          # would keep every future quality run permanently red.
-          fetch-depth: 1
+          # The scanner needs the PR base and head commits to inspect its diff.
+          fetch-depth: 0
 
       - name: Scan repository
         uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false
 
   firestore-rules:
     name: Firestore security matrix

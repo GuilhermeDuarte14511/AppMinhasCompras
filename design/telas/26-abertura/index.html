@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Abertura — Minhas Compras</title>
+<!-- Google Fonts: Newsreader (Editorial Serif) & Public Sans (Contábil / Grotesk) -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&amp;family=Public+Sans:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Theme Configuration Matching Design System -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "on-surface": "#1b1c18",
+            "surface-bright": "#fbf9f3",
+            "on-surface-variant": "#424843",
+            "on-primary-container": "#a7ceb2",
+            "surface-variant": "#e4e2dd",
+            "on-secondary-fixed-variant": "#444939",
+            "on-primary": "#ffffff",
+            "tertiary-container": "#724549",
+            "surface-container": "#f0eee8",
+            "primary-container": "#365943",
+            "outline": "#727972",
+            "on-secondary-container": "#616655",
+            "inverse-surface": "#30312d",
+            "secondary-fixed-dim": "#c4c9b4",
+            "surface-dim": "#dcdad4",
+            "on-tertiary": "#ffffff",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "on-tertiary-container": "#f2b6ba",
+            "on-error": "#ffffff",
+            "error-container": "#ffdad6",
+            "error": "#ba1a1a",
+            "outline-variant": "#c1c8c1",
+            "inverse-on-surface": "#f3f1eb",
+            "inverse-primary": "#a9d0b4",
+            "tertiary-fixed": "#ffdadb",
+            "secondary-container": "#e0e5cf",
+            "secondary": "#5b604f",
+            "primary": "#1f412d",
+            "on-secondary": "#ffffff",
+            "on-primary-fixed-variant": "#2b4e39",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "on-primary-fixed": "#002110",
+            "on-background": "#1b1c18",
+            "primary-fixed": "#c4eccf",
+            "on-error-container": "#93000a",
+            "surface-container-highest": "#e4e2dd",
+            "surface-container-high": "#eae8e2",
+            "secondary-fixed": "#e0e5cf",
+            "tertiary": "#582f33",
+            "background": "#fbf9f3",
+            "on-tertiary-fixed": "#321015",
+            "on-secondary-fixed": "#191d10",
+            "surface-tint": "#43664f",
+            "surface-container-lowest": "#ffffff",
+            "surface": "#fbf9f3",
+            "primary-fixed-dim": "#a9d0b4",
+            "surface-container-low": "#f5f3ed"
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          fontFamily: {
+            headline: ["Newsreader", "serif"],
+            display: ["Newsreader", "serif"],
+            body: ["Public Sans", "sans-serif"],
+            label: ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 350, 'GRAD' 0, 'opsz' 24;
+    }
+    
+    @keyframes subtlePulse {
+      0%, 100% { opacity: 0.85; }
+      50% { opacity: 1; }
+    }
+    
+    .caderno-line {
+      background-image: repeating-linear-gradient(
+        to bottom,
+        transparent,
+        transparent 31px,
+        rgba(193, 200, 193, 0.22) 31px,
+        rgba(193, 200, 193, 0.22) 32px
+      );
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-body antialiased min-h-screen flex flex-col justify-center items-center m-0 p-0 selection:bg-primary selection:text-surface-bright">
+<!-- Mobile Viewport Container 390px -->
+<main class="w-full max-w-[390px] h-[844px] max-h-screen flex flex-col justify-between items-center relative overflow-hidden bg-surface px-8 py-12 border-x border-outline-variant/20 shadow-none">
+<!-- Linhas Sutis de Caderno (Textura Tonal Editorial) -->
+<div class="absolute inset-0 pointer-events-none caderno-line opacity-60 z-0"></div>
+<!-- Topo Editorial Limpo: Marcador de Cabeçalho / Registro Oficial -->
+<!-- Centro da Tela: Identidade Visual Icônica & Logotipo Editorial -->
+<div class="flex flex-col items-center justify-center text-center my-auto z-10 w-full px-2">
+<!-- Emblema / Símbolo Contábil: Linhas Limpas de Caderno e Bolsa Mercado -->
+<div class="relative w-20 h-20 mb-8 flex items-center justify-center">
+<!-- Moldura Fina de Papelaria / Selo de Mercado -->
+<div class="absolute inset-0 rounded-lg border border-outline-variant/70 bg-surface-container-lowest/80 flex items-center justify-center">
+<div class="w-[70px] h-[70px] rounded border border-dashed border-outline-variant/40"></div>
+</div>
+<!-- Ícone Canônico Conforme Brand Anchors: menu_book -->
+<div class="relative z-10 flex items-center justify-center text-primary" data-icon="menu_book">
+<span class="material-symbols-outlined text-[36px]" style="font-variation-settings: 'FILL' 0, 'wght' 300;">menu_book</span>
+</div>
+</div>
+<!-- Logotipo da Marca 'Minhas Compras' (Newsreader Serif Editorial) -->
+<h1 class="font-headline text-[34px] leading-tight font-normal tracking-tight text-on-surface mb-2.5">
+        Minhas Compras
+      </h1>
+<!-- Subtítulo Limpo e Contábil -->
+<!-- Indicador Contábil de Carregamento: Barra de Progresso Fina Verde Folha -->
+<div class="mt-12 w-full max-w-[190px] flex flex-col items-center">
+<div class="w-full h-[2px] bg-outline-variant/35 rounded-full overflow-hidden relative">
+<!-- Barra com avanço contábil sutil em verde folha -->
+<div class="h-full bg-primary transition-all duration-700 ease-out" id="progress-bar" style="width: 28%;"></div>
+</div>
+<!-- Marcador numérico tabular discreto -->
+</div>
+</div>
+<!-- Rodapé Editorial Discreto: Estado do Caderno -->
+<footer class="w-full pb-2 flex flex-col items-center justify-center text-center z-10">
+<div class="flex items-center gap-1.5 mb-1.5">
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-primary/70 animate-pulse"></span>
+<p class="font-body text-[12px] font-normal text-on-surface-variant tracking-normal" id="status-label">Preparando caderno de compras...</p>
+</div>
+<!-- Assinatura de Versão Contábil -->
+</footer>
+</main>
+<!-- Script Suave de Transição de Estado Editorial (Sem interatividade externa) -->
+<script>
+    (function() {
+      const progressBar = document.getElementById('progress-bar');
+      const progressPercent = document.getElementById('progress-percent');
+      const statusLabel = document.getElementById('status-label');
+
+      let step = 0;
+      const sequence = [
+        { pct: 28, text: "Carregando caderno..." },
+        { pct: 64, text: "Sincronizando itens e despensa..." },
+        { pct: 92, text: "Organizando registros..." },
+        { pct: 100, text: "Pronto para uso." }
+      ];
+
+      const interval = setInterval(() => {
+        step++;
+        if (step < sequence.length) {
+          const current = sequence[step];
+          if (progressBar) progressBar.style.width = current.pct + '%';
+          if (progressPercent) progressPercent.textContent = current.pct + '%';
+          if (statusLabel) statusLabel.textContent = current.text;
+        } else {
+          clearInterval(interval);
+        }
+      }, 950);
+    })();
+  </script>
+</body></html>

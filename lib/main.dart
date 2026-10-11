@@ -10,6 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'firebase_options.dart';
 import 'src/app/shopping_list_app.dart';
+import 'src/presentation/launch.dart';
+import 'src/presentation/splash/splash_motion.dart';
 import 'src/data/services/backup_service.dart';
 import 'src/data/services/firebase_app_check_bootstrap.dart';
 import 'src/data/services/firebase_emulator_bootstrap.dart';
@@ -17,6 +19,22 @@ import 'src/data/services/reminder_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Paint the opening scene while Firebase and local services initialize.
+  runApp(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.light(),
+      darkTheme: ThemeData.dark(),
+      home: const SplashPage(),
+    ),
+  );
+  final openingAnimation = Future<void>.delayed(
+    MediaQueryData.fromView(
+          WidgetsBinding.instance.platformDispatcher.views.first,
+        ).disableAnimations
+        ? Duration.zero
+        : SplashMotion.duration,
+  );
 
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
@@ -84,6 +102,7 @@ Future<void> main() async {
             ? const NoopShoppingReminderService()
             : LocalNotificationsReminderService();
 
+        await openingAnimation;
         runApp(
           ShoppingListApp(
             backupService: const FilePickerShoppingBackupService(),

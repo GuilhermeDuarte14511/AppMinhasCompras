@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Onboarding — Minhas Compras</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Editorial Typography: Newsreader & Public Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-secondary-container": "#616655",
+            "on-primary-fixed-variant": "#2b4e39",
+            "surface-container-low": "#f5f3ed",
+            "surface-variant": "#e4e2dd",
+            "on-primary-fixed": "#002110",
+            "on-background": "#1b1c18",
+            "surface-dim": "#dcdad4",
+            "primary-fixed-dim": "#a9d0b4",
+            "secondary-container": "#e0e5cf",
+            "on-secondary": "#ffffff",
+            "on-surface-variant": "#424843",
+            "on-secondary-fixed": "#191d10",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "surface-container-highest": "#e4e2dd",
+            "on-tertiary": "#ffffff",
+            "inverse-on-surface": "#f3f1eb",
+            "error-container": "#ffdad6",
+            "primary-container": "#365943",
+            "background": "#fbf9f3",
+            "on-surface": "#1b1c18",
+            "on-secondary-fixed-variant": "#444939",
+            "surface": "#fbf9f3",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "surface-bright": "#fbf9f3",
+            "secondary-fixed-dim": "#c4c9b4",
+            "on-tertiary-container": "#f2b6ba",
+            "tertiary-container": "#724549",
+            "tertiary": "#582f33",
+            "primary-fixed": "#c4eccf",
+            "outline": "#727972",
+            "on-primary": "#ffffff",
+            "inverse-surface": "#30312d",
+            "secondary-fixed": "#e0e5cf",
+            "surface-container": "#f0eee8",
+            "secondary": "#5b604f",
+            "error": "#ba1a1a",
+            "on-tertiary-fixed": "#321015",
+            "primary": "#1f412d",
+            "on-error-container": "#93000a",
+            "inverse-primary": "#a9d0b4",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-high": "#eae8e2",
+            "on-primary-container": "#a7ceb2",
+            "on-error": "#ffffff",
+            "surface-tint": "#43664f",
+            "tertiary-fixed": "#ffdadb",
+            "outline-variant": "#c1c8c1"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-[#F7F5EF] text-on-surface antialiased flex justify-center min-h-screen">
+<!-- Container Mobile 390px -->
+<main class="w-full max-w-[390px] min-h-screen bg-background border-x border-outline-variant/30 flex flex-col justify-between relative shadow-sm">
+<!-- 1. TopAppBar Fiel ao Flutter -->
+<header class="sticky top-0 w-full z-50 flex justify-between items-center px-4 h-14 bg-background/95 backdrop-blur-sm border-b border-outline-variant/30">
+<div class="flex items-center space-x-2">
+<button aria-label="Voltar" class="p-1 rounded-full hover:bg-surface-container active:bg-surface-variant transition-colors text-primary" type="button">
+<span class="material-symbols-outlined text-xl" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-headline font-normal text-2xl text-on-surface tracking-tight">Minhas Compras</h1>
+</div>
+<button class="font-body text-sm font-medium text-secondary hover:text-primary transition-colors px-2 py-1" type="button">
+        Pular
+      </button>
+</header>
+<!-- Corpo de Conteúdo com os Passos do App -->
+<div class="px-5 pt-4 pb-6 flex-1 flex flex-col">
+<!-- Indicador de Progresso Limpo (Passo 1 de 3) -->
+<section class="mb-5">
+<div class="flex justify-between items-center mb-2">
+<span class="font-label text-xs uppercase tracking-wider text-secondary font-medium">Primeiros Passos</span>
+<span class="font-label text-xs tabular-nums text-secondary font-medium">Passo 1 de 3</span>
+</div>
+<div class="grid grid-cols-3 gap-1.5">
+<div class="h-1 bg-primary rounded-full"></div>
+<div class="h-1 bg-outline-variant/40 rounded-full"></div>
+<div class="h-1 bg-outline-variant/40 rounded-full"></div>
+</div>
+</section>
+<!-- Cabeçalho de Boas-vindas sem slogans artificiais -->
+<div class="mb-5">
+<h2 class="font-headline text-2xl sm:text-[26px] text-on-surface font-normal leading-snug tracking-tight">
+          Como funciona o seu aplicativo de compras
+        </h2>
+</div>
+<!-- 2. Conteúdo Fiel aos Recursos Reais do App (Listas, Itens e Modo Compra) -->
+<div class="space-y-3">
+<!-- Passo 1: Listas e Teto de Gastos -->
+<article class="p-3.5 bg-surface-container-lowest border border-outline-variant/50 rounded-lg">
+<div class="flex items-start gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center shrink-0 mt-0.5 text-primary">
+<span class="material-symbols-outlined text-lg" data-icon="checklist">checklist</span>
+</div>
+<div class="flex-1">
+<h3 class="font-headline text-lg text-on-surface font-medium leading-snug">Criação e gestão de listas</h3>
+<p class="font-body text-xs text-secondary leading-relaxed mt-0.5">
+              Organize suas compras com facilidade e defina um planejamento de teto de gastos para cada lista.
+            </p>
+</div>
+</div>
+</article>
+<!-- Passo 2: Adição de Itens e Catálogo -->
+<article class="p-3.5 bg-surface-container-lowest border border-outline-variant/50 rounded-lg">
+<div class="flex items-start gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center shrink-0 mt-0.5 text-primary">
+<span class="material-symbols-outlined text-lg" data-icon="inventory_2">inventory_2</span>
+</div>
+<div class="flex-1">
+<h3 class="font-headline text-lg text-on-surface font-medium leading-snug">Adição de itens e catálogo</h3>
+<p class="font-body text-xs text-secondary leading-relaxed mt-0.5">
+              Insira produtos rapidamente, configure unidades e consulte os itens cadastrados no seu catálogo.
+            </p>
+</div>
+</div>
+</article>
+<!-- Passo 3: Modo Compra no Mercado -->
+<article class="p-3.5 bg-surface-container-lowest border border-outline-variant/50 rounded-lg">
+<div class="flex items-start gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center shrink-0 mt-0.5 text-primary">
+<span class="material-symbols-outlined text-lg" data-icon="shopping_cart_checkout">shopping_cart_checkout</span>
+</div>
+<div class="flex-1">
+<h3 class="font-headline text-lg text-on-surface font-medium leading-snug">Modo compra no mercado</h3>
+<p class="font-body text-xs text-secondary leading-relaxed mt-0.5">
+              Marque os itens no carrinho em tempo real e acompanhe a soma do total gasto na sua ida ao mercado.
+            </p>
+</div>
+</div>
+</article>
+</div>
+<!-- Seletor de Preferência de Tema da Interface: Claro / Escuro -->
+<section class="mt-5 pt-4 border-t border-outline-variant/30">
+<p class="font-body text-xs font-semibold uppercase tracking-wider text-secondary mb-2.5">Preferência de tema da interface</p>
+<div aria-label="Seletor de Tema" class="grid grid-cols-2 gap-2.5" role="radiogroup">
+<!-- Opção Claro (Ativo) -->
+<label class="flex items-center justify-between p-3 bg-surface-container-lowest border-2 border-primary rounded-lg cursor-pointer transition-all">
+<div class="flex items-center space-x-2">
+<span class="w-4 h-4 rounded-full border-2 border-primary flex items-center justify-center">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+</span>
+<span class="font-body text-sm text-on-surface font-medium">Claro</span>
+</div>
+<span class="material-symbols-outlined text-primary text-lg" data-icon="light_mode">light_mode</span>
+<input checked="" class="sr-only" name="theme_preference" type="radio" value="claro"/>
+</label>
+<!-- Opção Escuro -->
+<label class="flex items-center justify-between p-3 bg-surface-container-lowest border border-outline-variant/60 rounded-lg cursor-pointer hover:border-outline transition-all">
+<div class="flex items-center space-x-2">
+<span class="w-4 h-4 rounded-full border border-outline flex items-center justify-center"></span>
+<span class="font-body text-sm text-secondary font-medium">Escuro</span>
+</div>
+<span class="material-symbols-outlined text-secondary text-lg" data-icon="dark_mode">dark_mode</span>
+<input class="sr-only" name="theme_preference" type="radio" value="escuro"/>
+</label>
+</div>
+</section>
+</div>
+<!-- Botões de Navegação no Rodapé -->
+<footer class="p-4 bg-background border-t border-outline-variant/40 space-y-2">
+<!-- Botão Primário "Concluir e Criar Lista" com verde folha (#1f412d) -->
+<button class="w-full h-11 bg-primary text-on-primary font-body font-medium text-sm rounded-lg flex items-center justify-center gap-2 active:opacity-90 shadow-sm transition-opacity" type="button">
+<span>Concluir e Criar Lista</span>
+<span class="material-symbols-outlined text-base" data-icon="arrow_forward">arrow_forward</span>
+</button>
+<!-- Botões Próximo e Concluir -->
+<div class="grid grid-cols-2 gap-2">
+<button class="h-10 bg-surface-container-high text-on-surface font-body font-medium text-xs rounded-lg hover:bg-surface-variant transition-colors active:opacity-80" type="button">
+          Próximo
+        </button>
+<button class="h-10 border border-outline-variant text-on-surface font-body font-medium text-xs rounded-lg hover:bg-surface-container transition-colors active:opacity-80" type="button">
+          Concluir
+        </button>
+</div>
+</footer>
+</main>
+</body></html>

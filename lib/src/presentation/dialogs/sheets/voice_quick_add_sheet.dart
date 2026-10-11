@@ -10,6 +10,7 @@ import '../../../domain/classifications.dart';
 import '../../../domain/models_and_utils.dart';
 import '../../extensions/classification_ui_extensions.dart';
 import '../../utils/app_modal.dart';
+import '../../theme/editorial_workspace_theme.dart';
 import 'shopping_item_editor_sheet.dart';
 
 Future<List<ShoppingItemDraft>?> showVoiceQuickAddSheet(
@@ -23,7 +24,13 @@ Future<List<ShoppingItemDraft>?> showVoiceQuickAddSheet(
   return showAppModalBottomSheet<List<ShoppingItemDraft>>(
     context: context,
     isScrollControlled: true,
-    showDragHandle: true,
+    showDragHandle: false,
+    backgroundColor: editorialWorkspaceTheme(
+      Theme.of(context),
+    ).colorScheme.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+    ),
     useSafeArea: true,
     builder: (context) => _VoiceQuickAddSheet(
       voiceRecognitionService: voiceRecognitionService,
@@ -59,6 +66,7 @@ class _VoiceQuickAddSheetState extends State<_VoiceQuickAddSheet> {
   static const VoiceCatalogMatcher _matcher = VoiceCatalogMatcher();
 
   late final TextEditingController _transcriptController;
+  final FocusNode _transcriptFocus = FocusNode();
   List<VoiceResolvedShoppingItem> _resolvedItems =
       const <VoiceResolvedShoppingItem>[];
   final Set<int> _selectedIndexes = <int>{};
@@ -75,6 +83,7 @@ class _VoiceQuickAddSheetState extends State<_VoiceQuickAddSheet> {
     _transcriptController = TextEditingController(
       text: widget.initialTranscript,
     );
+    _transcriptFocus.addListener(_refreshTranscriptFocus);
     if (widget.autoStart) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -87,8 +96,13 @@ class _VoiceQuickAddSheetState extends State<_VoiceQuickAddSheet> {
   @override
   void dispose() {
     unawaited(widget.voiceRecognitionService.cancelListening());
+    _transcriptFocus.dispose();
     _transcriptController.dispose();
     super.dispose();
+  }
+
+  void _refreshTranscriptFocus() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _startListening() async {
@@ -101,45 +115,53 @@ class _VoiceQuickAddSheetState extends State<_VoiceQuickAddSheet> {
       _feedback = null;
     });
 
-    final available = await widget.voiceRecognitionService.initialize(
-      onError: _handleRecognitionError,
-      onStatus: _handleRecognitionStatus,
-    );
-    if (!mounted) {
-      return;
-    }
-    if (!available) {
+    try {
+      final available = await widget.voiceRecognitionService.initialize(
+        onError: _handleRecognitionError,
+        onStatus: _handleRecognitionStatus,
+      );
+      if (!mounted) {
+        return;
+      }
+      if (!available) {
+        setState(() {
+          _isInitializing = false;
+          _recognitionAvailable = false;
+          _feedback =
+              'O reconhecimento de voz não está disponível. Digite os itens abaixo.';
+        });
+        return;
+      }
+
       setState(() {
         _isInitializing = false;
-        _recognitionAvailable = false;
-        _feedback =
-            'O reconhecimento de voz não está disponível. Digite os itens abaixo.';
+        _recognitionAvailable = true;
+        _isListening = true;
+        _feedback = 'Estou ouvindo. Fale os produtos naturalmente.';
       });
-      return;
+      await widget.voiceRecognitionService.startListening(
+        onResult: _handleRecognitionResult,
+      );
+    } catch (error) {
+      _handleRecognitionError(error.toString());
     }
-
-    setState(() {
-      _isInitializing = false;
-      _recognitionAvailable = true;
-      _isListening = true;
-      _feedback = 'Estou ouvindo. Fale os produtos naturalmente.';
-    });
-    await widget.voiceRecognitionService.startListening(
-      onResult: _handleRecognitionResult,
-    );
   }
 
   Future<void> _stopListening() async {
-    await widget.voiceRecognitionService.stopListening();
-    if (!mounted) {
-      return;
+    try {
+      await widget.voiceRecognitionService.stopListening();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isListening = false;
+        _feedback = _transcriptController.text.trim().isEmpty
+            ? 'Não reconheci nenhum item. Tente novamente ou digite.'
+            : 'Revise a frase e toque em “Analisar itens”.';
+      });
+    } catch (error) {
+      _handleRecognitionError(error.toString());
     }
-    setState(() {
-      _isListening = false;
-      _feedback = _transcriptController.text.trim().isEmpty
-          ? 'Não reconheci nenhum item. Tente novamente ou digite.'
-          : 'Revise a frase e toque em “Analisar itens”.';
-    });
   }
 
   void _handleRecognitionResult(ShoppingVoiceRecognitionUpdate update) {
@@ -291,199 +313,429 @@ class _VoiceQuickAddSheetState extends State<_VoiceQuickAddSheet> {
   @override
   Widget build(BuildContext context) {
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-    final safeBottom = MediaQuery.viewPaddingOf(context).bottom;
-    return AnimatedPadding(
-      duration: const Duration(milliseconds: 180),
-      padding: EdgeInsets.only(bottom: keyboardInset),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+    final maxHeight = MediaQuery.sizeOf(context).height * .85;
+    final height = _isReviewing
+        ? maxHeight
+        : MediaQuery.textScalerOf(context).scale(560).clamp(0.0, maxHeight);
+    final editorial = editorialWorkspaceTheme(Theme.of(context));
+    return Theme(
+      data: editorial.copyWith(
+        inputDecorationTheme: editorial.inputDecorationTheme.copyWith(
+          filled: true,
+          fillColor: editorial.colorScheme.surfaceContainerLowest,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: editorial.colorScheme.outlineVariant),
+          ),
+          contentPadding: const EdgeInsets.all(12),
         ),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(20, 4, 20, 20 + safeBottom),
-          child: _isReviewing ? _buildReview(context) : _buildCapture(context),
+      ),
+      child: Builder(
+        builder: (context) => AnimatedPadding(
+          duration: const Duration(milliseconds: 180),
+          padding: EdgeInsets.only(bottom: keyboardInset),
+          child: SizedBox(
+            height: (height - keyboardInset).clamp(140.0, height),
+            child: Material(
+              color: editorial.colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      margin: const EdgeInsets.only(top: 10, bottom: 4),
+                      decoration: BoxDecoration(
+                        color: editorial.colorScheme.outlineVariant,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          tooltip: 'Fechar voz',
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close, size: 22),
+                        ),
+                        Expanded(
+                          child: Text(
+                            _isReviewing
+                                ? 'Revise os produtos'
+                                : 'Adicionar por voz',
+                            textAlign: TextAlign.center,
+                            style:
+                                _isReviewing &&
+                                    MediaQuery.sizeOf(context).width < 360
+                                ? editorial.textTheme.titleLarge?.copyWith(
+                                    fontSize: 20,
+                                  )
+                                : editorial.textTheme.titleLarge,
+                          ),
+                        ),
+                        if (_isReviewing &&
+                            (MediaQuery.sizeOf(context).width < 360 ||
+                                MediaQuery.textScalerOf(context).scale(12) >
+                                    15))
+                          IconButton(
+                            tooltip: 'Ouvir novamente',
+                            onPressed: _returnToCapture,
+                            icon: const Icon(Icons.replay, size: 22),
+                          )
+                        else if (_isReviewing)
+                          TextButton.icon(
+                            style: TextButton.styleFrom(
+                              minimumSize: const Size(48, 48),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                              ),
+                            ),
+                            onPressed: _returnToCapture,
+                            icon: const Icon(Icons.replay, size: 18),
+                            label: const SizedBox(
+                              width: 76,
+                              child: Text(
+                                'Ouvir novamente',
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          )
+                        else
+                          const SizedBox(width: 48),
+                      ],
+                    ),
+                  ),
+                  Divider(
+                    height: 1,
+                    color: editorial.colorScheme.outlineVariant,
+                  ),
+                  Expanded(
+                    child: _isReviewing
+                        ? _buildReview(context)
+                        : _buildCapture(context),
+                  ),
+                  if (_isReviewing)
+                    _buildReviewFooter(context)
+                  else
+                    _buildCaptureFooter(context),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
 
   Widget _buildCapture(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final active = _isListening;
     return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Adicionar por voz',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Exemplo: “dois detergentes Minuano, um arroz e três sabonetes”.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 22),
           Center(
-            child: Semantics(
-              button: true,
-              label: _isListening ? 'Parar de ouvir' : 'Começar a ouvir',
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: _isInitializing
-                    ? null
-                    : (_isListening ? _stopListening : _startListening),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  width: 92,
-                  height: 92,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _isListening
-                        ? colorScheme.errorContainer
-                        : colorScheme.primaryContainer,
+            child: SizedBox(
+              width: 96,
+              height: 96,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: active
+                      ? Border.all(color: colors.primary.withValues(alpha: .35))
+                      : null,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: IconButton.filled(
+                    tooltip: active ? 'Parar de ouvir' : 'Começar a ouvir',
+                    onPressed: _isInitializing
+                        ? null
+                        : (active ? _stopListening : _startListening),
+                    style: IconButton.styleFrom(
+                      backgroundColor: colors.primary,
+                      foregroundColor: colors.brightness == Brightness.dark
+                          ? colors.surface
+                          : Colors.white,
+                      shape: const CircleBorder(),
+                    ),
+                    icon: _isInitializing
+                        ? SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: colors.brightness == Brightness.dark
+                                  ? colors.surface
+                                  : Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.mic, size: 36),
                   ),
-                  child: _isInitializing
-                      ? const Padding(
-                          padding: EdgeInsets.all(32),
-                          child: CircularProgressIndicator(strokeWidth: 3),
-                        )
-                      : Icon(
-                          _isListening ? Icons.stop_rounded : Icons.mic_rounded,
-                          size: 42,
-                          color: _isListening
-                              ? colorScheme.onErrorContainer
-                              : colorScheme.onPrimaryContainer,
-                        ),
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            _isListening
-                ? 'Ouvindo… toque para parar'
-                : (_recognitionAvailable
-                      ? 'Toque no microfone para falar'
-                      : 'Digite os itens abaixo'),
-            textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 20),
-          TextField(
-            controller: _transcriptController,
-            minLines: 3,
-            maxLines: 6,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              labelText: 'Itens reconhecidos',
-              alignLabelWithHint: true,
-              hintText: 'Digite os produtos separados por vírgulas.',
-              prefixIcon: Icon(Icons.format_list_bulleted_rounded),
+          const SizedBox(height: 16),
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              _isInitializing
+                  ? 'Preparando microfone…'
+                  : active
+                  ? 'Ouvindo… toque para parar'
+                  : _recognitionAvailable
+                  ? 'Toque no microfone para falar'
+                  : 'Digite os itens abaixo',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
             ),
-            onChanged: (_) {
-              if (_feedback != null) {
-                setState(() {
-                  _feedback = null;
-                });
-              }
-            },
           ),
-          if (_feedback != null) ...[
-            const SizedBox(height: 10),
-            _VoiceFeedbackBanner(message: _feedback!),
+          const SizedBox(height: 28),
+          Text(
+            'Itens reconhecidos',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: colors.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: colors.surface,
+              border: Border.all(
+                color: _transcriptFocus.hasFocus
+                    ? colors.primary
+                    : colors.brightness == Brightness.dark
+                    ? colors.outlineVariant
+                    : const Color(0xFF727972),
+                width: _transcriptFocus.hasFocus ? 2 : 1,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    focusNode: _transcriptFocus,
+                    controller: _transcriptController,
+                    minLines: 2,
+                    maxLines: 5,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontSize: 16,
+                      height: 1.5,
+                    ),
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: InputDecoration(
+                      hintText: 'Diga ou digite os itens e quantidades…',
+                      prefixIcon: Icon(
+                        Icons.edit_outlined,
+                        size: 18,
+                        color: colors.onSurfaceVariant,
+                      ),
+                      prefixIconConstraints: const BoxConstraints(
+                        minWidth: 26,
+                        minHeight: 28,
+                      ),
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    onChanged: (_) {
+                      if (_feedback != null) setState(() => _feedback = null);
+                    },
+                  ),
+                  Divider(height: 22, color: colors.outlineVariant),
+                  Text(
+                    'Fale naturalmente nomes e quantidades',
+                    style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_feedback != null &&
+              _feedback != 'Estou ouvindo. Fale os produtos naturalmente.') ...[
+            const SizedBox(height: 12),
+            Semantics(
+              liveRegion: true,
+              child: _VoiceFeedbackBanner(message: _feedback!),
+            ),
           ],
-          const SizedBox(height: 20),
-          FilledButton.icon(
-            onPressed: _isListening ? null : _analyzeTranscript,
-            icon: const Icon(Icons.auto_awesome_rounded),
-            label: const Text('Analisar itens'),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildReview(BuildContext context) {
-    final selectedCount = _selectedIndexes.length;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
+  Widget _buildCaptureFooter(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(48),
+          backgroundColor: colors.primary,
+          foregroundColor: colors.brightness == Brightness.dark
+              ? colors.surface
+              : Colors.white,
+          disabledBackgroundColor: colors.primary.withValues(alpha: .40),
+          disabledForegroundColor: colors.brightness == Brightness.dark
+              ? colors.surface
+              : Colors.white,
+          side: BorderSide.none,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        onPressed: _isListening || _isInitializing ? null : _analyzeTranscript,
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Revise os produtos',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$selectedCount de ${_resolvedItems.length} selecionados',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
-              ),
-            ),
-            TextButton.icon(
-              onPressed: _returnToCapture,
-              icon: const Icon(Icons.mic_rounded),
-              label: const Text('Ouvir novamente'),
-            ),
+            Flexible(child: Text('Analisar itens')),
+            SizedBox(width: 8),
+            Icon(Icons.arrow_forward, size: 18),
           ],
         ),
-        if (_feedback != null) ...[
-          const SizedBox(height: 10),
-          _VoiceFeedbackBanner(message: _feedback!),
-        ],
-        const SizedBox(height: 12),
-        Expanded(
-          child: ListView.separated(
-            itemCount: _resolvedItems.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              final item = _resolvedItems[index];
-              return _VoiceReviewCard(
-                item: item,
-                isSelected: _selectedIndexes.contains(index),
-                isAlreadyInList: _matchesCurrentList(item.draft),
-                onSelected: (selected) {
-                  setState(() {
-                    if (selected) {
-                      _selectedIndexes.add(index);
-                    } else {
-                      _selectedIndexes.remove(index);
-                    }
-                  });
-                },
-                onEdit: () => _editItem(index),
-                onSelectProduct: (product) =>
-                    _selectCatalogProduct(index, product),
-              );
-            },
+      ),
+    );
+  }
+
+  Widget _buildReview(BuildContext context) {
+    final theme = Theme.of(context);
+    final allSelected = _selectedIndexes.length == _resolvedItems.length;
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerLow,
+            border: Border(
+              bottom: BorderSide(color: theme.colorScheme.outlineVariant),
+            ),
+          ),
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            children: [
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  '${_selectedIndexes.length} de ${_resolvedItems.length} selecionados',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                onPressed: () => setState(() {
+                  _selectedIndexes.clear();
+                  if (!allSelected) {
+                    _selectedIndexes.addAll(
+                      List.generate(_resolvedItems.length, (index) => index),
+                    );
+                  }
+                  _feedback = null;
+                }),
+                child: Text(
+                  allSelected ? 'Desmarcar todos' : 'Selecionar todos',
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 14),
-        FilledButton.icon(
-          onPressed: _submit,
-          icon: const Icon(Icons.playlist_add_check_rounded),
-          label: Text(
-            selectedCount == 1
-                ? 'Adicionar 1 produto'
-                : 'Adicionar $selectedCount produtos',
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              if (_feedback != null) ...[
+                Semantics(
+                  liveRegion: true,
+                  child: _VoiceFeedbackBanner(message: _feedback!),
+                ),
+                const SizedBox(height: 12),
+              ],
+              for (var index = 0; index < _resolvedItems.length; index++) ...[
+                if (index > 0) const SizedBox(height: 12),
+                _VoiceReviewCard(
+                  item: _resolvedItems[index],
+                  isSelected: _selectedIndexes.contains(index),
+                  isAlreadyInList: _matchesCurrentList(
+                    _resolvedItems[index].draft,
+                  ),
+                  onSelected: (selected) => setState(() {
+                    selected
+                        ? _selectedIndexes.add(index)
+                        : _selectedIndexes.remove(index);
+                    _feedback = null;
+                  }),
+                  onEdit: () => _editItem(index),
+                  onSelectProduct: (product) =>
+                      _selectCatalogProduct(index, product),
+                ),
+              ],
+            ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildReviewFooter(BuildContext context) {
+    final count = _selectedIndexes.length;
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border(top: BorderSide(color: colors.outlineVariant)),
+      ),
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.all(16),
+        child: FilledButton(
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+            backgroundColor: colors.primary,
+            foregroundColor: colors.brightness == Brightness.dark
+                ? colors.surface
+                : Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          onPressed: count == 0 ? null : _submit,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: Text(
+                  count == 0
+                      ? 'Nenhum produto selecionado'
+                      : count == 1
+                      ? 'Adicionar 1 produto'
+                      : 'Adicionar $count produtos',
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.check, size: 18),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -519,11 +771,12 @@ class _VoiceReviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final needsAttention = item.needsAttention;
-    return Card(
-      elevation: 0,
-      color: needsAttention
-          ? colorScheme.errorContainer.withValues(alpha: 0.34)
-          : colorScheme.surfaceContainerLow,
+    return Material(
+      color: colorScheme.surfaceContainerLowest,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: colorScheme.outlineVariant),
+      ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(10, 10, 12, 12),
         child: Column(
@@ -544,17 +797,23 @@ class _VoiceReviewCard extends StatelessWidget {
                       Text(
                         item.draft.name,
                         style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
+                            ?.copyWith(
+                              fontFamily: 'MercadoPublicSans',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${item.draft.quantity} un. • '
-                        '${item.hasPrice ? formatCurrency(item.draft.unitPrice) : 'valor pendente'}',
+                        '${item.draft.quantity} un. · '
+                        '${item.hasPrice ? formatCurrency(item.draft.quantity * item.draft.unitPrice) : 'Preço a definir'}'
+                        '${item.hasPrice && item.draft.quantity > 1 ? ' (${formatCurrency(item.draft.unitPrice)}/un)' : ''}',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: needsAttention
                               ? colorScheme.error
                               : colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
                         ),
                       ),
                     ],
@@ -574,52 +833,68 @@ class _VoiceReviewCard extends StatelessWidget {
                 runSpacing: 7,
                 children: [
                   _MatchBadge(item: item),
-                  Chip(
-                    avatar: Icon(item.draft.category.icon, size: 16),
-                    label: Text(item.draft.category.label),
-                    visualDensity: VisualDensity.compact,
+                  _VoiceMetadata(
+                    icon: item.draft.category.icon,
+                    label: item.draft.category.label,
                   ),
                   if (item.draft.barcode != null)
-                    const Chip(
-                      avatar: Icon(Icons.qr_code_rounded, size: 16),
-                      label: Text('Código associado'),
-                      visualDensity: VisualDensity.compact,
+                    const _VoiceMetadata(
+                      icon: Icons.qr_code_rounded,
+                      label: 'Código associado',
                     ),
                   if (isAlreadyInList)
-                    const Chip(
-                      avatar: Icon(Icons.add_circle_outline_rounded, size: 16),
-                      label: Text('Quantidade será somada'),
-                      visualDensity: VisualDensity.compact,
+                    const _VoiceMetadata(
+                      icon: Icons.add_circle_outline_rounded,
+                      label: 'Quantidade será somada',
                     ),
                 ],
               ),
             ),
-            if (item.confidence == VoiceCatalogMatchConfidence.ambiguous &&
-                item.alternatives.isNotEmpty) ...[
+            if (item.alternatives.isNotEmpty) ...[
               const SizedBox(height: 10),
               Padding(
                 padding: const EdgeInsets.only(left: 50),
                 child: Text(
-                  'Qual produto você quis adicionar?',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+                  item.matchedProduct == null
+                      ? 'Qual produto você quis adicionar?'
+                      : 'Produto encontrado no catálogo',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    fontFamily: 'MercadoPublicSans',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
               const SizedBox(height: 7),
               Padding(
                 padding: const EdgeInsets.only(left: 50),
-                child: Wrap(
-                  spacing: 7,
-                  runSpacing: 7,
-                  children: [
+                child: DropdownButtonFormField<CatalogProduct>(
+                  key: ValueKey(item.matchedProduct?.id),
+                  initialValue:
+                      item.alternatives.any(
+                        (candidate) => candidate.product == item.matchedProduct,
+                      )
+                      ? item.matchedProduct
+                      : null,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Correspondência no catálogo',
+                  ),
+                  hint: const Text('Escolher produto'),
+                  items: [
                     for (final alternative in item.alternatives)
-                      ActionChip(
-                        avatar: const Icon(Icons.local_offer_rounded, size: 16),
-                        label: Text(alternative.product.name),
-                        onPressed: () => onSelectProduct(alternative.product),
+                      DropdownMenuItem(
+                        value: alternative.product,
+                        child: Text(
+                          alternative.product.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                   ],
+                  onChanged: (product) {
+                    if (product != null) onSelectProduct(product);
+                  },
                 ),
               ),
             ],
@@ -652,12 +927,44 @@ class _MatchBadge extends StatelessWidget {
         'Produto novo',
       ),
     };
-    return Chip(
-      avatar: Icon(icon, size: 16),
-      label: Text(label),
-      visualDensity: VisualDensity.compact,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: .08),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: _VoiceMetadata(icon: icon, label: label),
     );
   }
+}
+
+class _VoiceMetadata extends StatelessWidget {
+  const _VoiceMetadata({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          icon,
+          size: 14,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 5),
+        Flexible(
+          child: Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontSize: 11),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _VoiceFeedbackBanner extends StatelessWidget {
@@ -671,7 +978,7 @@ class _VoiceFeedbackBanner extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),

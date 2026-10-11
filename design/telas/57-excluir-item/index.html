@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=390, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Minhas Compras — Excluir item</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "primary-container": "#365943",
+            "surface-container-lowest": "#ffffff",
+            "surface-tint": "#43664f",
+            "inverse-on-surface": "#f3f1eb",
+            "on-background": "#1b1c18",
+            "on-secondary-container": "#616655",
+            "background": "#fbf9f3",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "surface": "#fbf9f3",
+            "inverse-surface": "#30312d",
+            "surface-dim": "#dcdad4",
+            "secondary-container": "#e0e5cf",
+            "primary": "#1f412d",
+            "on-primary-fixed-variant": "#2b4e39",
+            "secondary-fixed-dim": "#c4c9b4",
+            "tertiary-container": "#724549",
+            "on-tertiary-fixed": "#321015",
+            "error-container": "#ffdad6",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "on-surface": "#1b1c18",
+            "on-secondary": "#ffffff",
+            "surface-container-high": "#eae8e2",
+            "on-secondary-fixed-variant": "#444939",
+            "surface-container-low": "#f5f3ed",
+            "surface-container": "#f0eee8",
+            "primary-fixed": "#c4eccf",
+            "outline-variant": "#c1c8c1",
+            "primary-fixed-dim": "#a9d0b4",
+            "surface-container-highest": "#e4e2dd",
+            "outline": "#727972",
+            "surface-bright": "#fbf9f3",
+            "error": "#a44438",
+            "on-surface-variant": "#424843",
+            "on-error": "#ffffff",
+            "tertiary-fixed": "#ffdadb",
+            "on-primary-fixed": "#002110",
+            "secondary": "#5b604f",
+            "inverse-primary": "#a9d0b4",
+            "on-error-container": "#93000a",
+            "tertiary": "#582f33",
+            "on-secondary-fixed": "#191d10",
+            "on-tertiary": "#ffffff",
+            "on-primary-container": "#a7ceb2",
+            "on-primary": "#ffffff",
+            "surface-variant": "#e4e2dd",
+            "secondary-fixed": "#e0e5cf",
+            "on-tertiary-container": "#f2b6ba"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "2xl": "1rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body antialiased flex justify-center items-center min-h-screen p-0 m-0">
+<!-- Mobile Viewport Container (390px) -->
+<div class="relative w-[390px] h-[844px] bg-background overflow-hidden flex flex-col shadow-2xl">
+<!-- Background Layer: Lista de compras no estilo Mercado Editorial -->
+<div class="flex-1 flex flex-col w-full h-full select-none filter blur-[2px] opacity-40">
+<!-- TopAppBar Desvanecida -->
+<header class="flex justify-between items-center w-full px-4 h-14 bg-surface border-b border-outline-variant/30">
+<button aria-label="Voltar" class="w-10 h-10 flex items-center justify-center text-primary" tabindex="-1" type="button">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<span class="font-headline italic text-xl text-primary">Minhas Compras</span>
+<button aria-label="Mais opções" class="w-10 h-10 flex items-center justify-center text-on-surface-variant" tabindex="-1" type="button">
+<span class="material-symbols-outlined text-[24px]">more_vert</span>
+</button>
+</header>
+<!-- Conteúdo da Lista em Segundo Plano -->
+<main class="flex-1 px-5 pt-5 pb-6 overflow-hidden flex flex-col">
+<div class="mb-4">
+<h1 class="font-headline text-2xl text-on-surface tracking-tight font-normal">Compras da semana</h1>
+<p class="font-body text-xs text-on-surface-variant mt-0.5">8 itens • Total estimado R$ 94,60</p>
+</div>
+<div class="divide-y divide-outline-variant/30 text-sm">
+<!-- Item 1: Café especial (alvo da exclusão) -->
+<div class="py-3 flex items-center justify-between bg-surface-container-high/40 px-2 -mx-2 rounded">
+<div class="flex items-center space-x-3">
+<span class="w-4 h-4 border border-outline rounded-sm flex items-center justify-center"></span>
+<div>
+<span class="font-medium text-on-surface block">Café especial</span>
+<span class="text-xs text-on-surface-variant font-normal">1 pct (250g)</span>
+</div>
+</div>
+<span class="font-body tabular-nums text-on-surface font-medium">R$ 24,90</span>
+</div>
+<!-- Item 2: Azeite de oliva -->
+<div class="py-3 flex items-center justify-between">
+<div class="flex items-center space-x-3">
+<span class="w-4 h-4 border border-outline rounded-sm flex items-center justify-center"></span>
+<div>
+<span class="font-normal text-on-surface block">Azeite de oliva</span>
+<span class="text-xs text-on-surface-variant">500ml</span>
+</div>
+</div>
+<span class="font-body tabular-nums text-on-surface font-medium">R$ 38,50</span>
+</div>
+<!-- Item 3: Pão de fermentação natural -->
+<div class="py-3 flex items-center justify-between">
+<div class="flex items-center space-x-3">
+<span class="w-4 h-4 border border-outline rounded-sm flex items-center justify-center"></span>
+<div>
+<span class="font-normal text-on-surface block">Pão artesanal</span>
+<span class="text-xs text-on-surface-variant">1 un</span>
+</div>
+</div>
+<span class="font-body tabular-nums text-on-surface font-medium">R$ 16,00</span>
+</div>
+<!-- Item 4: Ovos caipiras -->
+<div class="py-3 flex items-center justify-between">
+<div class="flex items-center space-x-3">
+<span class="w-4 h-4 border border-outline rounded-sm flex items-center justify-center"></span>
+<div>
+<span class="font-normal text-on-surface block">Ovos caipiras</span>
+<span class="text-xs text-on-surface-variant">12 un</span>
+</div>
+</div>
+<span class="font-body tabular-nums text-on-surface font-medium">R$ 15,20</span>
+</div>
+</div>
+</main>
+<!-- BottomNavBar Desvanecida -->
+<nav class="flex justify-around items-center px-4 py-2 border-t border-outline-variant/30 bg-surface">
+<div class="flex flex-col items-center text-primary py-1">
+<span class="material-symbols-outlined text-xl">format_list_bulleted</span>
+<span class="font-body text-xs font-semibold">Listas</span>
+</div>
+<div class="flex flex-col items-center text-on-surface-variant py-1">
+<span class="material-symbols-outlined text-xl">kitchen</span>
+<span class="font-body text-xs">Despensa</span>
+</div>
+<div class="flex flex-col items-center text-on-surface-variant py-1">
+<span class="material-symbols-outlined text-xl">history</span>
+<span class="font-body text-xs">Histórico</span>
+</div>
+<div class="flex flex-col items-center text-on-surface-variant py-1">
+<span class="material-symbols-outlined text-xl">settings</span>
+<span class="font-body text-xs">Opções</span>
+</div>
+</nav>
+</div>
+<!-- Scrim Modal Escurecido -->
+<div aria-modal="true" class="absolute inset-0 bg-[#1b1c18]/40 backdrop-blur-[1.5px] z-40 flex items-center justify-center px-6" role="dialog">
+<!-- AlertDialog Container Compacto -->
+<div class="w-full max-w-[320px] bg-surface-container-lowest border border-[#E6E2D8] rounded-2xl p-6 shadow-sm flex flex-col">
+<!-- Título em Newsreader serifado -->
+<h2 class="font-headline text-xl text-on-surface font-normal tracking-tight mb-2">
+          Excluir item?
+        </h2>
+<!-- Mensagem do Diálogo em Public Sans -->
+<p class="font-body text-[15px] leading-relaxed text-secondary mb-6">
+          Deseja remover ‘Café especial’ da lista?
+        </p>
+<!-- Ações do Diálogo alinhadas e com área de toque mínima confortável -->
+<div class="flex items-center justify-end space-x-2">
+<!-- Botão Cancelar -->
+<button class="min-h-[48px] px-4 py-2.5 rounded-lg font-body text-sm font-medium text-secondary hover:text-on-surface hover:bg-surface-container active:scale-95 transition-all focus:outline-none focus:ring-1 focus:ring-outline" onclick="console.log('Cancelar exclusão')" type="button">
+            Cancelar
+          </button>
+<!-- Botão Excluir Destrutivo com Vermelho Terroso -->
+<button class="min-h-[48px] px-5 py-2.5 rounded-lg font-body text-sm font-medium text-on-error bg-error hover:opacity-95 active:scale-95 transition-all shadow-none focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-error" onclick="console.log('Confirmar exclusão')" type="button">
+            Excluir
+          </button>
+</div>
+</div>
+</div>
+</div>
+</body></html>

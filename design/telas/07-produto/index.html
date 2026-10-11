@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Detalhe do produto — Minhas Compras</title>
+<!-- Google Fonts: Newsreader & Public Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400&amp;family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "secondary-fixed": "#e0e5cf",
+            "secondary": "#5b604f",
+            "primary-fixed-dim": "#a9d0b4",
+            "surface-container-high": "#eae8e2",
+            "on-primary-container": "#a7ceb2",
+            "on-primary-fixed": "#002110",
+            "on-error-container": "#93000a",
+            "error": "#ba1a1a",
+            "on-tertiary-container": "#f2b6ba",
+            "inverse-on-surface": "#f3f1eb",
+            "on-secondary-fixed-variant": "#444939",
+            "tertiary-fixed": "#ffdadb",
+            "surface-tint": "#43664f",
+            "surface-container-low": "#f5f3ed",
+            "on-error": "#ffffff",
+            "secondary-container": "#e0e5cf",
+            "inverse-surface": "#30312d",
+            "tertiary-container": "#724549",
+            "surface-container": "#f0eee8",
+            "on-primary": "#ffffff",
+            "primary-fixed": "#c4eccf",
+            "surface-bright": "#fbf9f3",
+            "background": "#fbf9f3",
+            "surface-container-highest": "#e4e2dd",
+            "primary-container": "#365943",
+            "inverse-primary": "#a9d0b4",
+            "outline": "#727972",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "tertiary": "#582f33",
+            "on-secondary-container": "#616655",
+            "on-background": "#1b1c18",
+            "primary": "#1f412d",
+            "on-tertiary-fixed": "#321015",
+            "on-primary-fixed-variant": "#2b4e39",
+            "secondary-fixed-dim": "#c4c9b4",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "on-secondary": "#ffffff",
+            "on-surface": "#1b1c18",
+            "surface": "#fbf9f3",
+            "surface-variant": "#e4e2dd",
+            "on-secondary-fixed": "#191d10",
+            "error-container": "#ffdad6",
+            "outline-variant": "#c1c8c1",
+            "on-tertiary": "#ffffff",
+            "surface-container-lowest": "#ffffff",
+            "surface-dim": "#dcdad4",
+            "on-surface-variant": "#424843"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-body antialiased flex justify-center min-h-screen selection:bg-secondary-fixed">
+<!-- Mobile Viewport Container: 390px layout -->
+<div class="w-full max-w-[390px] min-h-screen bg-background flex flex-col relative pb-10">
+<!-- 1. AppBar / Navegação Superior Exata Flutter -->
+<header class="sticky top-0 z-40 bg-surface/95 backdrop-blur-sm border-b border-outline-variant px-2 py-2 flex items-center justify-between">
+<div class="flex items-center gap-1">
+<button aria-label="Voltar" class="w-10 h-10 flex items-center justify-center rounded text-on-surface hover:text-primary active:opacity-75 transition-opacity" type="button">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<div>
+<h2 class="font-headline text-lg font-normal tracking-tight text-on-surface leading-tight">Detalhe do produto</h2>
+<p class="text-[10px] text-secondary font-label tracking-wide uppercase">Ficha Cadastral</p>
+</div>
+</div>
+<!-- Ações Reais Flutter: Atualizar Preço, Editar e Excluir -->
+<div class="flex items-center gap-0.5">
+<button aria-label="Atualizar preço" class="w-9 h-9 flex items-center justify-center rounded text-primary hover:bg-surface-container active:scale-95 transition-all" title="Atualizar preço" type="button">
+<span class="material-symbols-outlined text-[20px]">price_change</span>
+</button>
+<button aria-label="Editar produto" class="w-9 h-9 flex items-center justify-center rounded text-on-surface-variant hover:text-primary hover:bg-surface-container active:scale-95 transition-all" title="Editar produto" type="button">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+<button aria-label="Excluir produto" class="w-9 h-9 flex items-center justify-center rounded text-secondary hover:text-error hover:bg-error-container/30 active:scale-95 transition-all" title="Excluir produto" type="button">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</header>
+<!-- Conteúdo Principal com Layout Editorial -->
+<main class="flex-1 px-4 pt-4 space-y-6">
+<!-- 2. Cabeçalho do Produto / Modelo CatalogProduct -->
+<section class="space-y-2.5">
+<div class="flex items-center justify-between">
+<span class="inline-flex items-center px-2 py-0.5 border border-outline-variant rounded text-[11px] font-medium tracking-wide text-secondary bg-surface-container-low">
+        Mercearia
+      </span>
+<span class="text-[11px] text-secondary tabular-nums flex items-center gap-1 font-medium">
+<span class="material-symbols-outlined text-[14px] text-secondary">checklist</span>
+        Em 8 listas registradas
+      </span>
+</div>
+<div>
+<h1 class="font-headline text-2xl leading-tight text-on-surface font-normal">
+        Café especial torrado e moído 250g
+      </h1>
+<p class="text-[11px] text-secondary mt-1 flex items-center gap-1 tabular-nums">
+<span class="material-symbols-outlined text-[13px]">schedule</span>
+        Atualizado em 24 de out. de 2024
+      </p>
+</div>
+<!-- Código de Barras EAN CatalogProduct -->
+<div class="pt-2 flex items-center justify-between text-xs border-t border-outline-variant/60">
+<div class="flex items-center gap-2 text-on-surface-variant font-mono">
+<span class="material-symbols-outlined text-[17px] text-secondary">barcode</span>
+<span class="tracking-wider text-[12px]">7891000100103</span>
+<button aria-label="Copiar código de barras" class="p-1 text-secondary hover:text-primary active:scale-95 transition-transform" title="Copiar código de barras" type="button">
+<span class="material-symbols-outlined text-[14px]">content_copy</span>
+</button>
+</div>
+<span class="text-[10px] tracking-wide text-secondary uppercase font-semibold">EAN Válido</span>
+</div>
+</section>
+<!-- 3. Preço Atual e Análise Local de Variação -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 space-y-3.5 shadow-none">
+<div class="flex justify-between items-baseline">
+<div>
+<span class="font-label text-[10px] font-semibold text-secondary tracking-widest block uppercase">
+          Preço atual
+        </span>
+<div class="flex items-baseline gap-1 mt-0.5">
+<span class="font-headline text-3xl font-normal text-on-surface tabular-nums">R$ 18,90</span>
+</div>
+</div>
+<!-- Indicador editorial de direção/variação vs registro anterior -->
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-[#ecf4ed] text-primary border border-primary/20">
+<span class="material-symbols-outlined text-[14px]">arrow_downward</span>
+        -R$ 0,50 (-2,6%)
+      </span>
+</div>
+<!-- Grade Analítica Local de Extremos e Médias -->
+<div class="grid grid-cols-3 gap-2 border-t border-b border-outline-variant/50 py-2.5 text-center">
+<div class="border-r border-outline-variant/40 pr-1">
+<span class="text-[10px] text-secondary block font-label uppercase tracking-wide">Mínima</span>
+<span class="font-semibold text-primary text-xs tabular-nums mt-0.5 block">R$ 17,50</span>
+</div>
+<div class="border-r border-outline-variant/40 px-1">
+<span class="text-[10px] text-secondary block font-label uppercase tracking-wide">Média</span>
+<span class="font-medium text-on-surface text-xs tabular-nums mt-0.5 block">R$ 18,95</span>
+</div>
+<div class="pl-1">
+<span class="text-[10px] text-secondary block font-label uppercase tracking-wide">Máxima</span>
+<span class="font-semibold text-tertiary text-xs tabular-nums mt-0.5 block">R$ 20,40</span>
+</div>
+</div>
+<!-- Gráfico Mensal Sutil Estilo Caderno Contábil -->
+<div class="space-y-1.5 pt-1">
+<div class="flex justify-between items-center text-[10px] text-secondary uppercase font-label">
+<span>Evolução mensal (6 registros)</span>
+<span class="tabular-nums">Jun — Out</span>
+</div>
+<!-- SVG Line Chart Minimalista -->
+<div class="w-full bg-surface-container-low/70 border border-outline-variant/40 rounded p-2.5">
+<svg class="w-full h-20 overflow-visible" viewbox="0 0 320 70">
+<defs>
+<lineargradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#365943" stop-opacity="0.18"></stop>
+<stop offset="100%" stop-color="#365943" stop-opacity="0.0"></stop>
+</lineargradient>
+</defs>
+<!-- Grid lines sutis de caderno pautado -->
+<line stroke="#c1c8c1" stroke-dasharray="2 3" stroke-width="0.8" x1="0" x2="320" y1="12" y2="12"></line>
+<line stroke="#c1c8c1" stroke-dasharray="2 3" stroke-width="0.8" x1="0" x2="320" y1="36" y2="36"></line>
+<line stroke="#c1c8c1" stroke-dasharray="2 3" stroke-width="0.8" x1="0" x2="320" y1="58" y2="58"></line>
+<!-- Preenchimento sob a curva -->
+<polygon fill="url(#chartGradient)" points="10,40 70,12 130,30 190,30 250,58 310,30 310,68 10,68"></polygon>
+<!-- Traçado da curva editorial -->
+<polyline fill="none" points="10,40 70,12 130,30 190,30 250,58 310,30" stroke="#365943" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></polyline>
+<!-- Pontos e Rótulos dos Valores -->
+<!-- Jun (18,60) -->
+<circle cx="10" cy="40" fill="#ffffff" r="3" stroke="#365943" stroke-width="1.5"></circle>
+<!-- Jul (20,40 - Máx) -->
+<circle cx="70" cy="12" fill="#582f33" r="3.5" stroke="#ffffff" stroke-width="1.5"></circle>
+<text fill="#582f33" font-family="Public Sans" font-size="8" font-weight="600" text-anchor="middle" x="70" y="8">20,40</text>
+<!-- Ago (19,40) -->
+<circle cx="130" cy="30" fill="#ffffff" r="3" stroke="#365943" stroke-width="1.5"></circle>
+<!-- Ago (18,90) -->
+<circle cx="190" cy="30" fill="#ffffff" r="3" stroke="#365943" stroke-width="1.5"></circle>
+<!-- Set (17,50 - Mín) -->
+<circle cx="250" cy="58" fill="#1f412d" r="3.5" stroke="#ffffff" stroke-width="1.5"></circle>
+<text fill="#1f412d" font-family="Public Sans" font-size="8" font-weight="600" text-anchor="middle" x="250" y="54">17,50</text>
+<!-- Out (18,90 - Atual) -->
+<circle cx="310" cy="30" fill="#365943" r="3.5" stroke="#ffffff" stroke-width="1.5"></circle>
+<text fill="#1f412d" font-family="Public Sans" font-size="8" font-weight="600" text-anchor="end" x="306" y="24">18,90</text>
+</svg>
+<div class="flex justify-between text-[9px] text-secondary font-label mt-1 pt-1 border-t border-outline-variant/30">
+<span>02 Jun</span>
+<span>18 Jul</span>
+<span>05 Ago</span>
+<span>22 Ago</span>
+<span>14 Set</span>
+<span class="font-medium text-primary">24 Out</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 4. Histórico de Preço Estrito (Apenas Data e Valor - Razão Contábil) -->
+<section class="space-y-2">
+<div class="border-b border-outline-variant pb-1 flex items-baseline justify-between">
+<h3 class="font-headline text-lg font-normal text-on-surface">Histórico de preço</h3>
+<span class="text-[11px] text-secondary font-label tabular-nums">6 entradas</span>
+</div>
+<!-- Tabela Razão Contábil -->
+<div class="border border-outline-variant rounded-lg overflow-hidden bg-surface-container-lowest">
+<div class="bg-surface-container-low px-3 py-1.5 flex justify-between text-[10px] font-semibold text-secondary uppercase font-label tracking-wider border-b border-outline-variant/60">
+<span>Data de registro</span>
+<span>Valor observado</span>
+</div>
+<div class="divide-y divide-outline-variant/40 font-body text-xs">
+<!-- Registro 1: Atual -->
+<div class="px-3 py-2 flex items-center justify-between hover:bg-surface-container-low/30 transition-colors">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+<span class="tabular-nums font-medium text-on-surface">24 out 2024</span>
+<span class="text-[10px] text-secondary italic">(Mais recente)</span>
+</div>
+<span class="tabular-nums font-semibold text-on-surface">R$ 18,90</span>
+</div>
+<!-- Registro 2: Mínima -->
+<div class="px-3 py-2 flex items-center justify-between bg-primary-fixed/20 hover:bg-primary-fixed/30 transition-colors">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+<span class="tabular-nums font-medium text-on-surface">14 set 2024</span>
+<span class="text-[10px] text-primary font-semibold uppercase tracking-wider px-1 bg-surface-container-lowest rounded border border-primary/20">mínima</span>
+</div>
+<span class="tabular-nums font-semibold text-primary">R$ 17,50</span>
+</div>
+<!-- Registro 3 -->
+<div class="px-3 py-2 flex items-center justify-between hover:bg-surface-container-low/30 transition-colors">
+<span class="tabular-nums text-on-surface">22 ago 2024</span>
+<span class="tabular-nums font-medium text-on-surface">R$ 18,90</span>
+</div>
+<!-- Registro 4 -->
+<div class="px-3 py-2 flex items-center justify-between hover:bg-surface-container-low/30 transition-colors">
+<span class="tabular-nums text-on-surface">05 ago 2024</span>
+<span class="tabular-nums font-medium text-on-surface">R$ 19,40</span>
+</div>
+<!-- Registro 5: Máxima -->
+<div class="px-3 py-2 flex items-center justify-between bg-tertiary-fixed/20 hover:bg-tertiary-fixed/30 transition-colors">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+<span class="tabular-nums font-medium text-on-surface">18 jul 2024</span>
+<span class="text-[10px] text-tertiary font-semibold uppercase tracking-wider px-1 bg-surface-container-lowest rounded border border-tertiary/20">máxima</span>
+</div>
+<span class="tabular-nums font-semibold text-tertiary">R$ 20,40</span>
+</div>
+<!-- Registro 6 -->
+<div class="px-3 py-2 flex items-center justify-between hover:bg-surface-container-low/30 transition-colors">
+<span class="tabular-nums text-on-surface">02 jun 2024</span>
+<span class="tabular-nums font-medium text-on-surface">R$ 18,60</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 5. Estado Ilustrativo: Caso não houvesse histórico (Preview de Estado Vazio Flutter) -->
+<section class="border border-dashed border-outline-variant rounded-lg p-3 bg-surface-container-low/40 space-y-1.5">
+<div class="flex items-center gap-1.5 text-secondary">
+<span class="material-symbols-outlined text-[16px]">info</span>
+<span class="font-label text-[11px] font-semibold uppercase tracking-wider">Estado sem preço cadastrado</span>
+</div>
+<p class="text-xs text-secondary leading-relaxed">
+      Produtos recém-adicionados sem registro de valor exibem a indicação <span class="font-mono text-on-surface-variant text-[11px]">"Preço não informado"</span> com atalho rápido no cabeçalho para registrar o primeiro valor anotado.
+    </p>
+</section>
+<!-- Rodapé Editorial Discreto -->
+<footer class="pt-4 border-t border-outline-variant/50 text-center">
+<p class="text-[11px] font-headline italic text-secondary">
+      Mercado Editorial — Ficha de Catálogo
+    </p>
+</footer>
+</main>
+</div>
+</body></html>

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Voz — Revisão | Minhas Compras</title>
+<!-- Google Fonts: Newsreader & Public Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-highest": "#e4e2dd",
+            "inverse-primary": "#a9d0b4",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "background": "#fbf9f3",
+            "primary-fixed": "#c4eccf",
+            "surface": "#fbf9f3",
+            "on-background": "#1b1c18",
+            "secondary": "#5b604f",
+            "outline-variant": "#c1c8c1",
+            "on-surface-variant": "#424843",
+            "error-container": "#ffdad6",
+            "surface-container": "#f0eee8",
+            "primary-container": "#365943",
+            "tertiary-container": "#724549",
+            "on-primary-container": "#a7ceb2",
+            "inverse-surface": "#30312d",
+            "tertiary": "#582f33",
+            "surface-variant": "#e4e2dd",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "on-secondary-container": "#616655",
+            "on-tertiary-container": "#f2b6ba",
+            "on-secondary": "#ffffff",
+            "inverse-on-surface": "#f3f1eb",
+            "surface-container-high": "#eae8e2",
+            "surface-bright": "#fbf9f3",
+            "error": "#ba1a1a",
+            "on-error-container": "#93000a",
+            "on-primary-fixed": "#002110",
+            "surface-container-low": "#f5f3ed",
+            "surface-container-lowest": "#ffffff",
+            "secondary-fixed-dim": "#c4c9b4",
+            "secondary-fixed": "#e0e5cf",
+            "primary": "#1f412d",
+            "outline": "#727972",
+            "on-surface": "#1b1c18",
+            "on-secondary-fixed": "#191d10",
+            "on-error": "#ffffff",
+            "primary-fixed-dim": "#a9d0b4",
+            "on-primary": "#ffffff",
+            "tertiary-fixed": "#ffdadb",
+            "surface-dim": "#dcdad4",
+            "on-primary-fixed-variant": "#2b4e39",
+            "on-tertiary": "#ffffff",
+            "on-secondary-fixed-variant": "#444939",
+            "on-tertiary-fixed": "#321015",
+            "surface-tint": "#43664f",
+            "secondary-container": "#e0e5cf"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .material-symbols-outlined.fill-icon {
+      font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-stone-900 text-on-surface font-body antialiased flex justify-center min-h-screen items-center p-0 md:p-6 select-none">
+<!-- Mobile Device Shell (390px) -->
+<div class="relative w-full max-w-[390px] h-[844px] bg-background overflow-hidden shadow-2xl flex flex-col justify-end">
+<!-- 1. Background Content (Esmaecido pelo Scrim) -->
+<div aria-hidden="true" class="absolute inset-0 bg-surface flex flex-col pointer-events-none filter blur-[1px] opacity-35">
+<!-- Falsa TopAppBar da Lista -->
+<div class="h-14 border-b border-outline-variant px-4 flex items-center justify-between bg-surface">
+<span class="material-symbols-outlined text-secondary" data-icon="arrow_back">arrow_back</span>
+<span class="font-headline text-xl text-on-surface font-medium">Feira Semanal</span>
+<span class="material-symbols-outlined text-secondary" data-icon="more_vert">more_vert</span>
+</div>
+<!-- Itens de fundo fictícios -->
+<div class="p-4 space-y-4 font-body">
+<div class="flex items-center justify-between pb-3 border-b border-outline-variant">
+<div class="flex items-center gap-3">
+<div class="w-5 h-5 rounded border border-outline"></div>
+<div>
+<p class="text-sm font-medium text-on-surface">Arroz agulhinha tipo 1 5kg</p>
+<p class="text-xs text-secondary">1 un · R$ 28,90</p>
+</div>
+</div>
+<span class="text-xs font-semibold tabular-nums text-on-surface">R$ 28,90</span>
+</div>
+<div class="flex items-center justify-between pb-3 border-b border-outline-variant">
+<div class="flex items-center gap-3">
+<div class="w-5 h-5 rounded border border-outline"></div>
+<div>
+<p class="text-sm font-medium text-on-surface">Azeite de oliva extravirgem 500ml</p>
+<p class="text-xs text-secondary">1 un · R$ 41,50</p>
+</div>
+</div>
+<span class="text-xs font-semibold tabular-nums text-on-surface">R$ 41,50</span>
+</div>
+<div class="flex items-center justify-between pb-3 border-b border-outline-variant">
+<div class="flex items-center gap-3">
+<div class="w-5 h-5 rounded border border-outline"></div>
+<div>
+<p class="text-sm font-medium text-on-surface">Ovos vermelhos caipira 12 un</p>
+<p class="text-xs text-secondary">2 un · R$ 16,00</p>
+</div>
+</div>
+<span class="text-xs font-semibold tabular-nums text-on-surface">R$ 32,00</span>
+</div>
+</div>
+</div>
+<!-- 2. Dark Scrim Overlay -->
+<div class="absolute inset-0 bg-stone-900/60 z-10 transition-opacity backdrop-blur-[0.5px]"></div>
+<!-- 3. Bottom Sheet (Voz — Revisão) -->
+<section aria-label="Revisão de reconhecimento de voz" class="relative z-20 w-full bg-surface rounded-t-2xl shadow-xl flex flex-col max-h-[790px] border-t border-outline-variant">
+<!-- Drag Handle -->
+<div class="w-full flex justify-center pt-3 pb-1">
+<div aria-hidden="true" class="w-10 h-1 rounded-full bg-outline-variant"></div>
+</div>
+<!-- TopAppBar (da especificação do Shared Components JSON) -->
+<header class="flex justify-between items-center w-full px-4 h-14 border-b border-outline-variant bg-surface">
+<button aria-label="Fechar" class="w-10 h-10 -ml-2 inline-flex items-center justify-center rounded-full text-secondary hover:text-primary hover:bg-surface-container transition-colors duration-150 active:opacity-80" type="button">
+<span class="material-symbols-outlined text-2xl" data-icon="close">close</span>
+</button>
+<h1 class="font-headline text-2xl font-normal text-on-surface tracking-tight text-center">Revise os produtos</h1>
+<button aria-label="Ouvir novamente" class="inline-flex items-center gap-1 text-sm font-medium text-primary hover:bg-surface-container px-2 py-1.5 rounded transition-colors duration-150 active:opacity-80" type="button">
+<span class="material-symbols-outlined text-lg" data-icon="replay">replay</span>
+<span class="font-label">Ouvir novamente</span>
+</button>
+</header>
+<!-- Status Bar abaixo do Cabeçalho -->
+<div class="px-4 py-2.5 bg-surface-container-low border-b border-outline-variant flex items-center justify-between text-xs font-label">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary-container inline-block"></span>
+<span class="font-medium text-on-surface" id="selected-counter">2 de 3 selecionados</span>
+</div>
+</div>
+<!-- Scrollable Product List (Cartões Contábeis) -->
+<div class="overflow-y-auto px-4 py-4 space-y-3 flex-1 bg-surface">
+<!-- CARD 1: Selecionado - Leite integral pasteurizado -->
+<article class="p-3.5 bg-surface-container-lowest border border-outline-variant rounded-lg transition-colors hover:border-secondary">
+<div class="flex items-start gap-3">
+<!-- Checkbox Customizado -->
+<label class="mt-0.5 relative flex items-center justify-center cursor-pointer">
+<input aria-label="Selecionar Leite integral pasteurizado tipo A 1L" checked="" class="peer sr-only product-checkbox" type="checkbox"/>
+<div class="w-5 h-5 rounded border border-outline-variant bg-surface flex items-center justify-center peer-checked:bg-primary-container peer-checked:border-primary-container transition-colors">
+<span class="material-symbols-outlined text-sm text-surface fill-icon" data-icon="check" data-weight="fill">check</span>
+</div>
+</label>
+<!-- Detalhes do Produto -->
+<div class="flex-1 min-w-0">
+<div class="flex items-start justify-between gap-2">
+<h2 class="text-sm font-medium text-on-surface leading-tight">Leite integral pasteurizado tipo A 1L</h2>
+<button aria-label="Editar item" class="text-secondary hover:text-primary transition-colors p-0.5 rounded" type="button">
+<span class="material-symbols-outlined text-lg" data-icon="edit">edit</span>
+</button>
+</div>
+<!-- Quantidade & Preço -->
+<p class="text-xs text-secondary mt-1 tabular-nums">
+<span class="font-medium text-on-surface">2 un</span> · R$ 13,80 <span class="text-on-surface-variant text-[11px]">(R$ 6,90/un)</span>
+</p>
+<!-- Tag Contábil & Sugestão de Catálogo -->
+<div class="mt-2.5 pt-2 border-t border-outline-variant/60 flex flex-col gap-1.5">
+<div class="flex items-center">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary-container text-on-secondary-container text-[11px] font-medium leading-none">
+<span class="material-symbols-outlined text-[13px]" data-icon="check_circle">check_circle</span>
+                    Encontrado no catálogo
+                  </span>
+</div>
+<!-- Dropdown Seletor -->
+<button class="w-full flex items-center justify-between text-left text-xs bg-surface-container-low hover:bg-surface-container border border-outline-variant px-2.5 py-1.5 rounded transition-colors text-on-surface" type="button">
+<span class="truncate text-on-surface-variant font-medium">Leite integral tipo A 1L (Catálogo)</span>
+<span class="material-symbols-outlined text-base text-secondary flex-shrink-0" data-icon="arrow_drop_down">arrow_drop_down</span>
+</button>
+</div>
+</div>
+</div>
+</article>
+<!-- CARD 2: Selecionado - Café torrado e moído -->
+<article class="p-3.5 bg-surface-container-lowest border border-outline-variant rounded-lg transition-colors hover:border-secondary">
+<div class="flex items-start gap-3">
+<!-- Checkbox Customizado -->
+<label class="mt-0.5 relative flex items-center justify-center cursor-pointer">
+<input aria-label="Selecionar Café torrado e moído 500g" checked="" class="peer sr-only product-checkbox" type="checkbox"/>
+<div class="w-5 h-5 rounded border border-outline-variant bg-surface flex items-center justify-center peer-checked:bg-primary-container peer-checked:border-primary-container transition-colors">
+<span class="material-symbols-outlined text-sm text-surface fill-icon" data-icon="check" data-weight="fill">check</span>
+</div>
+</label>
+<!-- Detalhes do Produto -->
+<div class="flex-1 min-w-0">
+<div class="flex items-start justify-between gap-2">
+<h2 class="text-sm font-medium text-on-surface leading-tight">Café torrado e moído 500g</h2>
+<button aria-label="Editar item" class="text-secondary hover:text-primary transition-colors p-0.5 rounded" type="button">
+<span class="material-symbols-outlined text-lg" data-icon="edit">edit</span>
+</button>
+</div>
+<!-- Quantidade & Preço -->
+<p class="text-xs text-secondary mt-1 tabular-nums">
+<span class="font-medium text-on-surface">1 un</span> · R$ 24,90
+              </p>
+<!-- Tag Contábil & Sugestão de Catálogo -->
+<div class="mt-2.5 pt-2 border-t border-outline-variant/60 flex flex-col gap-1.5">
+<div class="flex items-center">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant text-[11px] font-medium leading-none">
+<span class="material-symbols-outlined text-[13px]" data-icon="alt_route">alt_route</span>
+                    Similar detectado
+                  </span>
+</div>
+<!-- Dropdown Seletor Correspondência -->
+<button class="w-full flex items-center justify-between text-left text-xs bg-surface-container-low hover:bg-surface-container border border-outline-variant px-2.5 py-1.5 rounded transition-colors text-on-surface" type="button">
+<span class="truncate text-on-surface-variant font-medium">Correspondência: Café torrado 500g (da lista)</span>
+<span class="material-symbols-outlined text-base text-secondary flex-shrink-0" data-icon="arrow_drop_down">arrow_drop_down</span>
+</button>
+</div>
+</div>
+</div>
+</article>
+<!-- CARD 3: Desmarcado - Sabonete vegetal neutro -->
+<article class="p-3.5 bg-surface-container-lowest/70 border border-outline-variant/80 rounded-lg transition-colors hover:border-secondary">
+<div class="flex items-start gap-3">
+<!-- Checkbox Customizado (Desmarcado) -->
+<label class="mt-0.5 relative flex items-center justify-center cursor-pointer">
+<input aria-label="Selecionar Sabonete vegetal neutro" class="peer sr-only product-checkbox" type="checkbox"/>
+<div class="w-5 h-5 rounded border border-outline bg-surface flex items-center justify-center peer-checked:bg-primary-container peer-checked:border-primary-container transition-colors">
+<span class="material-symbols-outlined text-sm text-surface hidden peer-checked:block fill-icon" data-icon="check" data-weight="fill">check</span>
+</div>
+</label>
+<!-- Detalhes do Produto -->
+<div class="flex-1 min-w-0">
+<div class="flex items-start justify-between gap-2">
+<h2 class="text-sm font-medium text-on-surface leading-tight">Sabonete vegetal neutro</h2>
+<button aria-label="Editar item" class="text-secondary hover:text-primary transition-colors p-0.5 rounded" type="button">
+<span class="material-symbols-outlined text-lg" data-icon="edit">edit</span>
+</button>
+</div>
+<!-- Quantidade & Preço -->
+<p class="text-xs text-secondary mt-1 tabular-nums">
+<span class="font-medium text-on-surface">3 un</span> · <span class="text-secondary italic">Preço a definir</span>
+</p>
+<!-- Tag Contábil -->
+<div class="mt-2.5 pt-2 border-t border-outline-variant/60 flex items-center">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-container text-secondary text-[11px] font-medium leading-none">
+<span class="material-symbols-outlined text-[13px]" data-icon="help_outline">help_outline</span>
+                  Não cadastrado no catálogo
+                </span>
+</div>
+</div>
+</div>
+</article>
+</div>
+<!-- Rodapé Fixo do Bottom Sheet -->
+<footer class="p-4 bg-surface border-t border-outline-variant">
+<button class="w-full h-12 bg-primary-container hover:bg-primary text-on-secondary font-label font-medium text-sm rounded-lg flex items-center justify-center gap-2 transition-colors active:scale-[0.99] duration-100" id="confirm-btn" type="button">
+<span>Adicionar 2 produtos</span>
+<span class="material-symbols-outlined text-lg" data-icon="check">check</span>
+</button>
+</footer>
+</section>
+</div>
+<script>
+    // Interatividade mínima para contagem de seleção
+    const checkboxes = document.querySelectorAll('.product-checkbox');
+    const counter = document.getElementById('selected-counter');
+    const toggleBtn = document.getElementById('toggle-all-btn');
+    const confirmBtn = document.getElementById('confirm-btn');
+
+    function updateCounter() {
+      const selected = Array.from(checkboxes).filter(cb => cb.checked).length;
+      counter.textContent = `${selected} de ${checkboxes.length} selecionados`;
+      
+      const spanText = confirmBtn.querySelector('span:first-child');
+      if (selected === 0) {
+        spanText.textContent = "Nenhum produto selecionado";
+        confirmBtn.classList.add('opacity-50', 'pointer-events-none');
+      } else {
+        spanText.textContent = `Adicionar ${selected} ${selected === 1 ? 'produto' : 'produtos'}`;
+        confirmBtn.classList.remove('opacity-50', 'pointer-events-none');
+      }
+
+      if (selected === checkboxes.length) {
+        toggleBtn.textContent = "Desmarcar todos";
+      } else {
+        toggleBtn.textContent = "Selecionar todos";
+      }
+    }
+
+    checkboxes.forEach(cb => {
+      cb.addEventListener('change', updateCounter);
+    });
+
+    toggleBtn.addEventListener('click', () => {
+      const allSelected = Array.from(checkboxes).every(cb => cb.checked);
+      checkboxes.forEach(cb => {
+        cb.checked = !allSelected;
+      });
+      updateCounter();
+    });
+  </script>
+</body></html>

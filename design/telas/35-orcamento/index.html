@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orçamento da lista</title>
+  <!-- Google Fonts: Newsreader & Public Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Material Symbols Outlined -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            surface: '#fbfaf6',
+            'surface-container-lowest': '#ffffff',
+            'surface-container-low': '#f5f3ec',
+            'surface-container': '#efece2',
+            'surface-container-high': '#e7e3d6',
+            primary: '#1f412d',
+            'primary-hover': '#163122',
+            'on-primary': '#ffffff',
+            'on-surface': '#1b1c19',
+            'on-surface-variant': '#444843',
+            outline: '#737971',
+            'outline-variant': '#c3c8bf',
+            error: '#ba1a1a',
+            'error-container': '#ffdad6',
+            'on-error-container': '#410002',
+          },
+          fontFamily: {
+            headline: ['Newsreader', 'serif'],
+            body: ['Public Sans', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Public Sans', sans-serif;
+      background-color: #797974; /* Backdrop do modal */
+      margin: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
+</head>
+<body class="p-4 sm:p-6 flex items-center justify-center">
+
+  <!-- Container Mobile 390px / Modal Dialog Material 3 -->
+  <div class="w-full max-w-[390px] bg-surface rounded-2xl shadow-2xl border border-outline-variant/60 overflow-hidden flex flex-col">
+    
+    <!-- Cabeçalho do Diálogo / Alça sutil e identificação -->
+    <div class="pt-3 px-6 pb-2">
+      <div class="w-10 h-1 bg-outline-variant/80 rounded-full mx-auto mb-4"></div>
+      
+      <div class="flex items-start justify-between">
+        <div>
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant/80 font-body">Definição financeira</span>
+          <h1 class="text-2xl font-normal font-headline text-on-surface tracking-tight mt-0.5">Orçamento da lista</h1>
+        </div>
+        <button type="button" aria-label="Fechar" class="text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface-container transition-colors -mr-1.5 mt-0.5">
+          <span class="material-symbols-outlined text-[22px]">close</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Divisor sutil linear -->
+    <div class="h-px bg-outline-variant/50 w-full"></div>
+
+    <!-- Conteúdo do Formulário (showBudgetEditorDialog) -->
+    <form class="p-6 flex flex-col gap-6" onsubmit="event.preventDefault();">
+      
+      <!-- Campo monetário: Orçamento da lista -->
+      <div class="flex flex-col gap-1.5">
+        <label for="budget-input" class="text-xs font-semibold uppercase tracking-wider text-on-surface-variant font-body">
+          Orçamento da lista
+        </label>
+        
+        <div class="relative flex items-center rounded-lg border border-outline-variant bg-surface-container-lowest focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+          <span class="pl-3.5 pr-1.5 text-base font-medium text-on-surface-variant select-none">
+            R$
+          </span>
+          <input 
+            type="text" 
+            id="budget-input" 
+            name="budget"
+            value="250,00" 
+            placeholder="0,00"
+            inputmode="decimal"
+            class="w-full py-3 pr-4 bg-transparent text-lg font-semibold text-on-surface outline-none placeholder:text-outline-variant font-body"
+          />
+        </div>
+        <span class="text-xs text-on-surface-variant mt-0.5">
+          Teto estimado para acompanhamento durante as compras.
+        </span>
+      </div>
+
+      <!-- Divisor contínuo de caderno de mercado -->
+      <div class="h-px bg-outline-variant/40 w-full"></div>
+
+      <!-- Grupo de Ações do Diálogo -->
+      <div class="flex flex-col gap-2.5 pt-1">
+        
+        <!-- Ação Primária: Salvar -->
+        <button 
+          type="submit" 
+          class="w-full min-h-[48px] bg-primary hover:bg-primary-hover active:bg-[#14281c] text-on-primary font-medium text-sm rounded-lg flex items-center justify-center gap-2 transition-colors duration-150 shadow-sm"
+        >
+          <span class="material-symbols-outlined text-[18px]">check</span>
+          <span>Salvar</span>
+        </button>
+
+        <!-- Ação Secundária: Cancelar -->
+        <button 
+          type="button" 
+          class="w-full min-h-[48px] bg-surface-container-lowest hover:bg-surface-container active:bg-surface-container-high text-on-surface border border-outline-variant font-medium text-sm rounded-lg flex items-center justify-center transition-colors duration-150"
+        >
+          <span>Cancelar</span>
+        </button>
+
+        <!-- Ação Terciária / Destrutiva: Remover limite -->
+        <button 
+          type="button" 
+          class="w-full min-h-[44px] text-error hover:bg-error-container/20 active:bg-error-container/40 font-medium text-sm rounded-lg flex items-center justify-center gap-1.5 transition-colors duration-150 mt-1"
+        >
+          <span class="material-symbols-outlined text-[18px]">delete_outline</span>
+          <span>Remover limite</span>
+        </button>
+
+      </div>
+    </form>
+
+  </div>
+
+</body>
+</html>

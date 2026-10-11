@@ -124,7 +124,8 @@
             'reminder',
             'paymentBalances',
             'isClosed',
-            'closedAt'
+            'closedAt',
+            'deletedAt'
           ]) &&
           d.keys().hasAll([
             'id',
@@ -149,7 +150,35 @@
           d.paymentBalances is list &&
           d.paymentBalances.size() <= 30 &&
           d.isClosed is bool &&
-          (d.closedAt == null || isDateLike(d.closedAt));
+          (d.closedAt == null || isDateLike(d.closedAt)) &&
+          (
+            !d.keys().hasAny(['deletedAt']) ||
+            d.deletedAt == null ||
+            isDateLike(d.deletedAt)
+          );
+      }
+
+      function validFinanceAllocation(a) {
+        return a is map &&
+          a.keys().hasOnly(['sourceId', 'sourceKind', 'sourceName', 'amountCents']) &&
+          isString(a.sourceId, 1, 120) &&
+          a.sourceKind in ['credit', 'debit', 'foodVoucher', 'mealVoucher'] &&
+          isString(a.sourceName, 1, 120) &&
+          a.amountCents is int && a.amountCents > 0 && a.amountCents <= 100000000;
+      }
+
+      function validFinanceIntent(i) {
+        return i is map &&
+          i.keys().hasOnly(['connectionId', 'categoryId', 'allocations']) &&
+          isString(i.connectionId, 1, 120) &&
+          (i.categoryId == null || isString(i.categoryId, 1, 120)) &&
+          i.allocations is list &&
+          i.allocations.size() >= 1 && i.allocations.size() <= 5 &&
+          validFinanceAllocation(i.allocations[0]) &&
+          (i.allocations.size() < 2 || validFinanceAllocation(i.allocations[1])) &&
+          (i.allocations.size() < 3 || validFinanceAllocation(i.allocations[2])) &&
+          (i.allocations.size() < 4 || validFinanceAllocation(i.allocations[3])) &&
+          (i.allocations.size() < 5 || validFinanceAllocation(i.allocations[4]));
       }
 
       function validHistoryDoc(historyId) {
@@ -161,7 +190,8 @@
             'closedAt',
             'items',
             'budget',
-            'paymentBalances'
+            'paymentBalances',
+            'financeIntent'
           ]) &&
           d.keys().hasAll([
             'id',
@@ -180,7 +210,8 @@
           d.items.size() <= 3000 &&
           isNumberOrNull(d.budget) &&
           d.paymentBalances is list &&
-          d.paymentBalances.size() <= 30;
+          d.paymentBalances.size() <= 30 &&
+          (!('financeIntent' in d) || validFinanceIntent(d.financeIntent));
       }
 
       function validCatalogDoc(productId) {
@@ -464,7 +495,8 @@
             'closedAt',
             'items',
             'budget',
-            'paymentBalances'
+            'paymentBalances',
+            'financeIntent'
           ]) &&
           d.keys().hasAll([
             'id',
@@ -483,7 +515,8 @@
           d.items.size() <= 3000 &&
           isNumberOrNull(d.budget) &&
           d.paymentBalances is list &&
-          d.paymentBalances.size() <= 30;
+          d.paymentBalances.size() <= 30 &&
+          (!('financeIntent' in d) || validFinanceIntent(d.financeIntent));
       }
 
       function validInviteDoc(code, d) {
@@ -587,28 +620,42 @@
         allow update: if isOwner(uid) && validUserRootUpdate();
         allow delete: if isOwner(uid);
 
+        match /sync_deletions/{deletionId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid) &&
+            request.resource.data.keys().hasOnly(['entityType', 'entityId', 'deletedAt']) &&
+            request.resource.data.entityType in ['lists', 'purchaseHistory', 'catalog', 'pantry'] &&
+            isString(request.resource.data.entityId, 1, 200) &&
+            deletionId == request.resource.data.entityType + '_' + request.resource.data.entityId &&
+            isDateLike(request.resource.data.deletedAt);
+        }
+
         match /lists/{listId} {
           allow read: if isOwner(uid);
-          allow create, update: if isOwner(uid) && validListDoc(listId);
+          allow create, update: if isOwner(uid) && validListDoc(listId) &&
+            !exists(/databases/$(database)/documents/users/$(uid)/sync_deletions/$("lists_" + listId));
           allow delete: if isOwner(uid);
         }
 
         match /history/{historyId} {
           allow read: if isOwner(uid);
-          allow create, update: if isOwner(uid) && validHistoryDoc(historyId);
+          allow create, update: if isOwner(uid) && validHistoryDoc(historyId) &&
+            !exists(/databases/$(database)/documents/users/$(uid)/sync_deletions/$("purchaseHistory_" + historyId));
           allow delete: if isOwner(uid);
         }
 
         match /catalog/{productId} {
           allow read: if isOwner(uid);
-          allow create, update: if isOwner(uid) && validCatalogDoc(productId);
+          allow create, update: if isOwner(uid) && validCatalogDoc(productId) &&
+            !exists(/databases/$(database)/documents/users/$(uid)/sync_deletions/$("catalog_" + productId));
           allow delete: if isOwner(uid);
         }
 
         match /pantry/{pantryItemId} {
           allow read: if isOwner(uid);
           allow create, update: if isOwner(uid) &&
-            validPantryDoc(pantryItemId);
+            validPantryDoc(pantryItemId) &&
+            !exists(/databases/$(database)/documents/users/$(uid)/sync_deletions/$("pantry_" + pantryItemId));
           allow delete: if isOwner(uid);
         }
 

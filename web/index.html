@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -19,7 +19,7 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Organize listas, preços, despensa e histórico de compras.">
-  <meta name="theme-color" content="#0D7B9A">
+  <meta name="theme-color" content="#1F412D">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -32,8 +32,79 @@
 
   <title>Minhas Compras</title>
   <link rel="manifest" href="manifest.json">
-</head>
-<body>
+<link rel="stylesheet" href="splash.css"></head>
+<body><div id="boot-splash" role="status" aria-label="Preparando sua lista"><div class="ruled-background" aria-hidden="true"></div><main><svg width="160" height="140" viewBox="0 0 160 140" fill="none" xmlns="http://www.w3.org/2000/svg" class="overflow-visible" aria-hidden="true">
+        
+        <!-- Papel / Caderno de Compras (Bloco à esquerda) -->
+        <g class="anim-paper">
+          <!-- Folha de papel cartão -->
+          <rect x="18" y="18" width="76" height="104" rx="4" fill="var(--surface)" stroke="var(--text)" stroke-width="1.75" />
+          
+          <!-- Grampo/Aba superior do caderno -->
+          <path d="M42 18V13C42 11.8954 42.8954 11 44 11H68C69.1046 11 70 11.8954 70 13V18" stroke="var(--text)" stroke-width="1.5" stroke-linecap="round" />
+          
+          <!-- Linha de corte/destaque superior sutil -->
+          <line x1="26" y1="28" x2="86" y2="28" stroke="var(--divider)" stroke-width="1" stroke-dasharray="2 2" />
+        </g>
+
+        <!-- Linha 1 da lista (Item, quantidade e checkbox 4x4) -->
+        <g class="anim-row-1">
+          <!-- Caixa do checkbox 10x10 com cantos de 2px -->
+          <rect x="26" y="38" width="10" height="10" rx="2" stroke="var(--text)" stroke-width="1.5" fill="var(--surface)" />
+          <!-- Checkmark verde contábil desenhado -->
+          <path class="anim-check-1" d="M28.5 43.2L31.2 45.8L38 38.5" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          <!-- Traço de texto do item -->
+          <line x1="42" y1="43" x2="72" y2="43" stroke="var(--text)" stroke-width="1.75" stroke-linecap="round" />
+          <!-- Ponto/Badge discreto de quantidade -->
+          <line x1="77" y1="43" x2="84" y2="43" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" />
+        </g>
+
+        <!-- Linha 2 da lista -->
+        <g class="anim-row-2">
+          <!-- Caixa do checkbox -->
+          <rect x="26" y="58" width="10" height="10" rx="2" stroke="var(--text)" stroke-width="1.5" fill="var(--surface)" />
+          <!-- Checkmark verde contábil desenhado -->
+          <path class="anim-check-2" d="M28.5 63.2L31.2 65.8L38 58.5" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          <!-- Traço de texto do item -->
+          <line x1="42" y1="63" x2="68" y2="63" stroke="var(--text)" stroke-width="1.75" stroke-linecap="round" />
+          <!-- Ponto/Badge discreto de quantidade -->
+          <line x1="74" y1="63" x2="84" y2="63" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" />
+        </g>
+
+        <!-- Linha 3 da lista -->
+        <g class="anim-row-3">
+          <!-- Caixa do checkbox -->
+          <rect x="26" y="78" width="10" height="10" rx="2" stroke="var(--text)" stroke-width="1.5" fill="var(--surface)" />
+          <!-- Checkmark verde contábil desenhado -->
+          <path class="anim-check-3" d="M28.5 83.2L31.2 85.8L38 78.5" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          <!-- Traço de texto do item -->
+          <line x1="42" y1="83" x2="70" y2="83" stroke="var(--text)" stroke-width="1.75" stroke-linecap="round" />
+          <!-- Ponto/Badge discreto de quantidade -->
+          <line x1="76" y1="83" x2="84" y2="83" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" />
+        </g>
+
+        <!-- Divisor sutil inferior da lista -->
+        <line x1="26" y1="98" x2="86" y2="98" stroke="var(--divider)" stroke-width="1" />
+
+        <!-- Sacola de Feira / Mercado (Conclusão do Emblema à direita) -->
+        <g class="anim-bag">
+          <!-- Corpo da sacola de mercado com sobreposição limpa ao caderno -->
+          <path d="M84 48H132C133.657 48 135 49.3431 134.8 51L130.6 114C130.45 116.2 128.6 118 126.4 118H90.6C88.4 118 86.55 116.2 86.4 114L83.2 51C83 49.3431 84.3431 48 86 48Z" 
+                fill="var(--surface)" stroke="var(--text)" stroke-width="1.75" stroke-linejoin="round" />
+          
+          <!-- Alça da sacola estruturada -->
+          <path d="M97 48V35C97 29.4772 101.477 25 107 25H111C116.523 25 121 29.4772 121 35V48" 
+                stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" />
+
+          <!-- Detalhe da dobra frontal da sacola de papel artesanal -->
+          <path d="M91 62L109 72L127 62" stroke="var(--divider)" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" />
+          
+          <!-- Ramo / Etiqueta gráfica discreta da sacola -->
+          <circle cx="109" cy="91" r="5" stroke="var(--green)" stroke-width="1.5" fill="none" />
+          <path d="M109 87V95M105 91H113" stroke="var(--green)" stroke-width="1.25" stroke-linecap="round" />
+        </g>
+
+      </svg><h1>Minhas Compras</h1><p>Planeje. Marque. Leve.</p></main><footer><span>Preparando sua lista...</span><div class="indeterminate-bar" aria-hidden="true"></div></footer></div><script>window.addEventListener("flutter-first-frame", function () { document.getElementById("boot-splash")?.remove(); }, { once: true });</script>
   <!--
     iOS WebKit requires camera-backed video elements to play inline.
     This helper also resumes the preview after Safari/PWA visibility changes.

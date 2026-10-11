@@ -172,9 +172,14 @@ class CatalogSuggestionTile extends StatelessWidget {
 }
 
 class PendingDraftsPreview extends StatelessWidget {
-  const PendingDraftsPreview({super.key, required this.drafts});
+  const PendingDraftsPreview({
+    super.key,
+    required this.drafts,
+    required this.onReview,
+  });
 
   final List<ShoppingItemDraft> drafts;
+  final VoidCallback onReview;
 
   @override
   Widget build(BuildContext context) {
@@ -184,30 +189,50 @@ class PendingDraftsPreview extends StatelessWidget {
     final suffix = remaining > 0 ? ' +$remaining' : '';
     final itemLabel = drafts.length == 1 ? 'item pronto' : 'itens prontos';
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
+    return Semantics(
+      button: true,
+      child: Material(
         color: colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(14),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            Icon(
-              Icons.playlist_add_check_rounded,
-              color: colorScheme.onPrimaryContainer,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                '${drafts.length} $itemLabel: $previewNames$suffix',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onReview,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.playlist_add_check_rounded,
                   color: colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.w700,
                 ),
-              ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${drafts.length} $itemLabel: $previewNames$suffix',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        'Revisar itens',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onPrimaryContainer,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: colorScheme.onPrimaryContainer,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

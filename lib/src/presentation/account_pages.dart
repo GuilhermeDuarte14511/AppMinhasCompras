@@ -1,5 +1,4 @@
 import 'dart:developer' as developer;
-import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,13 +6,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 
 import '../application/sync_diagnostics.dart';
+import '../data/finance_integration_dependencies.dart';
 import '../data/remote/firebase_user_data_repository.dart';
-import 'launch.dart';
+import 'account/cloud_sync_status_panel.dart';
+import 'finance_integration_page.dart';
 import 'sync_diagnostics_page.dart';
-import 'theme/app_tokens.dart';
+import 'theme/editorial_workspace_theme.dart';
 import 'utils/app_page_route.dart';
 import 'utils/app_toast.dart';
 
@@ -26,7 +26,6 @@ class _StorageAvatar extends StatefulWidget {
     required this.foregroundColor,
     required this.fallback,
     this.onLoadError,
-    this.cacheKey,
   });
 
   final String? photoUrl;
@@ -35,7 +34,6 @@ class _StorageAvatar extends StatefulWidget {
   final Color foregroundColor;
   final Widget fallback;
   final VoidCallback? onLoadError;
-  final int? cacheKey;
 
   @override
   State<_StorageAvatar> createState() => _StorageAvatarState();
@@ -55,8 +53,7 @@ class _StorageAvatarState extends State<_StorageAvatar> {
   @override
   void didUpdateWidget(covariant _StorageAvatar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.photoUrl != widget.photoUrl ||
-        oldWidget.cacheKey != widget.cacheKey) {
+    if (oldWidget.photoUrl != widget.photoUrl) {
       _prepare();
     }
   }
@@ -228,7 +225,6 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
   late String _resolvedName;
   late String? _resolvedEmail;
   String? _resolvedPhotoUrl;
-  int _photoCacheKey = 0;
   bool _isSigningOut = false;
 
   @override
@@ -301,7 +297,6 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
         email: _resolvedEmail,
       );
       _resolvedPhotoUrl = _cleanNullable(result.photoUrl);
-      _photoCacheKey = DateTime.now().millisecondsSinceEpoch;
     });
     final refresh = widget.onProfileUpdated;
     if (refresh != null) {
@@ -346,27 +341,48 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
     );
   }
 
-  Widget _buildSectionHeader(
-    BuildContext context, {
-    required String title,
-    required String subtitle,
-  }) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
+  Future<void> _openFinanceIntegration() {
+    return Navigator.push<void>(
+      context,
+      buildAppPageRoute(
+        builder: (_) => FinanceIntegrationPage(
+          repository: createFinanceIntegrationRepository(),
+        ),
+      ),
+    );
+  }
+
+  Widget _section(BuildContext context, String title, List<Widget> children) {
+    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 6, 4, 8),
+      padding: const EdgeInsets.only(bottom: 28),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            title,
-            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10, left: 2),
+            child: Text(
+              title.toUpperCase(),
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontSize: 11,
+                letterSpacing: 1,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
+          Material(
+            color: theme.colorScheme.surfaceContainerLowest,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: theme.colorScheme.outlineVariant.withValues(alpha: .6),
+              ),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: children,
             ),
           ),
         ],
@@ -374,294 +390,380 @@ class _AppOptionsPageState extends State<AppOptionsPage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
-    final avatarLabel = _resolvedName.isEmpty
-        ? 'U'
-        : _resolvedName[0].toUpperCase();
-    return Scaffold(
-      appBar: AppBar(title: const Text('Opções')),
-      body: AppGradientScene(
-        child: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: [
-              _AccountContentPanel(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Ajustes do app',
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Gerencie conta, aparência, sincronização e ajuda em um só lugar.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              _buildSectionHeader(
-                context,
-                title: 'Conta',
-                subtitle: 'Perfil e sessão',
-              ),
-              _AccountContentPanel(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          _StorageAvatar(
-                            key: ValueKey(
-                              'options_avatar_${_resolvedPhotoUrl ?? ''}_$_photoCacheKey',
-                            ),
-                            photoUrl: _resolvedPhotoUrl,
-                            radius: 22,
-                            backgroundColor: colorScheme.primaryContainer,
-                            foregroundColor: colorScheme.onPrimaryContainer,
-                            fallback: Text(
-                              avatarLabel,
-                              style: textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            onLoadError: () {
-                              if (!mounted) {
-                                return;
-                              }
-                              setState(() {
-                                _resolvedPhotoUrl = null;
-                              });
-                            },
-                            cacheKey: _photoCacheKey,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _resolvedName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                Text(
-                                  (_resolvedEmail != null &&
-                                          _resolvedEmail!.isNotEmpty)
-                                      ? _resolvedEmail!
-                                      : 'Conta conectada',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: textTheme.bodyMedium?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed: _openMyProfile,
-                          icon: const Icon(Icons.manage_accounts_rounded),
-                          label: const Text('Meus dados'),
-                        ),
-                      ),
-                      if (widget.onSignOut != null) ...[
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: _isSigningOut ? null : _requestSignOut,
-                            icon: _isSigningOut
-                                ? const SizedBox.square(
-                                    dimension: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.logout_rounded),
-                            label: Text(
-                              _isSigningOut ? 'Saindo...' : 'Deslogar',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
+  Widget _profileSummary(BuildContext context) {
+    final theme = Theme.of(context);
+    final words = _resolvedName
+        .split(RegExp(r'\s+'))
+        .where((word) => word.isNotEmpty)
+        .toList();
+    final initials = words
+        .take(2)
+        .map((word) => word.characters.first)
+        .join()
+        .toUpperCase();
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          _StorageAvatar(
+            photoUrl: _resolvedPhotoUrl,
+            radius: 24,
+            backgroundColor: theme.colorScheme.secondaryContainer,
+            foregroundColor: theme.colorScheme.primary,
+            fallback: Text(initials, style: theme.textTheme.titleSmall),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _resolvedName,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
+                if (_resolvedEmail != null) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    _resolvedEmail!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _option(
+    BuildContext context, {
+    required String title,
+    VoidCallback? onTap,
+    String? subtitle,
+    IconData icon = Icons.chevron_right,
+    bool destructive = false,
+    bool busy = false,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      enabled: onTap != null,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 52),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: scheme.outlineVariant.withValues(alpha: .45),
+                ),
               ),
-              const SizedBox(height: 10),
-              _buildSectionHeader(
-                context,
-                title: 'Aparência',
-                subtitle: 'Tema e preferências visuais',
-              ),
-              _AccountContentPanel(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+            ),
+            child: Row(
+              children: [
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Tema do App',
-                        style: textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
+                        title,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontSize: 15,
+                          color: onTap == null
+                              ? Theme.of(context).disabledColor
+                              : destructive
+                              ? scheme.error
+                              : scheme.onSurface,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                fontSize: 12,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                if (busy)
+                  SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: scheme.error,
+                    ),
+                  )
+                else
+                  Icon(
+                    icon,
+                    size: 20,
+                    color: destructive ? scheme.error : scheme.onSurfaceVariant,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Theme(
+      data: editorialWorkspaceTheme(Theme.of(context)),
+      child: Builder(
+        builder: (context) {
+          final scheme = Theme.of(context).colorScheme;
+          final themeModes = <ThemeMode>[
+            ThemeMode.light,
+            ThemeMode.dark,
+            ThemeMode.system,
+          ];
+          return Scaffold(
+            appBar: AppBar(
+              centerTitle: true,
+              title: Text(
+                'Opções',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontFamily: 'MercadoNewsreader',
+                  fontSize: 24,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(1),
+                child: Divider(
+                  height: 1,
+                  color: scheme.outlineVariant.withValues(alpha: .6),
+                ),
+              ),
+            ),
+            body: SafeArea(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+                    children: [
                       Text(
-                        'Escolha entre modo claro e modo escuro.',
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                        'Ajustes do app',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.titleLarge?.copyWith(fontSize: 30),
                       ),
-                      const SizedBox(height: 10),
-                      SegmentedButton<ThemeMode>(
-                        showSelectedIcon: false,
-                        segments: const [
-                          ButtonSegment<ThemeMode>(
-                            value: ThemeMode.light,
-                            icon: Icon(Icons.light_mode_rounded),
-                            label: Text('Claro'),
-                          ),
-                          ButtonSegment<ThemeMode>(
-                            value: ThemeMode.dark,
-                            icon: Icon(Icons.dark_mode_rounded),
-                            label: Text('Escuro'),
-                          ),
-                        ],
-                        selected: <ThemeMode>{_selectedThemeMode},
-                        onSelectionChanged: (selected) {
-                          if (selected.isEmpty) {
-                            return;
-                          }
-                          _updateThemeMode(selected.first);
-                        },
-                      ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 4),
                       Text(
-                        _selectedThemeMode == ThemeMode.dark
-                            ? 'Modo escuro ativo com contraste reforçado.'
-                            : 'Modo claro ativo (visual original).',
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
+                        'Gerenciamento da sua conta, sincronização e preferências visuais.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
                         ),
                       ),
+                      const SizedBox(height: 28),
+                      _section(context, 'Conta', [
+                        _profileSummary(context),
+                        Divider(
+                          height: 1,
+                          color: scheme.outlineVariant.withValues(alpha: .4),
+                        ),
+                        _option(
+                          context,
+                          title: 'Meus dados',
+                          onTap: _openMyProfile,
+                        ),
+                        if (widget.onSignOut != null)
+                          _option(
+                            context,
+                            title: _isSigningOut ? 'Saindo...' : 'Deslogar',
+                            onTap: _isSigningOut ? null : _requestSignOut,
+                            icon: Icons.logout,
+                            destructive: true,
+                            busy: _isSigningOut,
+                          ),
+                      ]),
+                      _section(context, 'Aparência', [
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: scheme.surfaceContainerLow,
+                              border: Border.all(color: scheme.outlineVariant),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              children: [
+                                for (final mode in themeModes)
+                                  Expanded(
+                                    child: Semantics(
+                                      selected: mode == _selectedThemeMode,
+                                      child: TextButton(
+                                        onPressed: () => _updateThemeMode(mode),
+                                        style: TextButton.styleFrom(
+                                          minimumSize: const Size(48, 48),
+                                          foregroundColor:
+                                              mode == _selectedThemeMode
+                                              ? scheme.primary
+                                              : scheme.onSurfaceVariant,
+                                          backgroundColor:
+                                              mode == _selectedThemeMode
+                                              ? scheme.surface
+                                              : Colors.transparent,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 4,
+                                            vertical: 12,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              mode == ThemeMode.light
+                                                  ? Icons.light_mode_outlined
+                                                  : mode == ThemeMode.dark
+                                                  ? Icons.dark_mode_outlined
+                                                  : Icons
+                                                        .brightness_auto_outlined,
+                                              size: 16,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Flexible(
+                                              child: Text(
+                                                mode == ThemeMode.light
+                                                    ? 'Claro'
+                                                    : mode == ThemeMode.dark
+                                                    ? 'Escuro'
+                                                    : 'Sistema',
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          child: Text(
+                            _selectedThemeMode == ThemeMode.system
+                                ? 'Acompanha o tema do dispositivo'
+                                : _selectedThemeMode == ThemeMode.light
+                                ? 'Tema claro ativado'
+                                : 'Tema escuro ativado',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: scheme.onSurfaceVariant),
+                          ),
+                        ),
+                      ]),
+                      _section(context, 'Dados', [
+                        if (widget.showCloudSyncStatus) ...[
+                          const SizedBox(height: 12),
+                          CloudSyncStatusPanel(
+                            hasInternetConnection: widget.hasInternetConnection,
+                            hasPendingCloudSync: widget.hasPendingCloudSync,
+                            isCloudSyncing: widget.isCloudSyncing,
+                            lastCloudSyncAt: widget.lastCloudSyncAt,
+                            totalRecords: widget.totalSyncRecords,
+                            pendingRecords: widget.pendingSyncRecords,
+                            listRecords: widget.listRecords,
+                            historyRecords: widget.historyRecords,
+                            catalogRecords: widget.catalogRecords,
+                            pantryRecords: widget.pantryRecords,
+                            compact: true,
+                          ),
+                        ] else
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Text(
+                              'Sincronização em nuvem indisponível no momento.',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                            ),
+                          ),
+                        if (widget.syncDiagnostics != null &&
+                            widget.onSyncNow != null)
+                          _option(
+                            context,
+                            title: 'Sincronização e diagnóstico',
+                            subtitle:
+                                'Status, listas compartilhadas e relatório de suporte',
+                            onTap: _openSyncDiagnostics,
+                          ),
+
+                        SwitchListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          title: const Text(
+                            'Atualizar meu catálogo como dono',
+                            style: TextStyle(fontSize: 15),
+                          ),
+                          subtitle: Text(
+                            'Importar produtos adicionados às suas listas compartilhadas.',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  fontSize: 12,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                          ),
+                          value: _autoImportOwnedSharedCatalogs,
+                          onChanged: _updateAutoImportOwnedSharedCatalogs,
+                        ),
+
+                        _option(
+                          context,
+                          title: 'Minhas Finanças',
+                          subtitle:
+                              'Integração de pagamentos e fechamento contábil.',
+                          onTap: _openFinanceIntegration,
+                        ),
+                      ]),
+                      _section(context, 'Ajuda', [
+                        _option(
+                          context,
+                          title: 'Rever Onboarding',
+                          icon: Icons.replay,
+                          onTap: widget.onReplayOnboarding == null
+                              ? null
+                              : () {
+                                  Navigator.of(context).pop();
+                                  widget.onReplayOnboarding?.call();
+                                },
+                        ),
+                      ]),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
-              _buildSectionHeader(
-                context,
-                title: 'Dados',
-                subtitle: 'Sincronização e armazenamento',
-              ),
-              if (widget.showCloudSyncStatus)
-                _CloudSyncStatusCard(
-                  hasInternetConnection: widget.hasInternetConnection,
-                  hasPendingCloudSync: widget.hasPendingCloudSync,
-                  isCloudSyncing: widget.isCloudSyncing,
-                  lastCloudSyncAt: widget.lastCloudSyncAt,
-                  totalRecords: widget.totalSyncRecords,
-                  pendingRecords: widget.pendingSyncRecords,
-                  listRecords: widget.listRecords,
-                  historyRecords: widget.historyRecords,
-                  catalogRecords: widget.catalogRecords,
-                  pantryRecords: widget.pantryRecords,
-                  compact: false,
-                )
-              else
-                _AccountContentPanel(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.cloud_off_rounded,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Sincronização em nuvem indisponível no momento.',
-                            style: textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 10),
-              if (widget.syncDiagnostics != null && widget.onSyncNow != null)
-                _AccountContentPanel(
-                  child: ListTile(
-                    leading: const Icon(Icons.health_and_safety_rounded),
-                    title: const Text('Sincronização e diagnóstico'),
-                    subtitle: const Text(
-                      'Veja status, listas compartilhadas e copie um relatório de suporte.',
-                    ),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: _openSyncDiagnostics,
-                  ),
-                ),
-              if (widget.syncDiagnostics != null && widget.onSyncNow != null)
-                const SizedBox(height: 10),
-              _AccountContentPanel(
-                child: SwitchListTile(
-                  secondary: const Icon(Icons.inventory_2_rounded),
-                  title: const Text('Atualizar meu catálogo como dono'),
-                  subtitle: const Text(
-                    'Quando alguém adicionar produtos em uma lista compartilhada sua, importar automaticamente para o seu catálogo pessoal.',
-                  ),
-                  value: _autoImportOwnedSharedCatalogs,
-                  onChanged: _updateAutoImportOwnedSharedCatalogs,
-                ),
-              ),
-              const SizedBox(height: 10),
-              _buildSectionHeader(
-                context,
-                title: 'Ajuda',
-                subtitle: 'Dicas e suporte',
-              ),
-              _AccountContentPanel(
-                child: ListTile(
-                  leading: const Icon(Icons.auto_awesome_rounded),
-                  title: const Text('Rever Onboarding'),
-                  subtitle: const Text(
-                    'Veja novamente o tour inicial com as principais dicas.',
-                  ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: widget.onReplayOnboarding == null
-                      ? null
-                      : () {
-                          Navigator.of(context).pop();
-                          widget.onReplayOnboarding?.call();
-                        },
-                ),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -991,587 +1093,321 @@ class _MyProfilePageState extends State<MyProfilePage> {
     }
   }
 
+  Widget _profileField(
+    BuildContext context,
+    String label,
+    Widget field, {
+    bool uppercase = true,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          uppercase ? label.toUpperCase() : label,
+          style: TextStyle(
+            fontFamily: 'MercadoPublicSans',
+            fontSize: 12,
+            height: 1.4,
+            fontWeight: FontWeight.w600,
+            letterSpacing: uppercase ? .6 : 0,
+            color: colors.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Semantics(label: label, child: field),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+    return Theme(
+      data: editorialWorkspaceTheme(Theme.of(context)),
+      child: Builder(builder: _buildEditorialProfile),
+    );
+  }
+
+  Widget _buildEditorialProfile(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final text = theme.textTheme;
     final displayEmail = _cleanNullable(widget.initialEmail);
+    final busy = _isSaving || _isUploadingPhoto;
     final trimmedName = _nameController.text.trim();
     final avatarLabel = trimmedName.isEmpty
         ? 'U'
         : trimmedName.substring(0, 1).toUpperCase();
-
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(4),
+      borderSide: BorderSide(color: colors.outlineVariant),
+    );
+    InputDecoration fieldDecoration(String label, {String? hint}) =>
+        InputDecoration(
+          hintText: hint,
+          filled: true,
+          fillColor: colors.surfaceContainerLowest,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 12,
+          ),
+          border: border,
+          enabledBorder: border,
+          focusedBorder: border.copyWith(
+            borderSide: BorderSide(color: colors.primary),
+          ),
+        );
     return Scaffold(
-      appBar: AppBar(title: const Text('Meus dados')),
-      body: AppGradientScene(
-        child: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-            children: [
-              _AccountContentPanel(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Perfil e identidade',
-                          style: textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w900,
+      appBar: AppBar(
+        title: const Text('Meus dados'),
+        titleSpacing: 0,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Divider(
+            height: 1,
+            color: colors.outlineVariant.withValues(alpha: .5),
+          ),
+        ),
+      ),
+      body: SafeArea(
+        bottom: false,
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+                children: [
+                  Text(
+                    'CONTA PESSOAL',
+                    style: text.bodySmall?.copyWith(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: .8,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Ficha do titular',
+                    style: text.titleLarge?.copyWith(fontSize: 30),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Atualize suas informações cadastrais para identificação no caderno e sincronização de compras.',
+                    style: text.bodySmall,
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'FOTO DE PERFIL',
+                    style: text.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: .8,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      _StorageAvatar(
+                        key: ValueKey('profile_avatar_${_photoUrl ?? ''}'),
+                        photoUrl: _photoUrl,
+                        radius: 32,
+                        backgroundColor: colors.surfaceContainerLow,
+                        foregroundColor: colors.primary,
+                        fallback: Text(
+                          avatarLabel,
+                          style: text.titleLarge?.copyWith(
+                            color: colors.primary,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Atualize nome, foto e informações exibidas na sua conta.',
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Row(
+                        onLoadError: () {
+                          if (!mounted) return;
+                          setState(() {
+                            _photoUrl = null;
+                            _photoUrlController.clear();
+                          });
+                          _showMessage(
+                            'Não foi possível carregar a foto.',
+                            type: AppToastType.warning,
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _StorageAvatar(
-                              key: ValueKey(
-                                'profile_avatar_${_photoUrl ?? ''}',
-                              ),
-                              photoUrl: _photoUrl,
-                              radius: 38,
-                              backgroundColor: colorScheme.primaryContainer,
-                              foregroundColor: colorScheme.onPrimaryContainer,
-                              fallback: Text(
-                                avatarLabel,
-                                style: textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                              onLoadError: () {
-                                if (!mounted) {
-                                  return;
-                                }
-                                setState(() {
-                                  _photoUrl = null;
-                                  _photoUrlController.clear();
-                                });
-                                _showMessage(
-                                  'Não foi possível carregar a foto.',
-                                  type: AppToastType.warning,
-                                );
-                              },
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Foto de perfil',
-                                    style: textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Escolha uma nova foto da galeria ou cole uma URL.',
-                                    style: textTheme.bodySmall?.copyWith(
-                                      color: colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ],
+                            Text(
+                              'Avatar atual',
+                              style: text.bodySmall?.copyWith(
+                                color: colors.onSurface,
                               ),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: FilledButton.icon(
-                                onPressed: _isSaving
-                                    ? null
-                                    : _pickAndUploadPhoto,
-                                icon: _isUploadingPhoto
-                                    ? const SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
+                            Wrap(
+                              spacing: 8,
+                              children: [
+                                TextButton.icon(
+                                  onPressed: busy ? null : _pickAndUploadPhoto,
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                  icon: _isUploadingPhoto
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(
+                                          Icons.photo_library_outlined,
+                                          size: 16,
                                         ),
-                                      )
-                                    : const Icon(Icons.photo_library_rounded),
-                                label: Text(
-                                  _isUploadingPhoto
-                                      ? 'Enviando foto...'
-                                      : 'Escolher foto',
+                                  label: Text(
+                                    _isUploadingPhoto
+                                        ? 'Enviando foto...'
+                                        : 'Escolher foto',
+                                  ),
                                 ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            OutlinedButton.icon(
-                              onPressed: (_isSaving || _photoUrl == null)
-                                  ? null
-                                  : _removePhoto,
-                              icon: const Icon(Icons.delete_outline_rounded),
-                              label: const Text('Remover'),
+                                TextButton.icon(
+                                  onPressed: busy || _photoUrl == null
+                                      ? null
+                                      : _removePhoto,
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: colors.error,
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    size: 16,
+                                  ),
+                                  label: const Text('Remover'),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        _AccountInlineInfoBanner(
-                          icon: Icons.info_outline_rounded,
-                          message:
-                              'Se usar uma URL, prefira um link direto e estável para evitar falha no carregamento da foto.',
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _photoUrlController,
-                          enabled: !_isSaving,
-                          decoration: const InputDecoration(
-                            labelText: 'URL da foto (opcional)',
-                            prefixIcon: Icon(Icons.link_rounded),
-                          ),
-                          onChanged: (value) {
-                            setState(() {
-                              _photoUrl = _cleanNullable(value);
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _nameController,
-                          enabled: !_isSaving,
-                          textCapitalization: TextCapitalization.words,
-                          decoration: const InputDecoration(
-                            labelText: 'Nome',
-                            prefixIcon: Icon(Icons.person_rounded),
-                          ),
-                          validator: (value) {
-                            final trimmed = value?.trim() ?? '';
-                            if (trimmed.length < 2) {
-                              return 'Informe um nome válido.';
-                            }
-                            if (trimmed.length > 80) {
-                              return 'Nome muito longo (máximo 80).';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          initialValue: displayEmail ?? 'Sem e-mail',
-                          enabled: false,
-                          decoration: const InputDecoration(
-                            labelText: 'E-mail',
-                            prefixIcon: Icon(Icons.alternate_email_rounded),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: _isSaving ? null : _saveProfile,
-                            icon: _isSaving
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.save_rounded),
-                            label: Text(
-                              _isSaving ? 'Salvando...' : 'Salvar meus dados',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CloudSyncStatusCard extends StatelessWidget {
-  const _CloudSyncStatusCard({
-    required this.hasInternetConnection,
-    required this.hasPendingCloudSync,
-    required this.isCloudSyncing,
-    required this.lastCloudSyncAt,
-    required this.totalRecords,
-    required this.pendingRecords,
-    required this.listRecords,
-    required this.historyRecords,
-    required this.catalogRecords,
-    required this.pantryRecords,
-    required this.compact,
-  });
-
-  final bool hasInternetConnection;
-  final bool hasPendingCloudSync;
-  final bool isCloudSyncing;
-  final DateTime? lastCloudSyncAt;
-  final int totalRecords;
-  final int pendingRecords;
-  final int listRecords;
-  final int historyRecords;
-  final int catalogRecords;
-  final int pantryRecords;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final safeTotal = max(0, totalRecords);
-    final safePending = min(max(0, pendingRecords), safeTotal);
-    final safeSynced = max(0, safeTotal - safePending);
-    final progress = safeTotal == 0 ? 1.0 : safeSynced / safeTotal;
-    final status = _resolveStatus(context, pending: safePending);
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
-    final lastSyncLabel = lastCloudSyncAt == null
-        ? 'Nunca sincronizado'
-        : 'Última sincronização: ${DateFormat('dd/MM HH:mm').format(lastCloudSyncAt!.toLocal())}';
-
-    return Semantics(
-      container: true,
-      label:
-          'Status da sincronização: ${status.title}. ${status.description}. $safeSynced de $safeTotal registros sincronizados.',
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          borderRadius: BorderRadius.circular(AppTokens.radiusXl),
-          border: Border.all(color: status.color.withValues(alpha: 0.48)),
-        ),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            compact ? 14 : 16,
-            compact ? 12 : 14,
-            compact ? 14 : 16,
-            compact ? 12 : 14,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  SizedBox(
-                    width: compact ? 42 : 46,
-                    height: compact ? 42 : 46,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        CircularProgressIndicator(
-                          value: progress,
-                          strokeWidth: compact ? 3.0 : 3.4,
-                          backgroundColor: colorScheme.surfaceContainerHighest,
-                          color: status.color,
-                        ),
-                        Icon(
-                          status.icon,
-                          color: status.color,
-                          size: compact ? 20 : 22,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      status.title,
-                      style: textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _profileField(
+                    context,
+                    'URL da foto (opcional)',
+                    TextFormField(
+                      key: const Key('profile_photo_url'),
+                      controller: _photoUrlController,
+                      enabled: !busy,
+                      keyboardType: TextInputType.url,
+                      style: text.bodyMedium?.copyWith(fontSize: 14),
+                      decoration: fieldDecoration(
+                        'URL da foto (opcional)',
+                        hint: 'https://exemplo.com.br/sua-foto.jpg',
+                      ),
+                      onChanged: (value) =>
+                          setState(() => _photoUrl = _cleanNullable(value)),
+                    ),
+                    uppercase: false,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Use um link direto e estável para a foto.',
+                    style: text.bodySmall,
+                  ),
+                  const SizedBox(height: 20),
+                  Divider(
+                    height: 1,
+                    color: colors.outlineVariant.withValues(alpha: .5),
+                  ),
+                  const SizedBox(height: 20),
+                  _profileField(
+                    context,
+                    'Nome',
+                    TextFormField(
+                      key: const Key('profile_name'),
+                      controller: _nameController,
+                      enabled: !busy,
+                      textCapitalization: TextCapitalization.words,
+                      textInputAction: TextInputAction.done,
+                      style: text.bodyMedium?.copyWith(fontSize: 14),
+                      decoration: fieldDecoration('Nome'),
+                      validator: (value) {
+                        final trimmed = value?.trim() ?? '';
+                        if (trimmed.length < 2) {
+                          return 'Informe um nome válido.';
+                        }
+                        if (trimmed.length > 80) {
+                          return 'Nome muito longo (máximo 80).';
+                        }
+                        return null;
+                      },
                     ),
                   ),
-                  if (status.showLoading)
-                    SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.2,
-                        color: status.color,
-                      ),
+                  const SizedBox(height: 20),
+                  _profileField(
+                    context,
+                    'E-mail',
+                    TextFormField(
+                      key: const Key('profile_email'),
+                      initialValue: displayEmail ?? 'Sem e-mail',
+                      readOnly: true,
+                      enableInteractiveSelection: true,
+                      style: text.bodyMedium?.copyWith(fontSize: 14),
+                      decoration: fieldDecoration('E-mail'),
                     ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                status.description,
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _SyncMetricPill(label: 'Total', value: '$safeTotal'),
-                  _SyncMetricPill(label: 'Sincronizados', value: '$safeSynced'),
-                  _SyncMetricPill(label: 'Faltando', value: '$safePending'),
-                ],
-              ),
-              const SizedBox(height: 10),
-              if (compact)
-                Text(
-                  '$lastSyncLabel • Listas: $listRecords • Histórico: $historyRecords • Catálogo: $catalogRecords • Despensa: $pantryRecords',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                )
-              else
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-                    border: Border.all(
-                      color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Listas: $listRecords',
-                            style: textTheme.bodySmall,
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            'Histórico: $historyRecords',
-                            style: textTheme.bodySmall,
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            'Catálogo: $catalogRecords',
-                            style: textTheme.bodySmall,
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            'Despensa: $pantryRecords',
-                            style: textTheme.bodySmall,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 4),
-              Text(
-                lastSyncLabel,
-                style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-              if (status.showLoading) ...[
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    minHeight: 6,
-                    color: status.color,
-                    backgroundColor: colorScheme.surfaceContainerHighest,
-                  ),
-                ),
-              ],
-            ],
+            ),
           ),
         ),
       ),
-    );
-  }
-
-  _CloudSyncPresentation _resolveStatus(
-    BuildContext context, {
-    required int pending,
-  }) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    if (isCloudSyncing) {
-      return _CloudSyncPresentation(
-        icon: Icons.cloud_upload_rounded,
-        color: colorScheme.primary,
-        secondaryColor: colorScheme.tertiary,
-        title: 'Sincronizando online',
-        description: pending > 0
-            ? 'Enviando dados para nuvem. Faltam $pending registros.'
-            : 'Enviando dados para nuvem.',
-        showLoading: true,
-      );
-    }
-
-    if (!hasInternetConnection) {
-      return _CloudSyncPresentation(
-        icon: Icons.cloud_off_rounded,
-        color: colorScheme.error,
-        secondaryColor: colorScheme.errorContainer,
-        title: 'Modo offline',
-        description: pending > 0
-            ? 'Sem internet. $pending registros aguardam conexão.'
-            : 'Sem internet. Alterações continuam salvas no aparelho.',
-        showLoading: false,
-      );
-    }
-
-    if (hasPendingCloudSync || pending > 0) {
-      return _CloudSyncPresentation(
-        icon: Icons.sync_rounded,
-        color: colorScheme.primary,
-        secondaryColor: colorScheme.secondary,
-        title: 'Alterações pendentes',
-        description: '$pending registros aguardando sincronização.',
-        showLoading: true,
-      );
-    }
-
-    if (lastCloudSyncAt != null) {
-      final formatted = DateFormat(
-        'dd/MM HH:mm',
-      ).format(lastCloudSyncAt!.toLocal());
-      return _CloudSyncPresentation(
-        icon: Icons.cloud_done_rounded,
-        color: colorScheme.tertiary,
-        secondaryColor: colorScheme.primary,
-        title: 'Tudo sincronizado',
-        description: 'Dados online atualizados em $formatted.',
-        showLoading: false,
-      );
-    }
-
-    return _CloudSyncPresentation(
-      icon: Icons.cloud_queue_rounded,
-      color: colorScheme.primary,
-      secondaryColor: colorScheme.secondary,
-      title: 'Pronto para sincronizar',
-      description: 'Suas listas serão sincronizadas automaticamente online.',
-      showLoading: false,
-    );
-  }
-}
-
-class _CloudSyncPresentation {
-  const _CloudSyncPresentation({
-    required this.icon,
-    required this.color,
-    required this.secondaryColor,
-    required this.title,
-    required this.description,
-    required this.showLoading,
-  });
-
-  final IconData icon;
-  final Color color;
-  final Color secondaryColor;
-  final String title;
-  final String description;
-  final bool showLoading;
-}
-
-class _SyncMetricPill extends StatelessWidget {
-  const _SyncMetricPill({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+      bottomNavigationBar: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
         ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: RichText(
-          text: TextSpan(
-            style: Theme.of(context).textTheme.bodySmall,
-            children: [
-              TextSpan(text: '$label: '),
-              TextSpan(
-                text: value,
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AccountContentPanel extends StatelessWidget {
-  const _AccountContentPanel({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Material(
-      color: colorScheme.surface,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTokens.radiusXl),
-        side: BorderSide(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.54),
-        ),
-      ),
-      child: Padding(padding: const EdgeInsets.all(14), child: child),
-    );
-  }
-}
-
-class _AccountInlineInfoBanner extends StatelessWidget {
-  const _AccountInlineInfoBanner({required this.icon, required this.message});
-
-  final IconData icon;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Icon(icon, color: colorScheme.onSecondaryContainer),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSecondaryContainer,
-                  fontWeight: FontWeight.w600,
+        child: SafeArea(
+          top: false,
+          child: Align(
+            heightFactor: 1,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: busy ? null : _saveProfile,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                      textStyle: const TextStyle(
+                        fontFamily: 'MercadoPublicSans',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    child: _isSaving
+                        ? const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Text('Salvando...'),
+                            ],
+                          )
+                        : const Text('Salvar alterações'),
+                  ),
                 ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

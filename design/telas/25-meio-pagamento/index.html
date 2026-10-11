@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Selecionar meio de pagamento — Minhas Compras</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-highest": "#e4e2dd",
+            "outline": "#727972",
+            "error-container": "#ffdad6",
+            "error": "#ba1a1a",
+            "outline-variant": "#c1c8c1",
+            "on-background": "#1b1c18",
+            "primary-fixed-dim": "#a9d0b4",
+            "primary": "#1f412d",
+            "on-secondary-fixed-variant": "#444939",
+            "secondary-fixed-dim": "#c4c9b4",
+            "on-primary": "#ffffff",
+            "surface-dim": "#dcdad4",
+            "surface-container-high": "#eae8e2",
+            "surface-container": "#f0eee8",
+            "on-surface": "#1b1c18",
+            "inverse-primary": "#a9d0b4",
+            "inverse-on-surface": "#f3f1eb",
+            "on-surface-variant": "#424843",
+            "on-secondary-fixed": "#191d10",
+            "on-tertiary-container": "#f2b6ba",
+            "on-tertiary": "#ffffff",
+            "background": "#fcfbf7",
+            "surface-variant": "#e4e2dd",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "secondary-container": "#e0e5cf",
+            "surface-bright": "#fcfbf7",
+            "on-error-container": "#93000a",
+            "on-secondary-container": "#616655",
+            "on-secondary": "#ffffff",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "tertiary-container": "#724549",
+            "surface-tint": "#43664f",
+            "on-error": "#ffffff",
+            "primary-container": "#365943",
+            "inverse-surface": "#30312d",
+            "secondary": "#5b604f",
+            "surface": "#fcfbf7",
+            "primary-fixed": "#c4eccf",
+            "on-tertiary-fixed": "#321015",
+            "tertiary": "#582f33",
+            "on-primary-fixed": "#002110",
+            "tertiary-fixed": "#ffdadb",
+            "surface-container-low": "#f5f3ed",
+            "on-primary-fixed-variant": "#2b4e39",
+            "on-primary-container": "#a7ceb2",
+            "secondary-fixed": "#e0e5cf",
+            "surface-container-lowest": "#ffffff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-[#191d17]/40 text-on-surface font-body antialiased min-h-screen flex items-end justify-center p-0 sm:p-4 select-none">
+<!-- Mobile Sheet Container (Fundo Marfim Suave #fcfbf7) -->
+<div class="w-full max-w-[390px] bg-[#fcfbf7] rounded-t-2xl overflow-hidden flex flex-col max-h-[85vh] transition-all shadow-2xl">
+<!-- Drag Handle Indicator -->
+<div class="pt-3 pb-1 flex justify-center items-center bg-[#fcfbf7]">
+<div class="w-10 h-1.5 rounded-full bg-outline-variant/60"></div>
+</div>
+<!-- Barra Superior Modal Conforme Flutter: X (Fechar), Meio de pagamento, Ajuda -->
+<header class="bg-[#fcfbf7] flex justify-between items-center w-full px-4 py-3 border-b border-outline-variant/40">
+<button aria-label="Fechar" class="w-9 h-9 -ml-1 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container active:opacity-80 transition-colors" type="button">
+<span class="material-symbols-outlined text-[22px]">close</span>
+</button>
+<h1 class="font-headline text-xl text-on-surface tracking-tight font-normal text-center">
+        Meio de pagamento
+      </h1>
+<button class="font-label text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container/60 px-2 py-1 rounded transition-colors active:opacity-80" type="button">
+        Ajuda
+      </button>
+</header>
+<!-- Scrollable Sheet Body -->
+<main class="overflow-y-auto px-5 py-4 space-y-6">
+<!-- Seletor: Fontes Sincronizadas da Integração -->
+<section class="space-y-3">
+<div class="flex items-center justify-between pb-1 border-b border-outline-variant/40">
+<span class="font-label text-xs font-semibold tracking-wide text-on-surface-variant">
+            Fontes sincronizadas
+          </span>
+<span class="font-label text-xs text-primary font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px]">sync</span> Sincronizado
+          </span>
+</div>
+<fieldset class="space-y-2.5" id="payment-options"><!-- Opção 1: Cartão de Crédito Principal (Selecionado) -->
+<label class="group relative flex items-start gap-3.5 p-3 rounded-lg border-2 border-primary-container bg-surface-container-lowest cursor-pointer transition-all">
+<div class="pt-0.5">
+<input checked="" class="w-4 h-4 text-primary-container border-outline focus:ring-0 focus:ring-offset-0 cursor-pointer" name="payment_source" type="radio" value="credito"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-2">
+<span class="font-body text-sm font-semibold text-on-surface">Cartão de crédito</span>
+<span class="font-label text-xs text-on-surface-variant">Cartão de crédito</span>
+</div>
+<div class="mt-1 flex flex-wrap items-baseline gap-x-2 text-xs">
+<span class="text-on-surface font-medium tabular-nums">Saldo disponível: R$ 3.420,00</span>
+<span class="text-outline-variant">·</span>
+<span class="text-on-surface-variant tabular-nums">Limite: R$ 8.000,00</span>
+</div>
+</div>
+</label>
+<!-- Opção 2: Conta corrente -->
+<label class="group relative flex items-start gap-3.5 p-3 rounded-lg border border-outline-variant/80 hover:border-outline bg-surface-container-lowest cursor-pointer transition-all">
+<div class="pt-0.5">
+<input class="w-4 h-4 text-primary-container border-outline focus:ring-0 focus:ring-offset-0 cursor-pointer" name="payment_source" type="radio" value="corrente"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-2">
+<span class="font-body text-sm font-semibold text-on-surface">Conta corrente</span>
+<span class="font-label text-xs text-on-surface-variant">Conta corrente / Débito</span>
+</div>
+<div class="mt-1 flex items-baseline gap-x-2 text-xs">
+<span class="text-on-surface font-medium tabular-nums">Saldo disponível: R$ 1.850,50</span>
+</div>
+</div>
+</label>
+<!-- Opção 3: Vale alimentação -->
+<label class="group relative flex items-start gap-3.5 p-3 rounded-lg border border-outline-variant/80 hover:border-outline bg-surface-container-lowest cursor-pointer transition-all">
+<div class="pt-0.5">
+<input class="w-4 h-4 text-primary-container border-outline focus:ring-0 focus:ring-offset-0 cursor-pointer" name="payment_source" type="radio" value="vale_alimentacao"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-2">
+<span class="font-body text-sm font-semibold text-on-surface">Vale alimentação</span>
+<span class="font-label text-xs text-on-surface-variant">Benefício alimentação</span>
+</div>
+<div class="mt-1 flex items-baseline gap-x-2 text-xs">
+<span class="text-on-surface font-medium tabular-nums">Saldo disponível: R$ 412,80</span>
+</div>
+</div>
+</label></fieldset>
+</section>
+<!-- Seção: Valor reservado para esta lista (Teto orçado da lista ativa) -->
+<section class="space-y-2 pt-1">
+<label class="block font-body text-sm font-medium text-on-surface" for="budget_cap">
+          Valor reservado para esta lista
+        </label>
+<div class="relative flex items-center rounded-lg border border-outline-variant focus-within:border-primary-container focus-within:ring-1 focus-within:ring-primary-container bg-surface-container-lowest transition-all">
+<span class="pl-3.5 pr-1 font-body text-base font-semibold text-on-surface-variant select-none">
+            R$
+          </span>
+<input class="w-full py-2.5 pr-4 text-base font-semibold text-on-surface font-body tabular-nums bg-transparent border-0 focus:ring-0 focus:outline-none" id="budget_cap" inputmode="decimal" placeholder="0,00" type="text" value="250,00"/>
+<div class="pr-3 text-xs text-on-surface-variant tabular-nums whitespace-nowrap">
+            Teto previsto
+          </div>
+</div>
+</section>
+<!-- Tratamento de Estado Vazio: Exibido apenas quando não há nenhum meio cadastrado -->
+</main>
+<!-- Barra de Ações Fixada na Base do Modal Sheet -->
+<footer class="p-4 bg-[#fcfbf7] border-t border-outline-variant/40 space-y-2.5">
+<!-- Botão Primário Verde Folha Real -->
+<button class="w-full h-12 flex items-center justify-center font-body text-sm font-semibold rounded-lg bg-primary text-on-primary hover:bg-primary-container active:scale-[0.99] transition-all" type="button">
+        Usar nesta lista
+      </button>
+<!-- Botão Secundário: Adicionar Manualmente -->
+<button class="w-full h-11 flex items-center justify-center font-body text-sm font-medium rounded-lg border border-outline text-on-surface bg-surface-container-lowest hover:bg-surface-container-low active:bg-surface-container transition-colors" type="button">
+        Adicionar manualmente
+      </button>
+</footer>
+</div>
+<script>
+    // Interação do rádio para seleção visual da fonte
+    const labels = document.querySelectorAll('#payment-options label');
+    labels.forEach(label => {
+      label.addEventListener('click', () => {
+        labels.forEach(l => {
+          l.classList.remove('border-2', 'border-primary-container');
+          l.classList.add('border', 'border-outline-variant/80');
+        });
+        label.classList.remove('border', 'border-outline-variant/80');
+        label.classList.add('border-2', 'border-primary-container');
+      });
+    });
+  </script>
+</body></html>

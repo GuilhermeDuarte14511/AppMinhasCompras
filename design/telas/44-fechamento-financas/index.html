@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Fechamento — Integração Financeira | Minhas Compras</title>
+<!-- Google Fonts: Newsreader & Public Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "tertiary-container": "#724549",
+            "tertiary": "#582f33",
+            "primary-fixed-dim": "#a9d0b4",
+            "on-primary-container": "#a7ceb2",
+            "surface-tint": "#43664f",
+            "on-tertiary-fixed": "#321015",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "tertiary-fixed": "#ffdadb",
+            "on-primary-fixed": "#002110",
+            "surface-variant": "#e4e2dd",
+            "surface-container-highest": "#e4e2dd",
+            "outline": "#727972",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "surface-container-high": "#eae8e2",
+            "on-tertiary-container": "#f2b6ba",
+            "inverse-surface": "#30312d",
+            "on-primary": "#ffffff",
+            "surface-dim": "#dcdad4",
+            "primary-container": "#365943",
+            "background": "#fbf9f3",
+            "on-primary-fixed-variant": "#2b4e39",
+            "secondary-fixed-dim": "#c4c9b4",
+            "secondary-fixed": "#e0e5cf",
+            "on-secondary-container": "#616655",
+            "surface": "#fbf9f3",
+            "on-surface-variant": "#424843",
+            "surface-bright": "#fbf9f3",
+            "on-error": "#ffffff",
+            "on-background": "#1b1c18",
+            "primary-fixed": "#c4eccf",
+            "on-tertiary": "#ffffff",
+            "error-container": "#ffdad6",
+            "surface-container-low": "#f5f3ed",
+            "on-secondary-fixed": "#191d10",
+            "on-secondary": "#ffffff",
+            "surface-container-lowest": "#ffffff",
+            "surface-container": "#f0eee8",
+            "primary": "#1f412d",
+            "on-secondary-fixed-variant": "#444939",
+            "on-surface": "#1b1c18",
+            "on-error-container": "#93000a",
+            "inverse-primary": "#a9d0b4",
+            "error": "#ba1a1a",
+            "secondary": "#5b604f",
+            "secondary-container": "#e0e5cf",
+            "outline-variant": "#c1c8c1",
+            "inverse-on-surface": "#f3f1eb"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    /* Estilização suave da barra de rolagem */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #c1c8c1;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-stone-900 text-on-surface font-body antialiased min-h-screen flex items-center justify-center p-0 sm:p-4 select-none">
+<!-- Mobile Viewport Container (Simulated iOS Screen: 390px x 844px) -->
+<div class="relative w-full max-w-[390px] h-[844px] bg-stone-900 overflow-hidden shadow-2xl flex flex-col justify-end">
+<!-- Background Parent Screen (Mock blurred underneath scrim) -->
+<div aria-hidden="true" class="absolute inset-0 bg-[#fbf9f3] flex flex-col pointer-events-none">
+<!-- Header simulado do app Minhas Compras -->
+<div class="px-5 pt-12 pb-3.5 border-b border-[#e4e2dd] flex justify-between items-center bg-[#fbf9f3]">
+<span class="material-symbols-outlined text-[#5b604f]" data-icon="menu">menu</span>
+<span class="font-headline text-2xl font-medium text-[#1b1c18] tracking-tight">Minhas Compras</span>
+<span class="material-symbols-outlined text-[#5b604f]" data-icon="account_circle">account_circle</span>
+</div>
+<!-- Conteúdo simulado por trás -->
+<div class="p-5 space-y-4 opacity-35">
+<div class="flex justify-between items-center">
+<div class="h-6 w-32 bg-[#eae8e2] rounded"></div>
+<div class="h-5 w-16 bg-[#eae8e2] rounded-full"></div>
+</div>
+<div class="h-16 w-full bg-[#f0eee8] rounded-xl border border-[#e4e2dd]"></div>
+<div class="h-16 w-full bg-[#f0eee8] rounded-xl border border-[#e4e2dd]"></div>
+<div class="h-16 w-full bg-[#f0eee8] rounded-xl border border-[#e4e2dd]"></div>
+<div class="h-16 w-full bg-[#f0eee8] rounded-xl border border-[#e4e2dd]"></div>
+</div>
+</div>
+<!-- Scrim translúcido escuro -->
+<div class="absolute inset-0 bg-black/60 z-20 transition-opacity backdrop-blur-[2px]"></div>
+<!-- Modal Bottom Sheet Alto (h-[94%] ocupando altura nobre, flex-col com scroll total e rodapé não sobreposto) -->
+<div class="relative z-30 w-full h-[94%] bg-[#F7F5EF] rounded-t-[28px] shadow-2xl flex flex-col border-t border-outline-variant/50 overflow-hidden">
+<!-- 1. Handle / Alça do Bottom Sheet -->
+<div class="w-full flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing flex-shrink-0">
+<div class="w-10 h-1.5 rounded-full bg-[#c1c8c1]"></div>
+</div>
+<!-- 2. Cabeçalho do Modal -->
+<header class="px-6 pt-2 pb-3.5 flex items-start justify-between border-b border-outline-variant/40 flex-shrink-0 bg-[#F7F5EF]">
+<div>
+<h1 class="font-headline text-[26px] font-normal text-on-surface leading-tight tracking-tight">
+          Conferir compra
+        </h1>
+<p class="font-body text-xs font-medium text-secondary mt-0.5 tracking-wide">
+          Compras da semana
+        </p>
+</div>
+<button aria-label="Fechar" class="w-10 h-10 -mr-2 -mt-1 flex items-center justify-center text-secondary hover:text-on-surface rounded-full transition-colors active:bg-surface-container-high focus:outline-none" type="button">
+<span class="material-symbols-outlined text-[24px]" data-icon="close">close</span>
+</button>
+</header>
+<!-- 3. Conteúdo Principal com Rolagem Limpa (flex-1 overflow-y-auto com padding de respiro) -->
+<div class="flex-1 overflow-y-auto px-6 py-4 space-y-5 text-on-surface custom-scrollbar">
+<!-- Seção 1: VALORES -->
+<section aria-label="Valores">
+<div class="text-[11px] font-semibold text-secondary tracking-widest uppercase mb-1.5">
+          VALORES
+        </div>
+<div class="flex items-baseline justify-between py-1">
+<span class="text-sm font-normal text-secondary">Total calculado</span>
+<span class="font-body font-semibold text-2xl text-on-surface tabular-nums tracking-tight">
+            R$ 184,30
+          </span>
+</div>
+<div class="w-full h-px bg-outline-variant/60 mt-3"></div>
+</section>
+<!-- Seção 2: ITENS CONFERIDOS -->
+<section aria-label="Itens conferidos">
+<div class="flex items-center justify-between mb-2">
+<h2 class="text-[11px] font-semibold text-secondary tracking-widest uppercase">
+            ITENS CONFERIDOS
+          </h2>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-surface-container-high text-secondary tabular-nums">
+            3 itens
+          </span>
+</div>
+<!-- Lista de Itens -->
+<div class="divide-y divide-outline-variant/40 text-sm">
+<!-- Item 1 -->
+<div class="py-2.5 flex items-start justify-between gap-3">
+<div class="flex-1 min-w-0">
+<p class="font-normal text-on-surface text-sm leading-snug truncate">
+                Café especial torrado e moído 250g
+              </p>
+<p class="text-xs text-secondary mt-0.5 tabular-nums">
+                2 un
+              </p>
+</div>
+<span class="font-medium text-on-surface text-sm tabular-nums whitespace-nowrap pt-0.5">
+              R$ 37,80
+            </span>
+</div>
+<!-- Item 2 -->
+<div class="py-2.5 flex items-start justify-between gap-3">
+<div class="flex-1 min-w-0">
+<p class="font-normal text-on-surface text-sm leading-snug truncate">
+                Azeite de oliva extravirgem 500ml
+              </p>
+<p class="text-xs text-secondary mt-0.5 tabular-nums">
+                1 un
+              </p>
+</div>
+<span class="font-medium text-on-surface text-sm tabular-nums whitespace-nowrap pt-0.5">
+              R$ 38,90
+            </span>
+</div>
+<!-- Item 3 -->
+<div class="py-2.5 flex items-start justify-between gap-3">
+<div class="flex-1 min-w-0">
+<p class="font-normal text-on-surface text-sm leading-snug truncate">
+                Banana prata madura
+              </p>
+<p class="text-xs text-secondary mt-0.5 tabular-nums">
+                1,2 kg
+              </p>
+</div>
+<span class="font-medium text-on-surface text-sm tabular-nums whitespace-nowrap pt-0.5">
+              R$ 10,20
+            </span>
+</div>
+</div>
+<div class="w-full h-px bg-outline-variant/60 mt-2"></div>
+</section>
+<!-- Seção 3: Lançamento Financeiro -->
+<section aria-label="Lançamento financeiro" class="space-y-4 pb-2">
+<h2 class="font-headline text-xl font-normal text-on-surface tracking-tight">
+          Lançamento financeiro
+        </h2>
+<!-- Switch 1: Lançar no Minhas Finanças (ON / Verde #1f412d) -->
+<div class="flex items-center justify-between gap-3 py-1">
+<div class="flex-1">
+<label class="text-sm font-medium text-on-surface block leading-tight cursor-pointer" for="toggle-financas">
+              Lançar no Minhas Finanças
+            </label>
+<p class="text-xs text-secondary mt-0.5">
+              Registra a despesa automaticamente
+            </p>
+</div>
+<button aria-checked="true" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full bg-primary p-0.5 transition-colors duration-200 focus:outline-none" id="toggle-financas" role="switch">
+<span class="inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-200 translate-x-5"></span>
+</button>
+</div>
+<!-- Switch 2: Dividir pagamento (OFF / Cinza claro) -->
+<div class="flex items-center justify-between gap-3 py-0.5">
+<div class="flex-1">
+<label class="text-sm font-medium text-on-surface block leading-tight cursor-pointer" for="toggle-dividir">
+              Dividir pagamento
+            </label>
+</div>
+<button aria-checked="false" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full bg-surface-container-highest p-0.5 transition-colors duration-200 focus:outline-none" id="toggle-dividir" role="switch">
+<span class="inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-200 translate-x-0"></span>
+</button>
+</div>
+<!-- Campos de Seleção / Dropdowns -->
+<div class="space-y-3.5 pt-1">
+<!-- Dropdown 1: Meio de Pagamento -->
+<div>
+<label class="block text-xs font-semibold text-secondary mb-1">
+              Meio de pagamento
+            </label>
+<div class="relative">
+<select class="w-full appearance-none bg-surface-container-lowest border border-outline-variant/80 rounded-xl px-3.5 py-2.5 text-xs font-medium text-on-surface focus:outline-none focus:border-primary transition-colors pr-9 shadow-sm">
+<option selected="">Nubank Principal (Crédito) · R$ 3.420,00</option>
+<option>Banco do Brasil (Débito)</option>
+<option>Dinheiro em espécie</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-secondary">
+<span class="material-symbols-outlined text-[20px]" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Dropdown 2: Categoria da despesa -->
+<div>
+<label class="block text-xs font-semibold text-secondary mb-1">
+              Categoria da despesa
+            </label>
+<div class="relative">
+<select class="w-full appearance-none bg-surface-container-lowest border border-outline-variant/80 rounded-xl px-3.5 py-2.5 text-xs font-medium text-on-surface focus:outline-none focus:border-primary transition-colors pr-9 shadow-sm">
+<option selected="">Alimentação &amp; Mercado</option>
+<option>Despensa Básica</option>
+<option>Casa &amp; Limpeza</option>
+<option>Hortifrúti e Orgânicos</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-secondary">
+<span class="material-symbols-outlined text-[20px]" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bloco explicativo do impacto no saldo -->
+<div class="p-3 bg-surface-container-low rounded-xl border border-outline-variant/50 flex items-start gap-2.5">
+<span class="material-symbols-outlined text-primary text-[19px] mt-0.5 flex-shrink-0" data-icon="info">info</span>
+<p class="text-xs text-secondary leading-relaxed">
+<strong class="font-semibold text-on-surface">Impacto no orçamento:</strong> O valor de <span class="font-medium text-on-surface tabular-nums">R$ 184,30</span> será deduzido do limite do cartão e computado no saldo previsto do mês corrente.
+          </p>
+</div>
+</section>
+</div>
+<!-- 4. Rodapé de Ações Fixo na Base (Com espaçamento próprio, sem sobrepor conteúdo) -->
+<footer class="p-4 pt-3.5 pb-6 bg-[#F7F5EF] border-t border-outline-variant/40 space-y-2.5 flex-shrink-0 shadow-[0_-4px_16px_rgba(0,0,0,0.03)]">
+<!-- Botão Primário: Confirmar fechamento (#1f412d) -->
+<button class="w-full bg-primary text-on-primary py-3.5 rounded-xl font-medium text-sm sm:text-base hover:bg-[#163021] active:opacity-90 transition-all flex items-center justify-center shadow-sm focus:outline-none" type="button">
+        Confirmar fechamento
+      </button>
+<!-- Botão Secundário: Cancelar -->
+<button class="w-full border border-outline/70 py-3 rounded-xl text-on-surface font-medium text-sm hover:bg-surface-container-low active:bg-surface-container transition-colors flex items-center justify-center focus:outline-none" type="button">
+        Cancelar
+      </button>
+</footer>
+</div>
+</div>
+</body></html>

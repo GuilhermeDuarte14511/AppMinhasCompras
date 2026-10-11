@@ -1,0 +1,15 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="180dp" android:height="156dp" android:viewportWidth="160" android:viewportHeight="140">
+  <group android:name="notebook" android:pivotX="80" android:pivotY="70">
+    <path android:fillColor="@color/splash_page" android:strokeColor="@color/splash_ink" android:strokeWidth="1.75" android:pathData="M22,18 L90,18 Q94,18 94,22 L94,118 Q94,122 90,122 L22,122 Q18,122 18,118 L18,22 Q18,18 22,18 Z" />
+    <path android:strokeColor="@color/splash_ink" android:strokeWidth="1.5" android:strokeLineCap="round" android:pathData="M42,18 L42,13 Q42,11 44,11 L68,11 Q70,11 70,13 L70,18" />
+    <path android:strokeColor="@color/splash_rule" android:strokeWidth="1" android:pathData="M26,28 L28,28 M30,28 L32,28 M34,28 L36,28 M38,28 L40,28 M42,28 L44,28 M46,28 L48,28 M50,28 L52,28 M54,28 L56,28 M58,28 L60,28 M62,28 L64,28 M66,28 L68,28 M70,28 L72,28 M74,28 L76,28 M78,28 L80,28 M82,28 L84,28 M26,98 L86,98" />
+    <path android:strokeColor="@color/splash_ink" android:strokeWidth="1.5" android:pathData="M28,38 L34,38 Q36,38 36,40 L36,46 Q36,48 34,48 L28,48 Q26,48 26,46 L26,40 Q26,38 28,38 Z M28,58 L34,58 Q36,58 36,60 L36,66 Q36,68 34,68 L28,68 Q26,68 26,66 L26,60 Q26,58 28,58 Z M28,78 L34,78 Q36,78 36,80 L36,86 Q36,88 34,88 L28,88 Q26,88 26,86 L26,80 Q26,78 28,78 Z" />
+    <path android:name="checks" android:strokeColor="@color/splash_leaf" android:strokeWidth="1.8" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M28.5,43.2 L31.2,45.8 L38,38.5 M28.5,63.2 L31.2,65.8 L38,58.5 M28.5,83.2 L31.2,85.8 L38,78.5" />
+    <path android:strokeColor="@color/splash_ink" android:strokeWidth="1.75" android:strokeLineCap="round" android:pathData="M42,43 L72,43 M42,63 L68,63 M42,83 L70,83" />
+    <path android:strokeColor="@color/splash_rule" android:strokeWidth="1.5" android:strokeLineCap="round" android:pathData="M77,43 L84,43 M74,63 L84,63 M76,83 L84,83" />
+    <path android:fillColor="@color/splash_page" android:strokeColor="@color/splash_ink" android:strokeWidth="1.75" android:strokeLineJoin="round" android:pathData="M86,48 L132,48 Q135,48 134.8,51 L130.6,114 Q130.45,118 126.4,118 L90.6,118 Q86.55,118 86.4,114 L83.2,51 Q83,48 86,48 Z" />
+    <path android:strokeColor="@color/splash_leaf" android:strokeWidth="1.8" android:strokeLineCap="round" android:pathData="M97,48 L97,35 C97,29.48 101.48,25 107,25 L111,25 C116.52,25 121,29.48 121,35 L121,48" />
+    <path android:strokeColor="@color/splash_rule" android:strokeWidth="1.25" android:strokeLineJoin="round" android:pathData="M91,62 L109,72 L127,62" />
+    <path android:strokeColor="@color/splash_leaf" android:strokeWidth="1.5" android:pathData="M104,91 A5,5 0,1 0,114 91 A5,5 0,1 0,104 91 M109,87 L109,95 M105,91 L113,91" />
+  </group>
+</vector>

@@ -1005,6 +1005,7 @@ class SharedListsRepository {
     required String listId,
     required String updatedBy,
     required bool markPendingAsPurchased,
+    int? finalTotalCents,
   }) async {
     final trimmedListId = listId.trim();
     final trimmedUid = updatedBy.trim();
@@ -1055,7 +1056,11 @@ class SharedListsRepository {
     );
 
     final now = DateTime.now();
-    final completed = CompletedPurchase.fromList(listModel, closedAt: now);
+    final completed = CompletedPurchase.fromList(
+      listModel,
+      closedAt: now,
+      finalTotalCents: finalTotalCents,
+    );
     final historyDocId = completed.id;
 
     final batch = _firestore.batch();

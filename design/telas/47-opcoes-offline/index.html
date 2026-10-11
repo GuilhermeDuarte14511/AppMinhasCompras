@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Opções — Minhas Compras</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Newsreader & Public Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "secondary": "#5b604f",
+            "on-primary-fixed": "#002110",
+            "surface-variant": "#2a352d",
+            "surface-bright": "#fbf9f3",
+            "error": "#d46a60",
+            "surface-tint": "#66A378",
+            "tertiary": "#582f33",
+            "on-secondary": "#ffffff",
+            "inverse-on-surface": "#f3f1eb",
+            "outline-variant": "#334035",
+            "on-secondary-container": "#616655",
+            "surface-dim": "#161D18",
+            "on-tertiary-container": "#f2b6ba",
+            "tertiary-container": "#724549",
+            "on-surface-variant": "#9EAB9C",
+            "outline": "#38483B",
+            "primary-fixed-dim": "#a9d0b4",
+            "secondary-fixed-dim": "#c4c9b4",
+            "error-container": "#3d1f1d",
+            "surface": "#1D241F",
+            "primary-fixed": "#c4eccf",
+            "on-primary-container": "#a7ceb2",
+            "on-primary-fixed-variant": "#2b4e39",
+            "inverse-surface": "#30312d",
+            "on-background": "#E8EDE4",
+            "on-secondary-fixed-variant": "#444939",
+            "on-primary": "#ffffff",
+            "surface-container-lowest": "#161D18",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "on-secondary-fixed": "#191d10",
+            "secondary-fixed": "#e0e5cf",
+            "surface-container-high": "#2A352D",
+            "tertiary-fixed": "#ffdadb",
+            "on-error": "#ffffff",
+            "surface-container-highest": "#334035",
+            "primary-container": "#243b2d",
+            "primary": "#66A378",
+            "on-tertiary": "#ffffff",
+            "surface-container": "#242D26",
+            "on-error-container": "#ffb4ab",
+            "inverse-primary": "#365943",
+            "surface-container-low": "#19201a",
+            "secondary-container": "#2f3830",
+            "on-tertiary-fixed": "#321015",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "on-surface": "#E8EDE4",
+            "background": "#1D241F"
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          fontFamily: {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    body {
+      background-color: #1D241F;
+      color: #E8EDE4;
+      font-family: 'Public Sans', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface min-h-screen flex justify-center selection:bg-primary-container selection:text-primary">
+<!-- Mobile Viewport Container (390px spec) -->
+<main class="w-full max-w-[390px] min-h-screen bg-surface flex flex-col relative shadow-2xl pb-8">
+<!-- TopAppBar (From Shared Component JSON) -->
+<header class="sticky top-0 z-40 bg-surface/95 backdrop-blur border-b border-outline-variant">
+<div class="flex justify-between items-center w-full px-4 h-14">
+<button aria-label="Voltar" class="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface active:opacity-80 transition-colors" type="button">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<h1 class="font-headline font-medium text-2xl tracking-tight text-on-surface text-center flex-1">
+          Opções
+        </h1><div aria-hidden="true" class="w-10 h-10 -mr-2"></div>
+</div>
+</header>
+<!-- Scrollable Content Canvas -->
+<div class="flex-1 px-4 pt-4 pb-8 space-y-6">
+<!-- Page Header: Editorial Header Title -->
+<section class="space-y-1">
+<h2 class="font-headline text-3xl font-medium tracking-tight text-on-surface">
+          Ajustes do app
+        </h2>
+<p class="font-body text-xs text-on-surface-variant leading-relaxed">
+          Gerenciamento da sua conta, sincronização e preferências visuais.
+        </p>
+</section>
+<!-- SEÇÃO CONTA -->
+<section class="space-y-2">
+<div class="flex items-center justify-between px-1">
+<span class="text-[11px] font-semibold tracking-wider uppercase text-on-surface-variant font-body">Conta</span>
+</div>
+<div class="bg-surface-container rounded-lg border border-outline-variant overflow-hidden">
+<!-- Profile Badge Item -->
+<div class="p-3.5 flex items-center gap-3.5 border-b border-outline-variant">
+<div class="w-11 h-11 rounded-full bg-primary-container text-primary font-headline font-semibold text-lg flex items-center justify-center border border-outline shrink-0">
+              HR
+            </div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="font-body font-medium text-sm text-on-surface truncate">Helena Ramos</span>
+</div>
+<p class="text-xs text-on-surface-variant truncate font-body">helena.ramos@exemplo.com.br</p>
+</div>
+</div>
+<!-- Meus Dados Row -->
+<button class="w-full px-3.5 py-3 flex items-center justify-between text-left hover:bg-surface-container-high active:bg-surface-container-highest transition-colors border-b border-outline-variant" type="button">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]">badge</span>
+<span class="text-xs font-medium text-on-surface font-body">Meus dados</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[18px]">chevron_right</span>
+</button>
+<!-- Deslogar Row -->
+<button class="w-full px-3.5 py-3 flex items-center justify-between text-left hover:bg-surface-container-high active:bg-surface-container-highest transition-colors" type="button">
+<div class="flex items-center gap-3 text-error">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+<span class="text-xs font-medium font-body">Deslogar</span>
+</div>
+<span class="material-symbols-outlined text-error text-[18px]">chevron_right</span>
+</button>
+</div>
+</section>
+<!-- SEÇÃO APARÊNCIA -->
+<section class="space-y-2">
+<span class="text-[11px] font-semibold tracking-wider uppercase text-on-surface-variant font-body px-1">Aparência</span>
+<div class="bg-surface-container rounded-lg border border-outline-variant p-3 space-y-2.5">
+<!-- Segmented Control (Light / Dark) -->
+<div aria-label="Seletor de tema" class="grid grid-cols-2 p-1 bg-surface-container-lowest rounded border border-outline-variant gap-1" role="radiogroup">
+<!-- Claro Option (Inactive) -->
+<button aria-checked="false" class="flex items-center justify-center gap-2 py-2 px-3 rounded text-xs font-medium text-on-surface-variant hover:text-on-surface transition-all" role="radio" type="button">
+<span class="material-symbols-outlined text-[18px]">light_mode</span>
+<span>Claro</span>
+</button>
+<!-- Escuro Option (Active - Dark Editorial) -->
+<button aria-checked="true" class="flex items-center justify-center gap-2 py-2 px-3 rounded bg-surface-container-high text-primary font-medium text-xs border border-outline shadow-sm transition-all" role="radio" type="button">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">dark_mode</span>
+<span>Escuro</span>
+</button>
+</div>
+<!-- Legenda com bullet -->
+</div>
+</section>
+<!-- SEÇÃO DADOS & SINCRONIZAÇÃO (ESTADO OFFLINE) -->
+<section class="space-y-2">
+<div class="flex items-center justify-between px-1">
+<span class="text-[11px] font-semibold tracking-wider uppercase text-on-surface-variant font-body">Dados &amp; Sincronização</span>
+<span class="inline-flex items-center gap-1 text-[11px] text-error font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>
+            Offline
+          </span>
+</div>
+<!-- Bloco Informativo de 'Modo offline' -->
+<div class="bg-surface-container rounded-lg border border-outline-variant overflow-hidden">
+<div class="p-3.5 bg-surface-container-low border-b border-outline-variant">
+<div class="flex items-start justify-between gap-3">
+<div class="flex items-start gap-3">
+<div class="w-9 h-9 rounded bg-surface-container-high border border-outline flex items-center justify-center text-error shrink-0">
+<span class="material-symbols-outlined text-[20px]">cloud_off</span>
+</div>
+<div class="space-y-0.5">
+<div class="flex items-center gap-2">
+<h3 class="text-sm font-medium text-on-surface font-body">Modo offline</h3>
+<span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-error-container text-error border border-error/30 uppercase tracking-tight">Sem rede</span>
+</div>
+<p class="text-xs text-on-surface-variant leading-snug font-body">
+                    Sem internet. Alterações continuam salvas no aparelho.
+                  </p>
+</div>
+</div>
+</div>
+<!-- Métricas Contábeis Offline -->
+<div class="mt-3 pt-3 border-t border-outline-variant grid grid-cols-2 gap-2 text-xs">
+<div class="bg-surface-container p-2 rounded border border-outline-variant">
+<span class="text-[10px] text-on-surface-variant block uppercase tracking-tight">Aguardando conexão</span>
+<span class="text-xs font-semibold tabular-nums text-on-surface flex items-center gap-1 mt-0.5">
+<span class="material-symbols-outlined text-[14px] text-primary">pending_actions</span>
+                  2 registros
+                </span>
+</div>
+<div class="bg-surface-container p-2 rounded border border-outline-variant">
+<span class="text-[10px] text-on-surface-variant block uppercase tracking-tight">Última sincronização</span>
+<span class="text-xs font-medium tabular-nums text-on-surface-variant block mt-0.5">
+                  Há 42 minutos
+                </span>
+</div>
+</div>
+</div>
+<!-- Sincronização e diagnóstico row -->
+<button class="w-full px-3.5 py-3 flex items-center justify-between text-left hover:bg-surface-container-high active:bg-surface-container-highest transition-colors border-b border-outline-variant" type="button">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-[20px] mt-0.5">sync_problem</span>
+<div>
+<span class="text-xs font-medium text-on-surface font-body block">Sincronização e diagnóstico</span>
+<span class="text-[11px] text-on-surface-variant font-body">Ver detalhes de fila e logs locais</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[18px]">chevron_right</span>
+</button>
+<!-- SwitchListTile: Atualizar meu catálogo como dono -->
+<div class="px-3.5 py-3 flex items-center justify-between gap-3 border-b border-outline-variant bg-surface-container">
+<div class="flex-1 pr-2">
+<label class="text-xs font-medium text-on-surface font-body block cursor-pointer" for="catalog-sync-switch">
+                Atualizar meu catálogo como dono
+              </label>
+<p class="text-[11px] text-on-surface-variant font-body mt-0.5 leading-snug">
+                Aplica edições e novos itens globalmente no catálogo.
+              </p>
+</div>
+<!-- Custom Accessible Toggle Switch (Active/Verde) -->
+<label class="relative inline-flex items-center cursor-pointer shrink-0">
+<input checked="" class="sr-only peer" id="catalog-sync-switch" type="checkbox"/>
+<div class="w-10 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-on-primary after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary border border-outline"></div>
+</label>
+</div>
+<!-- Minhas Finanças row -->
+<button class="w-full px-3.5 py-3 flex items-center justify-between text-left hover:bg-surface-container-high active:bg-surface-container-highest transition-colors" type="button">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]">account_balance_wallet</span>
+<div class="flex items-center gap-2">
+<span class="text-xs font-medium text-on-surface font-body">Minhas Finanças</span>
+<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-surface-container-high text-primary border border-outline">Orçamento ativo</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[18px]">chevron_right</span>
+</button>
+</div>
+</section>
+<!-- SEÇÃO AJUDA & SUPORTE -->
+<section class="space-y-2">
+<span class="text-[11px] font-semibold tracking-wider uppercase text-on-surface-variant font-body px-1">Ajuda &amp; Suporte</span>
+<div class="bg-surface-container rounded-lg border border-outline-variant overflow-hidden">
+<button class="w-full px-3.5 py-3 flex items-center justify-between text-left hover:bg-surface-container-high active:bg-surface-container-highest transition-colors" type="button">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]">replay</span>
+<span class="text-xs font-medium text-on-surface font-body">Rever Onboarding</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[18px]">chevron_right</span>
+</button>
+</div>
+</section>
+<!-- Rodapé Informativo Editorial -->
+</div>
+<!-- BottomNavBar (From Shared Components JSON - Mobile Docked Bottom) -->
+</main>
+</body></html>

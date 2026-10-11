@@ -10,6 +10,96 @@ import 'package:lista_compras_material/src/domain/models_and_utils.dart';
 import 'package:lista_compras_material/src/domain/pantry.dart';
 
 void main() {
+  test('closing saves the paid total without editing product prices', () async {
+    final now = DateTime(2026, 9, 25);
+    final list = ShoppingListModel(
+      id: 'discounted-list',
+      name: 'Mercado',
+      createdAt: now,
+      updatedAt: now,
+      items: const [
+        ShoppingItem(
+          id: 'item',
+          name: 'Arroz',
+          quantity: 1,
+          unitPrice: 12,
+          isPurchased: true,
+        ),
+      ],
+    );
+    final history = _CheckpointHistory();
+    final store = _createStore(
+      storage: _CheckpointLists([list]),
+      historyStorage: history,
+    );
+    await store.load();
+    await store.finalizeList(list.id, finalTotalCents: 950);
+    expect(history.values.single.finalTotalCents, 950);
+    expect(history.values.single.items.single.unitPrice, 12);
+    final restored = _createStore(
+      storage: _CheckpointLists([list]),
+      historyStorage: history,
+    );
+    await restored.load();
+    expect(restored.purchaseHistory.single.spentValue, 9.50);
+  });
+  test(
+    'history checkpoint survives interrupted closing and keeps payment intent',
+    () async {
+      final now = DateTime(2026, 9, 7);
+      final source = ShoppingListModel(
+        id: 'recover',
+        name: 'Mercado',
+        createdAt: now,
+        updatedAt: now,
+        items: const [
+          ShoppingItem(
+            id: 'i',
+            name: 'Arroz',
+            quantity: 1,
+            unitPrice: 96,
+            isPurchased: true,
+          ),
+        ],
+      );
+      final lists = _CheckpointLists([source]);
+      final history = _CheckpointHistory()..failSave = true;
+      final store = _createStore(storage: lists, historyStorage: history);
+      await store.load();
+      await expectLater(store.finalizeList(source.id), throwsStateError);
+      expect(lists.values.single.isClosed, isFalse);
+      expect(store.findById(source.id)!.isClosed, isFalse);
+      expect(store.purchaseHistory, isEmpty);
+      history.failSave = false;
+      lists.failSave = true;
+      const intent = FinanceCheckoutIntent(
+        connectionId: 'original',
+        allocations: [
+          FinancePaymentAllocation(
+            sourceId: 'va',
+            sourceKind: 'foodVoucher',
+            sourceName: 'Alelo',
+            amountCents: 9600,
+          ),
+        ],
+      );
+      await expectLater(
+        store.finalizeList(source.id, financeIntent: intent),
+        throwsStateError,
+      );
+      final originalId = history.values.single.id;
+      lists.failSave = false;
+      final restarted = _createStore(storage: lists, historyStorage: history);
+      await restarted.load();
+      await restarted.finalizeList(source.id);
+      expect(restarted.purchaseHistory.single.id, originalId);
+      expect(
+        restarted.purchaseHistory.single.financeIntent!.connectionId,
+        'original',
+      );
+      expect(lists.values.single.isClosed, isTrue);
+    },
+  );
   test(
     'shared catalog import preference can be enabled per list or globally',
     () async {
@@ -223,6 +313,65 @@ void main() {
       ]);
     },
   );
+
+  test(
+    'deleted lists stay in trash until restored or removed forever',
+    () async {
+      final storage = _CheckpointLists([
+        _shoppingList(
+          name: 'Mercado',
+          createdAt: DateTime(2026, 9, 1),
+          updatedAt: DateTime(2026, 9, 1),
+        ),
+      ]);
+      final store = _createStore(storage: storage);
+      await store.load();
+      final listId = store.lists.single.id;
+
+      await store.deleteList(listId, deletedAt: DateTime(2026, 9, 15));
+
+      expect(store.lists, isEmpty);
+      expect(store.trashedLists.single.id, listId);
+      expect(store.allLists.single.deletedAt, DateTime(2026, 9, 15));
+      expect(storage.values.single.deletedAt, DateTime(2026, 9, 15));
+
+      await store.restoreList(listId, restoredAt: DateTime(2026, 9, 16));
+
+      expect(store.trashedLists, isEmpty);
+      expect(store.lists.single.id, listId);
+      expect(store.lists.single.deletedAt, isNull);
+
+      await store.deleteList(listId, deletedAt: DateTime(2026, 9, 17));
+      await store.deleteListForever(listId);
+
+      expect(store.allLists, isEmpty);
+      expect(storage.values, isEmpty);
+    },
+  );
+
+  test('trash removes entries after thirty days', () async {
+    final now = DateTime.now();
+    final expiredAt = now.subtract(const Duration(days: 45));
+    final recentAt = now.subtract(const Duration(days: 5));
+    final expired = _shoppingList(
+      name: 'Expirada',
+      createdAt: DateTime(2026, 7, 1),
+      updatedAt: expiredAt,
+    ).copyWith(deletedAt: expiredAt);
+    final recent = _shoppingList(
+      name: 'Recente',
+      createdAt: DateTime(2026, 9, 1),
+      updatedAt: recentAt,
+    ).copyWith(deletedAt: recentAt);
+    final storage = _CheckpointLists([expired, recent]);
+    final store = _createStore(storage: storage);
+    await store.load();
+
+    await store.purgeExpiredTrash(now: now);
+
+    expect(store.trashedLists.map((list) => list.name), ['Recente']);
+    expect(storage.values.map((list) => list.name), ['Recente']);
+  });
 
   test(
     'suggestReplenishmentItems prioritizes products repeated across history',
@@ -484,6 +633,7 @@ void main() {
 }
 
 ShoppingListsStore _createStore({
+  PurchaseHistoryStorage? historyStorage,
   ShoppingListsStorage? storage,
   List<ShoppingListModel> lists = const <ShoppingListModel>[],
   List<CatalogProduct> catalogProducts = const <CatalogProduct>[],
@@ -497,12 +647,41 @@ ShoppingListsStore _createStore({
     productCatalog: ProductCatalogRepository(
       _MemoryProductCatalogStorage(catalogProducts),
     ),
-    historyStorage: _MemoryPurchaseHistoryStorage(history),
+    historyStorage: historyStorage ?? _MemoryPurchaseHistoryStorage(history),
     pantryStorage: pantryStorage,
     lookupService: const _NoopLookupService(),
     homeWidgetService: const NoopShoppingHomeWidgetService(),
     sharedCatalogImportPreferences: sharedCatalogImportPreferences,
   );
+}
+
+class _CheckpointLists implements ShoppingListsStorage {
+  _CheckpointLists(this.values);
+  List<ShoppingListModel> values;
+  bool failSave = false;
+  @override
+  Future<List<ShoppingListModel>> loadLists() async =>
+      values.map((v) => v.deepCopy()).toList();
+  @override
+  Future<void> saveLists(List<ShoppingListModel> lists) async {
+    if (failSave) throw StateError('list storage unavailable');
+    values = lists.map((v) => v.deepCopy()).toList();
+  }
+}
+
+class _CheckpointHistory implements PurchaseHistoryStorage {
+  List<CompletedPurchase> values = [];
+  bool failSave = false;
+  @override
+  Future<List<CompletedPurchase>> loadHistory() async =>
+      values.map((v) => CompletedPurchase.fromJson(v.toJson())).toList();
+  @override
+  Future<void> saveHistory(List<CompletedPurchase> history) async {
+    if (failSave) throw StateError('history storage unavailable');
+    values = history
+        .map((v) => CompletedPurchase.fromJson(v.toJson()))
+        .toList();
+  }
 }
 
 class _FailingShoppingListsStorage implements ShoppingListsStorage {

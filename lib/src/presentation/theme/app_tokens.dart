@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 final class AppTokens {
   const AppTokens._();
 
-  static const double radiusXs = 6;
-  static const double radiusSm = 8;
-  static const double radiusMd = 10;
-  static const double radiusLg = 12;
-  static const double radiusXl = 16;
-  static const double radius2Xl = 20;
+  static const double radiusXs = 4;
+  static const double radiusSm = 6;
+  static const double radiusMd = 8;
+  static const double radiusLg = 10;
+  static const double radiusXl = 12;
+  static const double radius2Xl = 16;
 
   static const double cardElevation = 0;
   static const double cardBorderWidth = 1;

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Scanner — erro de permissão</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Newsreader (Editorial Serif) & Public Sans (Ledger/Sans) -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "primary-fixed": "#c4eccf",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "secondary-fixed": "#e0e5cf",
+            "on-secondary-fixed-variant": "#444939",
+            "secondary-fixed-dim": "#c4c9b4",
+            "tertiary": "#582f33",
+            "on-tertiary-fixed": "#321015",
+            "inverse-surface": "#30312d",
+            "surface-container-low": "#f5f3ed",
+            "on-tertiary-container": "#f2b6ba",
+            "on-primary-container": "#a7ceb2",
+            "on-surface-variant": "#424843",
+            "on-secondary-container": "#616655",
+            "on-secondary": "#ffffff",
+            "surface-variant": "#e4e2dd",
+            "surface-container-lowest": "#ffffff",
+            "primary-container": "#365943",
+            "on-secondary-fixed": "#191d10",
+            "outline-variant": "#c1c8c1",
+            "primary-fixed-dim": "#a9d0b4",
+            "outline": "#727972",
+            "on-surface": "#1b1c18",
+            "inverse-on-surface": "#f3f1eb",
+            "tertiary-fixed": "#ffdadb",
+            "surface-container": "#f0eee8",
+            "surface-tint": "#43664f",
+            "on-primary": "#ffffff",
+            "background": "#fbf9f3",
+            "surface-container-highest": "#e4e2dd",
+            "surface": "#fbf9f3",
+            "secondary": "#5b604f",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "inverse-primary": "#a9d0b4",
+            "secondary-container": "#e0e5cf",
+            "error-container": "#ffdad6",
+            "on-error": "#ffffff",
+            "on-tertiary": "#ffffff",
+            "primary": "#1f412d",
+            "on-primary-fixed-variant": "#2b4e39",
+            "on-background": "#1b1c18",
+            "surface-bright": "#fbf9f3",
+            "tertiary-container": "#724549",
+            "on-primary-fixed": "#002110",
+            "on-error-container": "#93000a",
+            "surface-container-high": "#eae8e2",
+            "surface-dim": "#dcdad4",
+            "error": "#ba1a1a"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .tabular-numbers {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-inverse-surface/60 min-h-screen font-body flex justify-center items-end sm:items-center p-0 sm:p-4 text-on-surface antialiased select-none">
+<!-- Mobile Shell Simulation Frame (390px fixed canvas) -->
+<div class="w-full max-w-[390px] h-[844px] bg-background relative flex flex-col justify-end overflow-hidden shadow-2xl rounded-t-2xl sm:rounded-2xl border border-outline-variant/30">
+<!-- Underlay / Background Simulating Lista de Compras Behind Scrim -->
+<div class="absolute inset-0 bg-[#F7F5EF] p-5 opacity-40 pointer-events-none flex flex-col justify-between">
+<div class="space-y-4 pt-8">
+<div class="h-6 w-32 bg-outline-variant/60 rounded"></div>
+<div class="h-10 w-full bg-surface-container rounded border border-outline-variant/40"></div>
+<div class="space-y-2 pt-2">
+<div class="h-12 w-full bg-surface-container-lowest border-b border-outline-variant/40 flex items-center px-3 justify-between">
+<div class="w-36 h-4 bg-outline-variant/50 rounded"></div>
+<div class="w-12 h-4 bg-outline-variant/40 rounded"></div>
+</div>
+<div class="h-12 w-full bg-surface-container-lowest border-b border-outline-variant/40 flex items-center px-3 justify-between">
+<div class="w-40 h-4 bg-outline-variant/50 rounded"></div>
+<div class="w-14 h-4 bg-outline-variant/40 rounded"></div>
+</div>
+<div class="h-12 w-full bg-surface-container-lowest border-b border-outline-variant/40 flex items-center px-3 justify-between">
+<div class="w-28 h-4 bg-outline-variant/50 rounded"></div>
+<div class="w-10 h-4 bg-outline-variant/40 rounded"></div>
+</div>
+</div>
+</div>
+<div class="h-14 w-full bg-surface-container-high rounded mb-4"></div>
+</div>
+<!-- Scrim Backdrop Overlay -->
+<div class="absolute inset-0 bg-inverse-surface/50 backdrop-blur-[1px] transition-opacity"></div>
+<!-- Modal Bottom Sheet: BarcodeScannerSheet -->
+<section class="relative z-10 w-full bg-surface rounded-t-2xl shadow-xl flex flex-col max-h-[92%] border-t border-outline-variant/40">
+<!-- Grab Handle / Drag Indicator -->
+<div class="w-full pt-3 pb-1 flex justify-center items-center">
+<div class="w-10 h-1 rounded-full bg-outline-variant"></div>
+</div>
+<!-- Header: TopAppBar (Strict JSON matching & editorial elegance) -->
+<!-- style_bg_color: bg-surface, style_separation_logic: border-b border-outline-variant, style_shell_layout: flex justify-between items-center w-full px-4 h-14 -->
+<header class="flex justify-between items-center w-full px-4 h-14 bg-surface border-b border-outline-variant">
+<button aria-label="Fechar leitor" class="w-12 h-12 -ml-2 flex items-center justify-center rounded text-on-surface hover:bg-surface-container active:scale-95 transition-all" type="button">
+<span class="material-symbols-outlined text-[24px]">close</span>
+</button>
+<h1 class="font-headline text-lg font-medium text-on-surface tracking-tight">Leitor de código</h1>
+<div class="w-12 h-12 -mr-2"></div>
+</header>
+<!-- Subtitle Instruction Strip -->
+<div class="px-5 pt-3 pb-2 text-center bg-surface-container-low/60 border-b border-outline-variant/30">
+<p class="font-body text-xs text-secondary tracking-normal">Aponte para o código de barras</p>
+</div>
+<!-- Main Content / Viewport Container -->
+<div class="p-5 flex-1 flex flex-col justify-start">
+<!-- Viewport da Câmera (Retangular Escuro com cantoneiras de enquadramento) -->
+<div class="relative w-full aspect-[4/3] bg-[#1F211D] rounded-lg overflow-hidden border border-[#30332C] flex flex-col items-center justify-center p-4 shadow-inner">
+<!-- Retículo de Enquadramento: Cantoneiras Contábeis (sem código de barras) -->
+<div class="absolute inset-4 pointer-events-none">
+<!-- Canto Superior Esquerdo -->
+<div class="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-outline-variant/70"></div>
+<!-- Canto Superior Direito -->
+<div class="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-outline-variant/70"></div>
+<!-- Canto Inferior Esquerdo -->
+<div class="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-outline-variant/70"></div>
+<!-- Canto Inferior Direito -->
+<div class="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-outline-variant/70"></div>
+</div>
+<!-- Conteúdo Interno do Viewport: Estado de Câmera Bloqueada -->
+<div class="relative z-10 flex flex-col items-center text-center px-3 max-w-[290px]">
+<!-- Ícone de câmera indisponível -->
+<div class="w-10 h-10 rounded-full bg-surface-container-highest/10 flex items-center justify-center text-[#dcdad4] mb-2.5">
+<span class="material-symbols-outlined text-[26px]">videocam_off</span>
+</div>
+<!-- Aviso de Estado -->
+<span class="font-body text-[11px] font-semibold tracking-wider text-[#a9d0b4] uppercase mb-1.5">
+              Câmera indisponível agora
+            </span>
+<!-- Texto Descritivo Exato Solicitado -->
+<p class="font-body text-xs leading-relaxed text-[#c4c9b4] mb-3 font-normal">
+              A câmera está bloqueada. Abra Ajustes &gt; Minhas Compras &gt; Câmera, libere o acesso e volte ao aplicativo.
+            </p>
+<!-- Botão Sutil / Contorno: Tentar novamente -->
+<button class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#727972]/50 text-[#f3f1eb] text-xs font-medium hover:bg-[#30332C] active:scale-95 transition-all" type="button">
+<span class="material-symbols-outlined text-[16px]">refresh</span>
+<span>Tentar novamente</span>
+</button>
+</div>
+</div>
+<!-- Ledger Info Note (Ledger & Press context strip) -->
+</div>
+<!-- Rodapé / Área de Ações com altura mínima de 48dp -->
+<footer class="p-5 pt-0 pb-6 flex flex-col gap-2.5 bg-surface border-t border-outline-variant/30">
+<!-- Botão Primário: Preenchido Verde Contábil (#365943) -->
+<button class="w-full h-12 min-h-[48px] px-4 rounded-lg bg-primary-container text-on-primary font-body text-sm font-medium flex items-center justify-center gap-2 hover:opacity-95 active:scale-[0.99] transition-all" type="button">
+<span class="material-symbols-outlined text-[20px]">videocam</span>
+<span>Reabrir câmera</span>
+</button>
+<!-- Botão Secundário: Contornado / Borda fina (#D9DCD3 ou texto #252923) -->
+<button class="w-full h-12 min-h-[48px] px-4 rounded-lg border border-outline-variant bg-surface text-on-surface font-body text-sm font-medium flex items-center justify-center gap-2 hover:bg-surface-container-low active:scale-[0.99] transition-all" type="button">
+<span class="material-symbols-outlined text-[20px] text-secondary">keyboard</span>
+<span>Digitar manualmente</span>
+</button>
+</footer>
+</section>
+</div>
+</body></html>

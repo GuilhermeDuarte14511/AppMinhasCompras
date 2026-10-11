@@ -5,6 +5,36 @@ import 'package:lista_compras_material/src/domain/models_and_utils.dart';
 
 void main() {
   group('VoiceShoppingParser', () {
+    test('recognizes spoken quantity after a product name', () {
+      const parser = VoiceShoppingParser();
+      for (final transcript in [
+        'Arroz Camil 2 Unidades',
+        'ARROZ CAMIL DUAS UNIDADES',
+        'arroz camil dois unidades',
+        'duas unidades de arroz camil',
+      ]) {
+        final intent = parser.parse(transcript).single;
+        expect(intent.name, 'Arroz camil', reason: transcript);
+        expect(intent.quantity, 2, reason: transcript);
+      }
+    });
+
+    test('keeps sizes and product number names while parsing spoken units', () {
+      const parser = VoiceShoppingParser();
+      final intents = parser.parse(
+        'Sabonete três unidades, café vinte e duas unidades, '
+        'água trinta unidades, arroz cinco quilos, arroz tipo dois',
+      );
+      expect(intents.map((item) => item.quantity), [3, 22, 30, 1, 1]);
+      expect(intents.map((item) => item.name), [
+        'Sabonete',
+        'Café',
+        'Água',
+        'Arroz cinco quilos',
+        'Arroz tipo dois',
+      ]);
+    });
+
     test('parses multiple Portuguese items, quantities, and spoken price', () {
       const parser = VoiceShoppingParser();
 
@@ -34,10 +64,48 @@ void main() {
       expect(intents.first.quantity, 22);
       expect(intents.first.name, 'Sabonetes');
     });
+
+    test(
+      'accepts quantities after item names without changing product sizes',
+      () {
+        const parser = VoiceShoppingParser();
+
+        final intents = parser.parse(
+          'Arroz 2, leite 1, arroz tipo 1, água 1 litro',
+        );
+
+        expect(intents.map((item) => item.name), [
+          'Arroz',
+          'Leite',
+          'Arroz tipo 1',
+          'Água 1 litro',
+        ]);
+        expect(intents.map((item) => item.quantity), [2, 1, 1, 1]);
+      },
+    );
   });
 
   group('VoiceCatalogMatcher', () {
     const matcher = VoiceCatalogMatcher();
+
+    test('does not auto-select condensed milk for generic milk', () {
+      final product = _product(
+        id: 'condensed-milk',
+        name: 'Leite condensado 395g',
+        price: 5.89,
+      );
+      const intent = VoiceItemIntent(
+        rawText: 'leite',
+        name: 'Leite',
+        quantity: 1,
+      );
+
+      final resolved = matcher.resolve(intent, catalogProducts: [product]);
+
+      expect(resolved.matchedProduct, isNull);
+      expect(resolved.draft.name, 'Leite');
+      expect(resolved.alternatives.single.product, product);
+    });
 
     test('applies a unique safe match and recovers catalog data', () {
       final product = _product(
@@ -143,6 +211,81 @@ void main() {
       expect(selected.draft.unitPrice, 5);
       expect(selected.draft.barcode, '7891234567895');
       expect(selected.confidence, VoiceCatalogMatchConfidence.exact);
+    });
+  });
+
+  group('voice product suggestions', () {
+    const matcher = VoiceCatalogMatcher();
+    const parser = VoiceShoppingParser();
+
+    test(
+      'rice ignores capitalization and requires choice between variants',
+      () {
+        final products = [
+          _product(id: 'rice1', name: 'ARROZ BRANCO CAMIL 5KG', price: 20),
+          _product(id: 'rice2', name: 'Arroz integral Camil 1kg', price: 10),
+        ];
+        final resolved = matcher.resolve(
+          parser.parse('ARROZ duas unidades').single,
+          catalogProducts: products,
+        );
+        expect(resolved.confidence, VoiceCatalogMatchConfidence.ambiguous);
+        expect(
+          resolved.alternatives.map((candidate) => candidate.product.id),
+          containsAll(['rice1', 'rice2']),
+        );
+        expect(resolved.selectProduct(products.last).draft.quantity, 2);
+      },
+    );
+
+    test(
+      'macarrão PENNE suggests penne even without the generic pasta word',
+      () {
+        final penne = _product(
+          id: 'penne',
+          name: 'PENNE BARILLA GRANO DURO 500G',
+          price: 12,
+        );
+        final resolved = matcher.resolve(
+          parser.parse('macarrão PENNE duas unidades').single,
+          catalogProducts: [
+            penne,
+            _product(
+              id: 'spaghetti',
+              name: 'Macarrão espaguete 500g',
+              price: 5,
+            ),
+          ],
+        );
+        expect(resolved.confidence, VoiceCatalogMatchConfidence.ambiguous);
+        expect(resolved.matchedProduct, isNull);
+        expect(resolved.alternatives.first.product.id, 'penne');
+        expect(
+          resolved.alternatives.map((candidate) => candidate.product.id),
+          isNot(contains('spaghetti')),
+        );
+        final selected = resolved.selectProduct(penne);
+        expect(selected.draft.name, penne.name);
+        expect(selected.draft.quantity, 2);
+        expect(selected.draft.unitPrice, 12);
+      },
+    );
+
+    test('PENNE alone matches its catalog entry and never invents one', () {
+      final penne = _product(
+        id: 'penne',
+        name: 'Macarrão Penne Barilla 500g',
+        price: 12,
+      );
+      final intent = parser.parse('PENNE').single;
+      expect(
+        matcher.resolve(intent, catalogProducts: [penne]).matchedProduct,
+        penne,
+      );
+      expect(
+        matcher.resolve(intent, catalogProducts: []).alternatives,
+        isEmpty,
+      );
     });
   });
 

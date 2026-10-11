@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Minhas Compras — Lista detalhada</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Newsreader & Public Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400&amp;family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-variant": "#e4e2dd",
+            "primary-fixed-dim": "#a9d0b4",
+            "secondary-container": "#e0e5cf",
+            "on-surface-variant": "#424843",
+            "tertiary-container": "#724549",
+            "surface-container": "#f0eee8",
+            "secondary": "#5b604f",
+            "on-secondary-container": "#616655",
+            "on-tertiary-container": "#f2b6ba",
+            "on-secondary": "#ffffff",
+            "on-surface": "#1b1c18",
+            "surface-dim": "#dcdad4",
+            "on-primary-container": "#a7ceb2",
+            "on-primary-fixed": "#002110",
+            "on-secondary-fixed-variant": "#444939",
+            "secondary-fixed-dim": "#c4c9b4",
+            "inverse-primary": "#a9d0b4",
+            "background": "#fbf9f3",
+            "on-error": "#ffffff",
+            "on-error-container": "#93000a",
+            "inverse-surface": "#30312d",
+            "surface-tint": "#43664f",
+            "primary-container": "#365943",
+            "on-secondary-fixed": "#191d10",
+            "primary-fixed": "#c4eccf",
+            "tertiary": "#582f33",
+            "on-primary": "#ffffff",
+            "surface-container-lowest": "#ffffff",
+            "on-tertiary": "#ffffff",
+            "on-primary-fixed-variant": "#2b4e39",
+            "outline-variant": "#c1c8c1",
+            "inverse-on-surface": "#f3f1eb",
+            "surface-bright": "#fbf9f3",
+            "on-tertiary-fixed": "#321015",
+            "surface-container-low": "#f5f3ed",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "surface-container-highest": "#e4e2dd",
+            "surface": "#fbf9f3",
+            "error": "#ba1a1a",
+            "surface-container-high": "#eae8e2",
+            "outline": "#727972",
+            "primary": "#1f412d",
+            "on-background": "#1b1c18",
+            "tertiary-fixed": "#ffdadb",
+            "error-container": "#ffdad6",
+            "secondary-fixed": "#e0e5cf",
+            "on-tertiary-fixed-variant": "#663b3f"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    /* Estilização suave para scroll sem barra grosseira */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #c1c8c1;
+      border-radius: 4px;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface-variant font-body text-on-surface antialiased min-h-screen flex justify-center selection:bg-secondary-container selection:text-primary">
+<!-- Mobile Viewport Canvas strictly 390px (constrained to mobile device bounds) -->
+<main class="w-full max-w-[390px] bg-background min-h-screen flex flex-col relative shadow-xl overflow-x-hidden pb-20">
+<!-- Top App Bar / Cabeçalho Editorial -->
+<header class="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-outline-variant px-4 py-3">
+<div class="flex items-center justify-between gap-2">
+<div class="flex items-center gap-3">
+<button aria-label="Voltar para listas" class="w-10 h-10 flex items-center justify-center rounded-lg text-on-surface hover:bg-surface-container active:scale-95 transition-all" type="button">
+<span class="material-symbols-outlined text-2xl" data-icon="arrow_back">arrow_back</span>
+</button>
+<div>
+<h1 class="font-headline text-2xl font-normal text-on-surface leading-tight tracking-tight">
+              Compras da semana
+            </h1>
+<p class="font-body text-xs font-normal text-secondary flex items-center gap-1.5 mt-0.5"><span class="material-symbols-outlined text-[14px] text-primary" data-icon="alarm">alarm</span><span>Lembrete: Sábado às 09:00 · 11 itens</span></p>
+</div>
+</div>
+<div class="flex items-center gap-1"><button aria-label="Convidar / Compartilhar lista" class="w-9 h-9 flex items-center justify-center rounded-lg text-secondary hover:text-primary hover:bg-surface-container transition-colors" type="button"><span class="material-symbols-outlined text-xl" data-icon="person_add">person_add</span></button><button aria-label="Mais opções da lista" class="w-9 h-9 flex items-center justify-center rounded-lg text-secondary hover:text-primary hover:bg-surface-container transition-colors" type="button"><span class="material-symbols-outlined text-xl" data-icon="more_vert">more_vert</span></button></div>
+</div>
+</header>
+<!-- Resumo Orçamentário & Métricas de Despensa (Estilo Faixa Tipográfica Editorial) -->
+<section class="px-4 pt-4 pb-3 border-b border-outline-variant bg-surface-container-low/70"><div class="flex justify-between items-baseline mb-2"><div><span class="font-label text-xs uppercase tracking-wider text-secondary">Total calculado</span><div class="font-headline text-3xl font-medium text-primary tabular-nums tracking-tight">R$ 184,30</div></div><div class="text-right"><span class="font-label text-xs uppercase tracking-wider text-secondary">Teto orçado</span><div class="font-body text-sm font-semibold text-on-surface tabular-nums">R$ 250,00</div><p class="text-[11px] text-secondary tabular-nums">Disponível: <span class="text-primary font-medium">R$ 65,70</span></p></div></div><div class="w-full bg-surface-variant h-1.5 rounded-full overflow-hidden my-2"><div class="bg-primary-container h-full rounded-full transition-all duration-300" style="width: 73.7%;"></div></div><div class="flex items-center justify-between text-xs text-secondary mt-2 mb-3"><span class="font-medium text-on-surface flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-full bg-primary-container"></span>8 pendentes · 3 comprados (11 itens)</span><span class="tabular-nums font-medium text-secondary">73% do teto</span></div><div class="grid grid-cols-2 gap-2.5 pt-1"><button class="flex items-center justify-center gap-2 bg-primary-container hover:bg-primary text-on-primary py-2.5 px-3 rounded-lg font-medium text-sm transition-colors active:scale-[0.99]" type="button"><span class="material-symbols-outlined text-lg" data-icon="shopping_basket">shopping_basket</span><span>Modo compra</span></button><button class="flex items-center justify-center gap-2 border border-outline text-on-surface hover:bg-surface-container-highest py-2.5 px-3 rounded-lg font-medium text-sm transition-colors active:scale-[0.99]" type="button"><span class="material-symbols-outlined text-lg text-secondary" data-icon="assignment_turned_in">assignment_turned_in</span><span>Fechar compra</span></button></div></section>
+<!-- Barra de Ferramentas: Busca, Filtros e Ordenação -->
+<section class="px-4 py-3 border-b border-outline-variant/80 bg-background space-y-2.5">
+<!-- Campo de Busca -->
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-secondary text-lg" data-icon="search">search</span>
+<input class="w-full pl-9 pr-8 py-2 text-sm bg-surface-container-lowest border border-outline-variant rounded-lg text-on-surface placeholder:text-secondary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-body" placeholder="Filtrar nesta lista..." type="search"/>
+<button class="absolute right-2.5 text-secondary hover:text-on-surface text-xs" title="Limpar" type="button">
+<span class="material-symbols-outlined text-base" data-icon="cancel">cancel</span>
+</button>
+</div>
+<!-- Chips de Filtro Editorial -->
+<div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+<button class="whitespace-nowrap px-3 py-1.5 rounded-full bg-primary-container text-on-primary font-medium flex items-center gap-1 transition-all" type="button">
+<span>Pendentes</span>
+<span class="text-[11px] opacity-90">(8)</span>
+</button>
+<button class="whitespace-nowrap px-3 py-1.5 rounded-full bg-surface-container-high text-secondary hover:text-on-surface border border-transparent hover:border-outline-variant font-medium transition-all" type="button">
+<span>Todos</span>
+<span class="text-[11px] tabular-nums">(11)</span>
+</button>
+<button class="whitespace-nowrap px-3 py-1.5 rounded-full bg-surface-container-high text-secondary hover:text-on-surface border border-transparent hover:border-outline-variant font-medium transition-all" type="button">
+<span>Comprados</span>
+<span class="text-[11px] tabular-nums">(3)</span>
+</button>
+</div>
+<!-- Controles de Agrupamento e Ordenação em Linha Sutil -->
+<div class="flex items-center justify-between text-xs text-secondary pt-1 border-t border-dashed border-outline-variant/60 font-body"><div class="flex items-center gap-1.5 cursor-pointer hover:text-primary transition-colors"><span class="material-symbols-outlined text-sm" data-icon="category">category</span><span>Todas as categorias</span><span class="material-symbols-outlined text-xs" data-icon="expand_more">expand_more</span></div><div class="flex items-center gap-1.5 cursor-pointer hover:text-primary transition-colors"><span class="material-symbols-outlined text-sm" data-icon="swap_vert">swap_vert</span><span>Ordem de adição</span><span class="material-symbols-outlined text-xs" data-icon="expand_more">expand_more</span></div></div>
+</section>
+<!-- Lista de Itens Operacional -->
+<div class="flex-1 divide-y divide-outline-variant/60">
+<!-- Grupo 1: Pendentes -->
+<div class="bg-background">
+<!-- Subcabeçalho de Seção Editorial -->
+<div class="px-4 py-2 bg-surface-container-low flex items-center justify-between border-y border-outline-variant/60">
+<span class="font-label text-[11px] font-semibold tracking-wider text-secondary uppercase">
+            Pendentes (8 itens)
+          </span>
+<span class="text-xs text-secondary font-medium tabular-nums">Subtotal: R$ 159,10</span>
+</div>
+<ul class="divide-y divide-outline-variant/40">
+<!-- Item 1 -->
+<li class="px-4 py-3 flex items-start gap-3 hover:bg-surface-container-lowest transition-colors">
+<button aria-checked="false" aria-label="Marcar Arroz agulhinha como comprado" class="mt-0.5 w-5 h-5 rounded border border-outline flex items-center justify-center text-transparent hover:border-primary active:scale-90 transition-all bg-surface-container-lowest" role="checkbox" type="button">
+<span class="material-symbols-outlined text-sm font-bold" data-icon="check">check</span>
+</button>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-2">
+<span class="text-sm font-medium text-on-surface leading-tight">Arroz agulhinha tipo 1 5kg</span>
+<span class="text-sm font-semibold text-on-surface tabular-nums">R$ 29,90</span>
+</div>
+<div class="flex items-center justify-between text-xs text-secondary mt-1 tabular-nums">
+<span>1 un · R$ 29,90/un</span>
+<span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 bg-surface-container rounded text-on-surface-variant font-medium">Mercearia</span>
+</div>
+</div>
+</li>
+<!-- Item 2 -->
+<li class="px-4 py-3 flex items-start gap-3 hover:bg-surface-container-lowest transition-colors">
+<button aria-checked="false" aria-label="Marcar Leite pasteurizado" class="mt-0.5 w-5 h-5 rounded border border-outline flex items-center justify-center text-transparent hover:border-primary active:scale-90 transition-all bg-surface-container-lowest" role="checkbox" type="button">
+<span class="material-symbols-outlined text-sm font-bold" data-icon="check">check</span>
+</button>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-2">
+<span class="text-sm font-medium text-on-surface leading-tight">Leite integral pasteurizado tipo A</span>
+<span class="text-sm font-semibold text-on-surface tabular-nums">R$ 13,80</span>
+</div>
+<div class="flex items-center justify-between text-xs text-secondary mt-1 tabular-nums">
+<span>2 un · R$ 6,90/un</span>
+<span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 bg-surface-container rounded text-on-surface-variant font-medium">Laticínios</span>
+</div>
+</div>
+</li>
+<!-- Item 3 -->
+<li class="px-4 py-3 flex items-start gap-3 hover:bg-surface-container-lowest transition-colors">
+<button aria-checked="false" aria-label="Marcar Banana prata" class="mt-0.5 w-5 h-5 rounded border border-outline flex items-center justify-center text-transparent hover:border-primary active:scale-90 transition-all bg-surface-container-lowest" role="checkbox" type="button">
+<span class="material-symbols-outlined text-sm font-bold" data-icon="check">check</span>
+</button>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-2">
+<span class="text-sm font-medium text-on-surface leading-tight">Banana prata madura</span>
+<span class="text-sm font-semibold text-on-surface tabular-nums">R$ 10,20</span>
+</div>
+<div class="flex items-center justify-between text-xs text-secondary mt-1 tabular-nums">
+<span>1,2 kg · R$ 8,50/kg</span>
+<span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 bg-secondary-container rounded text-on-secondary-fixed-variant font-medium">Hortifrúti</span>
+</div>
+</div>
+</li>
+<!-- Item 4 -->
+<li class="px-4 py-3 flex items-start gap-3 hover:bg-surface-container-lowest transition-colors">
+<button aria-checked="false" aria-label="Marcar Azeite de oliva" class="mt-0.5 w-5 h-5 rounded border border-outline flex items-center justify-center text-transparent hover:border-primary active:scale-90 transition-all bg-surface-container-lowest" role="checkbox" type="button">
+<span class="material-symbols-outlined text-sm font-bold" data-icon="check">check</span>
+</button>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-2">
+<span class="text-sm font-medium text-on-surface leading-tight">Azeite de oliva extravirgem 500ml</span>
+<span class="text-sm font-semibold text-on-surface tabular-nums">R$ 38,90</span>
+</div>
+<div class="flex items-center justify-between text-xs text-secondary mt-1 tabular-nums">
+<span>1 un · R$ 38,90/un</span>
+<span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 bg-surface-container rounded text-on-surface-variant font-medium">Mercearia</span>
+</div>
+</div>
+</li>
+<!-- Item 5 -->
+<li class="px-4 py-3 flex items-start gap-3 hover:bg-surface-container-lowest transition-colors">
+<button aria-checked="false" aria-label="Marcar Café torrado" class="mt-0.5 w-5 h-5 rounded border border-outline flex items-center justify-center text-transparent hover:border-primary active:scale-90 transition-all bg-surface-container-lowest" role="checkbox" type="button">
+<span class="material-symbols-outlined text-sm font-bold" data-icon="check">check</span>
+</button>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-2">
+<span class="text-sm font-medium text-on-surface leading-tight">Café torrado e moído 500g</span>
+<span class="text-sm font-semibold text-on-surface tabular-nums">R$ 49,80</span>
+</div>
+<div class="flex items-center justify-between text-xs text-secondary mt-1 tabular-nums">
+<span>2 un · R$ 24,90/un</span>
+<span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 bg-surface-container rounded text-on-surface-variant font-medium">Mercearia</span>
+</div>
+</div>
+</li>
+<!-- Item 6 -->
+<li class="px-4 py-3 flex items-start gap-3 hover:bg-surface-container-lowest transition-colors">
+<button aria-checked="false" aria-label="Marcar Pão artesanal" class="mt-0.5 w-5 h-5 rounded border border-outline flex items-center justify-center text-transparent hover:border-primary active:scale-90 transition-all bg-surface-container-lowest" role="checkbox" type="button">
+<span class="material-symbols-outlined text-sm font-bold" data-icon="check">check</span>
+</button>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-2">
+<span class="text-sm font-medium text-on-surface leading-tight">Pão de fermentação natural</span>
+<span class="text-sm font-semibold text-on-surface tabular-nums">R$ 16,50</span>
+</div>
+<div class="flex items-center justify-between text-xs text-secondary mt-1 tabular-nums">
+<span>1 un · R$ 16,50/un</span>
+<span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 bg-surface-container rounded text-on-surface-variant font-medium">Padaria</span>
+</div>
+</div>
+</li>
+<!-- Item 7 -->
+<li class="px-4 py-3 flex items-start gap-3 hover:bg-surface-container-lowest transition-colors">
+<button aria-checked="false" aria-label="Marcar Tomate italiano" class="mt-0.5 w-5 h-5 rounded border border-outline flex items-center justify-center text-transparent hover:border-primary active:scale-90 transition-all bg-surface-container-lowest" role="checkbox" type="button">
+<span class="material-symbols-outlined text-sm font-bold" data-icon="check">check</span>
+</button>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-2">
+<span class="text-sm font-medium text-on-surface leading-tight">Tomate italiano selecionado</span>
+<span class="text-sm font-semibold text-on-surface tabular-nums">R$ 6,80</span>
+</div>
+<div class="flex items-center justify-between text-xs text-secondary mt-1 tabular-nums">
+<span>0,8 kg · R$ 8,50/kg</span>
+<span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 bg-secondary-container rounded text-on-secondary-fixed-variant font-medium">Hortifrúti</span>
+</div>
+</div>
+</li>
+<!-- Item 8 -->
+<li class="px-4 py-3 flex items-start gap-3 hover:bg-surface-container-lowest transition-colors">
+<button aria-checked="false" aria-label="Marcar Queijo minas frescal" class="mt-0.5 w-5 h-5 rounded border border-outline flex items-center justify-center text-transparent hover:border-primary active:scale-90 transition-all bg-surface-container-lowest" role="checkbox" type="button">
+<span class="material-symbols-outlined text-sm font-bold" data-icon="check">check</span>
+</button>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-2">
+<span class="text-sm font-medium text-on-surface leading-tight">Queijo minas frescal artesanal</span>
+<span class="text-sm font-semibold text-on-surface tabular-nums">R$ 13,20</span>
+</div>
+<div class="flex items-center justify-between text-xs text-secondary mt-1 tabular-nums">
+<span>1 un (300g) · R$ 13,20/un</span>
+<span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 bg-surface-container rounded text-on-surface-variant font-medium">Laticínios</span>
+</div>
+</div>
+</li>
+</ul>
+</div>
+<!-- Grupo 2: Comprados (Itens confirmados no carrinho) -->
+<div class="bg-surface-container-low/40">
+<!-- Subcabeçalho de Seção Comprados -->
+<div class="px-4 py-2 bg-surface-container flex items-center justify-between border-y border-outline-variant/60">
+<span class="font-label text-[11px] font-semibold tracking-wider text-secondary uppercase flex items-center gap-1.5">
+<span class="material-symbols-outlined text-sm text-primary" data-icon="done_all">done_all</span>
+            Comprados (3 itens)
+          </span>
+<span class="text-xs text-secondary font-medium tabular-nums">Concluído: R$ 25,20</span>
+</div>
+<ul class="divide-y divide-outline-variant/30">
+<!-- Comprado 1 -->
+<li class="px-4 py-2.5 flex items-start gap-3 opacity-70 bg-surface/50">
+<div class="mt-0.5 w-5 h-5 rounded bg-primary-container text-on-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-sm font-bold" data-icon="check">check</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-2">
+<span class="text-sm font-medium text-secondary line-through leading-tight">Ovos caipiras (dúzia)</span>
+<span class="text-sm font-medium text-secondary line-through tabular-nums">R$ 14,00</span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-secondary/80 mt-0.5">
+<span>1 un · No carrinho</span>
+<span class="text-[10px] uppercase">Hortifrúti</span>
+</div>
+</div>
+</li>
+<!-- Comprado 2 -->
+<li class="px-4 py-2.5 flex items-start gap-3 opacity-70 bg-surface/50">
+<div class="mt-0.5 w-5 h-5 rounded bg-primary-container text-on-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-sm font-bold" data-icon="check">check</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-2">
+<span class="text-sm font-medium text-secondary line-through leading-tight">Detergente biodegradável 500ml</span>
+<span class="text-sm font-medium text-secondary line-through tabular-nums">R$ 3,80</span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-secondary/80 mt-0.5">
+<span>1 un · No carrinho</span>
+<span class="text-[10px] uppercase">Limpeza</span>
+</div>
+</div>
+</li>
+<!-- Comprado 3 -->
+<li class="px-4 py-2.5 flex items-start gap-3 opacity-70 bg-surface/50">
+<div class="mt-0.5 w-5 h-5 rounded bg-primary-container text-on-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-sm font-bold" data-icon="check">check</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline justify-between gap-2">
+<span class="text-sm font-medium text-secondary line-through leading-tight">Maçã fuji nacional (1kg)</span>
+<span class="text-sm font-medium text-secondary line-through tabular-nums">R$ 7,40</span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-secondary/80 mt-0.5">
+<span>1,0 kg · No carrinho</span>
+<span class="text-[10px] uppercase">Hortifrúti</span>
+</div>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<!-- Barra Flutuante de Ação Rápida de Entrada (Docked sobre o BottomNav) -->
+<aside class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[390px] px-3 pb-3 pt-2 bg-background/95 backdrop-blur-sm border-t border-outline-variant/80 z-40"><div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-1 shadow-sm flex items-center gap-1"><input class="flex-1 bg-transparent px-3 py-2 text-sm text-on-surface placeholder:text-secondary focus:outline-none font-body min-w-0" placeholder="Adicionar item à lista..." type="text"/><button aria-label="Adicionar por voz" class="w-8 h-8 flex items-center justify-center rounded-lg text-secondary hover:text-primary hover:bg-surface-container transition-colors" title="Adicionar por voz" type="button"><span class="material-symbols-outlined text-xl" data-icon="mic">mic</span></button><button aria-label="Ler código de barras" class="w-8 h-8 flex items-center justify-center rounded-lg text-secondary hover:text-primary hover:bg-surface-container transition-colors" title="Ler código" type="button"><span class="material-symbols-outlined text-xl" data-icon="barcode_scanner">barcode_scanner</span></button><button aria-label="Importar cupom fiscal" class="w-8 h-8 flex items-center justify-center rounded-lg text-secondary hover:text-primary hover:bg-surface-container transition-colors" title="Importar cupom" type="button"><span class="material-symbols-outlined text-xl" data-icon="receipt_long">receipt_long</span></button><button aria-label="Adicionar item com detalhes" class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary-container text-on-primary hover:bg-primary transition-all active:scale-95 shrink-0" title="Adicionar item" type="button"><span class="material-symbols-outlined text-xl font-bold" data-icon="add">add</span></button></div></aside>
+<!-- Bottom Navigation Bar (Conforme Shared Component JSON: 'Listas' ativo) -->
+</main>
+<script>
+    // Microinterações leves e feedback de toque
+    document.querySelectorAll('[role="checkbox"]').forEach(button => {
+      button.addEventListener('click', function(e) {
+        e.preventDefault();
+        const icon = this.querySelector('.material-symbols-outlined');
+        const isChecked = this.getAttribute('aria-checked') === 'true';
+        if (isChecked) {
+          this.setAttribute('aria-checked', 'false');
+          this.classList.remove('bg-primary-container', 'text-on-primary');
+          this.classList.add('bg-surface-container-lowest', 'text-transparent');
+        } else {
+          this.setAttribute('aria-checked', 'true');
+          this.classList.add('bg-primary-container', 'text-on-primary');
+          this.classList.remove('bg-surface-container-lowest', 'text-transparent');
+        }
+      });
+    });
+  </script>
+</body></html>

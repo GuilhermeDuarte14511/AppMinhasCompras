@@ -21,7 +21,7 @@ class SharedMetaChip extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -57,7 +57,7 @@ class SharedActionChip extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(4),
         onTap: onTap,
         child: Ink(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -65,7 +65,7 @@ class SharedActionChip extends StatelessWidget {
             color: isEnabled
                 ? colorScheme.surface.withValues(alpha: 0.75)
                 : colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(4),
             border: Border.all(
               color: colorScheme.outlineVariant.withValues(alpha: 0.35),
             ),
@@ -124,7 +124,7 @@ class SharedHeaderSectionCard extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: colorScheme.surface,
-          borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+          borderRadius: BorderRadius.circular(4),
           border: Border.all(
             color: colorScheme.outlineVariant.withValues(alpha: 0.54),
           ),
@@ -132,7 +132,7 @@ class SharedHeaderSectionCard extends StatelessWidget {
         child: Column(
           children: [
             InkWell(
-              borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+              borderRadius: BorderRadius.circular(4),
               onTap: onToggle,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
@@ -145,7 +145,7 @@ class SharedHeaderSectionCard extends StatelessWidget {
                           Text(
                             title,
                             style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(fontWeight: FontWeight.w800),
+                                ?.copyWith(fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 3),
                           Text(
@@ -212,8 +212,8 @@ class SharedMetricCard extends StatelessWidget {
         constraints: const BoxConstraints(minWidth: 138),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.52),
-            borderRadius: BorderRadius.circular(16),
+            color: colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(4),
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
@@ -234,7 +234,7 @@ class SharedMetricCard extends StatelessWidget {
                   value,
                   style: Theme.of(
                     context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -260,7 +260,7 @@ class SharedBalanceRow extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(4),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -295,7 +295,7 @@ class SharedBalanceRow extends StatelessWidget {
                 formatCurrency(entry.value),
                 style: Theme.of(
                   context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
               ),
             ],
           ),

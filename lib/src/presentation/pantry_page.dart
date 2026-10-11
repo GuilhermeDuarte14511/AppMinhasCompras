@@ -9,7 +9,7 @@ import '../domain/models_and_utils.dart';
 import '../domain/pantry.dart';
 import 'dialogs_and_sheets.dart';
 import 'extensions/classification_ui_extensions.dart';
-import 'launch.dart';
+import 'theme/editorial_workspace_theme.dart';
 import 'theme/app_tokens.dart';
 import 'utils/app_modal.dart';
 import 'utils/app_toast.dart';
@@ -105,6 +105,11 @@ class _PantryPageState extends State<PantryPage> {
     if (selected == null || selected == item.status) {
       return;
     }
+    await _setStatus(item, selected);
+  }
+
+  Future<void> _setStatus(PantryItem item, PantryStockStatus selected) async {
+    if (selected == item.status) return;
     await widget.store.setPantryStatus(item.id, selected);
     if (!mounted) {
       return;
@@ -151,16 +156,20 @@ class _PantryPageState extends State<PantryPage> {
       return openLists.single;
     }
     if (openLists.isEmpty) {
-      final name = await showListNameDialog(
+      final setup = await showListSetupDialog(
         context,
         title: 'Criar lista para reposição',
         confirmLabel: 'Criar lista',
         initialValue: 'Reposição da despensa',
       );
-      if (!mounted || name == null) {
+      if (!mounted || setup == null) {
         return null;
       }
-      return widget.store.createList(name: name);
+      return widget.store.createList(
+        name: setup.name,
+        budget: setup.budget,
+        paymentBalances: setup.paymentBalances,
+      );
     }
     return showAppModalBottomSheet<ShoppingListModel>(
       context: context,
@@ -228,120 +237,204 @@ class _PantryPageState extends State<PantryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Despensa')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _addFromCatalog,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Adicionar produto'),
-      ),
-      body: AppGradientScene(
-        child: SafeArea(
-          child: AnimatedBuilder(
-            animation: widget.store,
-            builder: (context, _) {
-              final items = widget.store.pantryItems;
-              final visible = _visibleItems(items);
-              return CustomScrollView(
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                    sliver: SliverToBoxAdapter(
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 780),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              _PantryOverview(
-                                items: items,
-                                selectedStatus: _statusFilter,
-                                onStatusSelected: (status) {
-                                  setState(() {
-                                    _statusFilter = _statusFilter == status
-                                        ? null
-                                        : status;
-                                  });
-                                },
-                              ),
-                              const SizedBox(height: AppTokens.spaceMd),
-                              TextField(
-                                controller: _searchController,
-                                decoration: InputDecoration(
-                                  prefixIcon: const Icon(Icons.search_rounded),
-                                  hintText: 'Buscar produto na despensa',
-                                  suffixIcon:
-                                      _searchController.text.trim().isEmpty
-                                      ? null
-                                      : IconButton(
-                                          tooltip: 'Limpar busca',
-                                          onPressed: _searchController.clear,
-                                          icon: const Icon(Icons.close_rounded),
-                                        ),
+    return Theme(
+      data: editorialWorkspaceTheme(Theme.of(context)),
+      child: Builder(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: const Text('Despensa')),
+          body: SafeArea(
+            child: AnimatedBuilder(
+              animation: widget.store,
+              builder: (context, _) {
+                final items = widget.store.pantryItems;
+                final visible = _visibleItems(items);
+                return CustomScrollView(
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                      sliver: SliverToBoxAdapter(
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 600),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _PantryOverview(
+                                  items: items,
+                                  selectedStatus: _statusFilter,
+                                  onStatusSelected: (status) {
+                                    setState(() {
+                                      _statusFilter = _statusFilter == status
+                                          ? null
+                                          : status;
+                                    });
+                                  },
                                 ),
-                              ),
-                              const SizedBox(height: AppTokens.spaceMd),
-                              _PantryResultsHeader(
-                                visibleCount: visible.length,
-                                totalCount: items.length,
-                                hasFilter:
-                                    _statusFilter != null ||
-                                    _searchController.text.trim().isNotEmpty,
-                                onClearFilters: () {
-                                  _searchController.clear();
-                                  setState(() {
-                                    _statusFilter = null;
-                                  });
-                                },
-                              ),
-                            ],
+                                const SizedBox(height: AppTokens.spaceMd),
+                                TextField(
+                                  controller: _searchController,
+                                  decoration: InputDecoration(
+                                    prefixIcon: const Icon(
+                                      Icons.search_rounded,
+                                    ),
+                                    hintText: 'Buscar produto na despensa',
+                                    suffixIcon:
+                                        _searchController.text.trim().isEmpty
+                                        ? null
+                                        : IconButton(
+                                            tooltip: 'Limpar busca',
+                                            onPressed: _searchController.clear,
+                                            icon: const Icon(
+                                              Icons.close_rounded,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    children: [
+                                      ChoiceChip(
+                                        label: const Text('Todos'),
+                                        selected: _statusFilter == null,
+                                        onSelected: (_) => setState(
+                                          () => _statusFilter = null,
+                                        ),
+                                      ),
+                                      for (final status
+                                          in PantryStockStatus.values) ...[
+                                        const SizedBox(width: 6),
+                                        ChoiceChip(
+                                          label: Text(status.label),
+                                          selected: _statusFilter == status,
+                                          onSelected: (_) => setState(
+                                            () => _statusFilter = status,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: FilledButton.icon(
+                                    onPressed: _addFromCatalog,
+                                    icon: const Icon(
+                                      Icons.add_rounded,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Adicionar produto'),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                _PantryResultsHeader(
+                                  visibleCount: visible.length,
+                                  totalCount: items.length,
+                                  hasFilter:
+                                      _statusFilter != null ||
+                                      _searchController.text.trim().isNotEmpty,
+                                  onClearFilters: () {
+                                    _searchController.clear();
+                                    setState(() {
+                                      _statusFilter = null;
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  if (visible.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: _PantryEmptyState(
-                        hasItems: items.isNotEmpty,
-                        onAdd: _addFromCatalog,
-                        onClearFilters: () {
-                          _searchController.clear();
-                          setState(() {
-                            _statusFilter = null;
-                          });
-                        },
-                      ),
-                    )
-                  else
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 112),
-                      sliver: SliverList.separated(
-                        itemCount: visible.length,
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(height: AppTokens.spaceSm),
-                        itemBuilder: (context, index) {
-                          final item = visible[index];
-                          return Center(
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 780),
-                              child: _PantryItemRow(
-                                item: item,
-                                onStatusTap: () => _chooseStatus(item),
-                                onAddToList: item.needsRestock
-                                    ? () => _addToShoppingList(item)
-                                    : null,
-                                onRemove: () => _removeItem(item),
+                    if (visible.isEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: _PantryEmptyState(
+                          hasItems: items.isNotEmpty,
+                          onAdd: _addFromCatalog,
+                          onClearFilters: () {
+                            _searchController.clear();
+                            setState(() {
+                              _statusFilter = null;
+                            });
+                          },
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                        sliver: SliverList.separated(
+                          itemCount: visible.length,
+                          separatorBuilder: (_, _) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final item = visible[index];
+                            return Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 600,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    if (index == 0 ||
+                                        visible[index - 1].status !=
+                                            item.status)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 20,
+                                          bottom: 8,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              item.status.icon,
+                                              size: 16,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                item.status.label,
+                                                style: Theme.of(
+                                                  context,
+                                                ).textTheme.titleMedium,
+                                              ),
+                                            ),
+                                            Text(
+                                              '${visible.where((entry) => entry.status == item.status).length} itens',
+                                              style: Theme.of(
+                                                context,
+                                              ).textTheme.bodySmall,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    _PantryItemRow(
+                                      item: item,
+                                      onStatusSelected: (status) =>
+                                          _setStatus(item, status),
+                                      onStatusTap: () => _chooseStatus(item),
+                                      onAddToList: item.needsRestock
+                                          ? () => _addToShoppingList(item)
+                                          : null,
+                                      onRemove: () => _removeItem(item),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          );
-                        },
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                ],
-              );
-            },
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -364,55 +457,38 @@ class _PantryOverview extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final attentionCount = items.where((item) => item.needsRestock).length;
-    return DecoratedBox(
+    return Container(
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: AppTokens.radius(AppTokens.radiusXl),
+        color: colorScheme.surfaceContainerLowest,
         border: Border.all(color: colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(4),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppTokens.spaceLg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              attentionCount == 0
-                  ? 'Tudo em ordem'
-                  : '$attentionCount para repor',
-              style: textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: AppTokens.spaceXs),
-            Text(
-              attentionCount == 0
-                  ? 'Atualize o estado quando algum produto estiver acabando.'
-                  : 'Revise o que está acabando ou acabou antes da próxima compra.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: AppTokens.spaceLg),
-            Row(
-              children: PantryStockStatus.values
-                  .map((status) {
-                    final count = items
-                        .where((item) => item.status == status)
-                        .length;
-                    return Expanded(
-                      child: _PantryStatusMetric(
-                        status: status,
-                        count: count,
-                        selected: selectedStatus == status,
-                        onTap: () => onStatusSelected(status),
-                      ),
-                    );
-                  })
-                  .toList(growable: false),
-            ),
-          ],
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('ESTADO DOS ALIMENTOS', style: textTheme.labelSmall),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              for (final status in PantryStockStatus.values)
+                Expanded(
+                  child: _PantryStatusMetric(
+                    status: status,
+                    count: items.where((item) => item.status == status).length,
+                    selected: selectedStatus == status,
+                    onTap: () => onStatusSelected(status),
+                  ),
+                ),
+            ],
+          ),
+          const Divider(height: 20),
+          Text(
+            'Atualize o estado antes da próxima compra.',
+            style: textTheme.bodySmall,
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
@@ -439,25 +515,17 @@ class _PantryStatusMetric extends StatelessWidget {
       selected: selected,
       label: '${status.label}: $count',
       child: InkWell(
-        borderRadius: AppTokens.radius(AppTokens.radiusLg),
+        borderRadius: BorderRadius.circular(4),
         onTap: onTap,
         child: AnimatedContainer(
           duration: AppTokens.motionFast,
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
           decoration: BoxDecoration(
             color: selected ? colorScheme.primaryContainer : Colors.transparent,
-            borderRadius: AppTokens.radius(AppTokens.radiusLg),
+            borderRadius: BorderRadius.circular(4),
           ),
           child: Column(
             children: [
-              Icon(
-                status.icon,
-                size: 20,
-                color: selected
-                    ? colorScheme.onPrimaryContainer
-                    : colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(height: 4),
               Text(
                 '$count',
                 style: Theme.of(
@@ -522,108 +590,102 @@ class _PantryItemRow extends StatelessWidget {
   const _PantryItemRow({
     required this.item,
     required this.onStatusTap,
+    required this.onStatusSelected,
     required this.onAddToList,
     required this.onRemove,
   });
-
   final PantryItem item;
   final VoidCallback onStatusTap;
+  final ValueChanged<PantryStockStatus> onStatusSelected;
   final VoidCallback? onAddToList;
   final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final details = <String>[
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final details = [
       item.category.label,
       if ((item.unitPrice ?? 0) > 0) formatCurrency(item.unitPrice!),
       if (item.lastPurchasedAt != null)
         'Comprado em ${formatShortDate(item.lastPurchasedAt!)}',
     ];
-    return Material(
-      color: colorScheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: AppTokens.radius(AppTokens.radiusLg),
-        side: BorderSide(color: colorScheme.outlineVariant),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 6, 12),
-        child: Row(
-          children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: colorScheme.primaryContainer.withValues(alpha: 0.6),
-                borderRadius: AppTokens.radius(AppTokens.radiusMd),
-              ),
-              child: SizedBox(
-                width: 44,
-                height: 44,
-                child: Icon(
-                  item.category.icon,
-                  color: colorScheme.onPrimaryContainer,
+    return Padding(
+      key: ValueKey('pantry_item_${item.id}'),
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.name,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(details.join(' · '), style: theme.textTheme.bodySmall),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(width: AppTokens.spaceMd),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    details.join(' • '),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: AppTokens.spaceSm),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 6,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      ActionChip(
-                        avatar: Icon(item.status.icon, size: 17),
-                        label: Text(item.status.label),
-                        onPressed: onStatusTap,
-                      ),
-                      if (onAddToList != null)
-                        TextButton.icon(
-                          onPressed: onAddToList,
-                          icon: const Icon(
-                            Icons.playlist_add_rounded,
-                            size: 19,
-                          ),
-                          label: const Text('Adicionar à lista'),
-                        ),
-                    ],
-                  ),
-                ],
+              IconButton(
+                tooltip: 'Remover ${item.name} da despensa',
+                onPressed: onRemove,
+                icon: const Icon(Icons.delete_outline_rounded, size: 18),
               ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: colors.surfaceContainerLow,
+              border: Border.all(color: colors.outlineVariant),
+              borderRadius: BorderRadius.circular(4),
             ),
-            PopupMenuButton<String>(
-              tooltip: 'Mais opções',
-              onSelected: (value) {
-                if (value == 'remove') {
-                  onRemove();
-                }
-              },
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'remove', child: Text('Remover')),
+            child: Wrap(
+              spacing: 3,
+              runSpacing: 3,
+              children: [
+                for (final status in PantryStockStatus.values)
+                  TextButton(
+                    key: ValueKey('pantry_status_${item.id}_${status.key}'),
+                    onLongPress: onStatusTap,
+                    onPressed: () => onStatusSelected(status),
+                    style: TextButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      minimumSize: const Size(0, 40),
+                      padding: const EdgeInsets.symmetric(horizontal: 9),
+                      backgroundColor: item.status == status
+                          ? colors.surfaceContainerLowest
+                          : Colors.transparent,
+                      foregroundColor: item.status == status
+                          ? colors.primary
+                          : colors.onSurfaceVariant,
+                    ),
+                    child: Text(status.label),
+                  ),
               ],
             ),
+          ),
+          if (onAddToList != null) ...[
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: onAddToList,
+              icon: const Icon(Icons.playlist_add_rounded, size: 16),
+              label: const Text('Adicionar à lista'),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -698,30 +760,33 @@ class _PantryStatusSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Como está ${item.name}?',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: AppTokens.spaceMd),
-          for (final status in PantryStockStatus.values)
-            ListTile(
-              leading: Icon(status.icon),
-              title: Text(status.label),
-              subtitle: Text(status.description),
-              trailing: item.status == status
-                  ? const Icon(Icons.check_rounded)
-                  : null,
-              onTap: () => Navigator.pop(context, status),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Como está ${item.name}?',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
-        ],
+            const SizedBox(height: AppTokens.spaceMd),
+            for (final status in PantryStockStatus.values)
+              ListTile(
+                leading: Icon(status.icon),
+                title: Text(status.label),
+                subtitle: Text(status.description),
+                trailing: item.status == status
+                    ? const Icon(Icons.check_rounded)
+                    : null,
+                onTap: () => Navigator.pop(context, status),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -778,65 +843,71 @@ class _PantryCatalogPickerState extends State<_PantryCatalogPicker> {
             (a, b) => normalizeQuery(a.name).compareTo(normalizeQuery(b.name)),
           );
 
-    return FractionallySizedBox(
-      heightFactor: 0.88,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Adicionar do catálogo',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: AppTokens.spaceMd),
-            TextField(
-              controller: _controller,
-              autofocus: true,
-              onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search_rounded),
-                hintText: 'Buscar produto no catálogo',
+    return SafeArea(
+      top: false,
+      child: FractionallySizedBox(
+        heightFactor: 0.88,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Adicionar do catálogo',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
               ),
-            ),
-            const SizedBox(height: AppTokens.spaceMd),
-            Expanded(
-              child: products.isEmpty
-                  ? Center(
-                      child: Text(
-                        widget.products.isEmpty
-                            ? 'O catálogo ainda está vazio. Finalize uma compra para salvar produtos automaticamente.'
-                            : 'Todos os produtos encontrados já estão na despensa.',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+              const SizedBox(height: AppTokens.spaceMd),
+              TextField(
+                controller: _controller,
+                autofocus: true,
+                onChanged: (_) => setState(() {}),
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.search_rounded),
+                  hintText: 'Buscar produto no catálogo',
+                ),
+              ),
+              const SizedBox(height: AppTokens.spaceMd),
+              Expanded(
+                child: products.isEmpty
+                    ? Center(
+                        child: Text(
+                          widget.products.isEmpty
+                              ? 'O catálogo ainda está vazio. Finalize uma compra para salvar produtos automaticamente.'
+                              : 'Todos os produtos encontrados já estão na despensa.',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
                         ),
+                      )
+                    : ListView.separated(
+                        itemCount: products.length,
+                        separatorBuilder: (_, _) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final product = products[index];
+                          return ListTile(
+                            leading: Icon(product.category.icon),
+                            title: Text(product.name),
+                            subtitle: Text(
+                              [
+                                product.category.label,
+                                if ((product.unitPrice ?? 0) > 0)
+                                  formatCurrency(product.unitPrice!),
+                              ].join(' • '),
+                            ),
+                            trailing: const Icon(Icons.add_rounded),
+                            onTap: () => Navigator.pop(context, product),
+                          );
+                        },
                       ),
-                    )
-                  : ListView.separated(
-                      itemCount: products.length,
-                      separatorBuilder: (_, _) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final product = products[index];
-                        return ListTile(
-                          leading: Icon(product.category.icon),
-                          title: Text(product.name),
-                          subtitle: Text(
-                            [
-                              product.category.label,
-                              if ((product.unitPrice ?? 0) > 0)
-                                formatCurrency(product.unitPrice!),
-                            ].join(' • '),
-                          ),
-                          trailing: const Icon(Icons.add_rounded),
-                          onTap: () => Navigator.pop(context, product),
-                        );
-                      },
-                    ),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -850,30 +921,33 @@ class _OpenListPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Adicionar a qual lista?',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: AppTokens.spaceSm),
-          ...lists.map(
-            (list) => ListTile(
-              leading: const Icon(Icons.list_alt_rounded),
-              title: Text(list.name),
-              subtitle: Text(
-                formatCountLabel(list.items.length, 'produto', 'produtos'),
-              ),
-              onTap: () => Navigator.pop(context, list),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Adicionar a qual lista?',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
-          ),
-        ],
+            const SizedBox(height: AppTokens.spaceSm),
+            ...lists.map(
+              (list) => ListTile(
+                leading: const Icon(Icons.list_alt_rounded),
+                title: Text(list.name),
+                subtitle: Text(
+                  formatCountLabel(list.items.length, 'produto', 'produtos'),
+                ),
+                onTap: () => Navigator.pop(context, list),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

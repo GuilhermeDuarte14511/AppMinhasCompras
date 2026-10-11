@@ -63,6 +63,9 @@ Valor total R\$ 40,00
       await tester.tap(find.byType(Checkbox).first);
       await tester.pump();
 
+      await tester.tap(find.text('Editar').first);
+      await tester.pump();
+
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Produto').first,
         'Arroz integral',

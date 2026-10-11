@@ -12,11 +12,9 @@ void main() {
       find.byKey(const ValueKey('splash-animation-stage')),
       findsOneWidget,
     );
-    expect(find.byKey(const ValueKey('splash-shopping-bag')), findsOneWidget);
-    expect(find.byKey(const ValueKey('splash-checklist')), findsOneWidget);
-    expect(find.text('Minha Lista de Compras'), findsOneWidget);
-    expect(find.text('Organize suas compras de forma simples'), findsOneWidget);
-    expect(find.text('Abrindo painel'), findsOneWidget);
+    expect(find.byKey(const ValueKey('splash-notebook')), findsOneWidget);
+    expect(find.text('Minhas Compras'), findsOneWidget);
+    expect(find.text('Preparando sua lista...'), findsOneWidget);
   });
 
   testWidgets('SplashPage updates copy while local data is syncing', (
@@ -59,6 +57,6 @@ void main() {
     );
 
     expect(find.byType(SplashPage), findsOneWidget);
-    expect(find.text('Minha Lista de Compras'), findsOneWidget);
+    expect(find.text('Minhas Compras'), findsOneWidget);
   });
 }

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Opções — Minhas Compras</title>
+<!-- Google Fonts: Newsreader & Public Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-surface-variant": "#424843",
+            "on-secondary": "#ffffff",
+            "on-primary": "#ffffff",
+            "on-tertiary-container": "#f2b6ba",
+            "secondary-fixed": "#e0e5cf",
+            "on-background": "#1b1c18",
+            "surface-container-high": "#eae8e2",
+            "on-tertiary-fixed": "#321015",
+            "on-error-container": "#93000a",
+            "inverse-surface": "#30312d",
+            "surface": "#fcfbf7",
+            "secondary-container": "#e0e5cf",
+            "inverse-primary": "#a9d0b4",
+            "on-primary-fixed": "#002110",
+            "surface-container-lowest": "#ffffff",
+            "error-container": "#ffdad6",
+            "surface-container": "#f4f2ec",
+            "on-secondary-container": "#616655",
+            "on-primary-container": "#a7ceb2",
+            "tertiary-fixed": "#ffdadb",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "on-secondary-fixed": "#191d10",
+            "primary-fixed": "#c4eccf",
+            "on-secondary-fixed-variant": "#444939",
+            "surface-container-highest": "#e4e2dd",
+            "outline": "#727972",
+            "error": "#ba1a1a",
+            "primary-fixed-dim": "#a9d0b4",
+            "surface-container-low": "#f7f5ef",
+            "background": "#fcfbf7",
+            "primary-container": "#365943",
+            "inverse-on-surface": "#f3f1eb",
+            "outline-variant": "#c1c8c1",
+            "on-primary-fixed-variant": "#2b4e39",
+            "tertiary": "#582f33",
+            "tertiary-container": "#724549",
+            "surface-tint": "#43664f",
+            "surface-bright": "#fcfbf7",
+            "secondary-fixed-dim": "#c4c9b4",
+            "on-surface": "#1b1c18",
+            "primary": "#1f412d",
+            "surface-dim": "#dcdad4",
+            "surface-variant": "#e4e2dd",
+            "secondary": "#5b604f",
+            "on-tertiary": "#ffffff",
+            "on-error": "#ffffff",
+            "on-tertiary-fixed-variant": "#663b3f"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      font-size: 20px;
+      line-height: 1;
+    }
+    body {
+      background-color: #fcfbf7;
+      color: #1b1c18;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
+      -webkit-font-smoothing: antialiased;
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-secondary-fixed selection:text-on-secondary-fixed min-h-screen flex justify-center">
+<main class="w-full max-w-[390px] min-h-screen bg-surface flex flex-col relative pb-8">
+<!-- TopAppBar conforme Flutter / Mercado Editorial -->
+<header class="sticky top-0 left-0 w-full z-50 flex items-center justify-between px-4 h-14 bg-surface border-b border-outline-variant/60">
+<div class="flex items-center gap-3">
+<button aria-label="Voltar" class="w-10 h-10 -ml-2 inline-flex items-center justify-center text-primary hover:bg-surface-container-high transition-colors duration-150 active:opacity-80 rounded-full" type="button">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-headline text-2xl font-normal text-on-surface">Opções</h1>
+</div>
+</header>
+<div class="flex-1 px-5 pt-6 pb-6 flex flex-col gap-8">
+<!-- 1. Seção Conta -->
+<section aria-labelledby="sec-conta">
+<div class="border-b border-outline-variant/70 pb-2 mb-1">
+<h2 class="text-xs font-semibold tracking-wider text-secondary uppercase" id="sec-conta">Conta</h2>
+</div>
+<ul class="divide-y divide-outline-variant/50">
+<li>
+<button class="w-full py-3.5 flex items-center justify-between text-left hover:bg-surface-container-low transition-colors duration-150 active:opacity-80" type="button">
+<span class="text-[15px] font-normal text-on-surface">Meus dados</span>
+<span class="material-symbols-outlined text-outline" data-icon="chevron_right">chevron_right</span>
+</button>
+</li>
+<li>
+<button class="w-full py-3.5 flex items-center justify-between text-left hover:bg-surface-container-low transition-colors duration-150 active:opacity-80 text-error" type="button">
+<span class="text-[15px] font-medium">Deslogar</span>
+<span class="material-symbols-outlined text-error" data-icon="logout">logout</span>
+</button>
+</li>
+</ul>
+</section>
+<!-- 2. Seção Aparência -->
+<section aria-labelledby="sec-aparencia">
+<div class="border-b border-outline-variant/70 pb-2 mb-3">
+<h2 class="text-xs font-semibold tracking-wider text-secondary uppercase" id="sec-aparencia">Aparência</h2>
+</div>
+<div>
+<div class="flex p-1 bg-surface-container border border-outline-variant/70 rounded">
+<button class="flex-1 py-2 text-xs font-medium rounded transition-all duration-150 bg-surface text-primary shadow-sm flex items-center justify-center gap-1.5" id="theme-light-btn" onclick="selectTheme('light')" type="button">
+<span class="material-symbols-outlined text-base" data-icon="light_mode">light_mode</span>
+<span>Claro</span>
+</button>
+<button class="flex-1 py-2 text-xs font-medium rounded transition-all duration-150 text-secondary hover:text-on-surface flex items-center justify-center gap-1.5" id="theme-dark-btn" onclick="selectTheme('dark')" type="button">
+<span class="material-symbols-outlined text-base" data-icon="dark_mode">dark_mode</span>
+<span>Escuro</span>
+</button>
+</div>
+</div>
+</section>
+<!-- 3. Seção Sincronização -->
+<section aria-labelledby="sec-sincronizacao">
+<div class="border-b border-outline-variant/70 pb-2 mb-1 flex items-baseline justify-between">
+<h2 class="text-xs font-semibold tracking-wider text-secondary uppercase" id="sec-sincronizacao">Sincronização</h2>
+<span class="text-xs font-normal text-secondary tabular-nums">Sincronizado há 2 min</span>
+</div>
+<ul class="divide-y divide-outline-variant/50">
+<li>
+<button class="w-full py-3.5 flex items-center justify-between text-left hover:bg-surface-container-low transition-colors duration-150 active:opacity-80" type="button">
+<div class="flex flex-col">
+<span class="text-[15px] font-normal text-on-surface">Sincronização e diagnóstico</span>
+<span class="text-xs text-secondary mt-0.5">Histórico de transferências e integridade</span>
+</div>
+<span class="material-symbols-outlined text-outline" data-icon="chevron_right">chevron_right</span>
+</button>
+</li>
+</ul>
+</section>
+<!-- 4. Seção Catálogo -->
+<section aria-labelledby="sec-catalogo">
+<div class="border-b border-outline-variant/70 pb-2 mb-1">
+<h2 class="text-xs font-semibold tracking-wider text-secondary uppercase" id="sec-catalogo">Catálogo</h2>
+</div>
+<div class="py-3.5 flex items-center justify-between gap-4">
+<div class="flex flex-col pr-2">
+<label class="text-[15px] font-normal text-on-surface cursor-pointer select-none" for="toggle-catalogo">
+              Atualizar meu catálogo como dono
+            </label>
+<span class="text-xs text-secondary mt-0.5">Aplica edições e novos itens globalmente</span>
+</div>
+<!-- Toggle switch -->
+<label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+<input checked="" class="sr-only peer" id="toggle-catalogo" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest border border-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface-container-lowest peer-checked:after:bg-on-primary after:border-outline-variant after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container peer-checked:border-primary-container"></div>
+</label>
+</div>
+</section>
+<!-- 5. Seção Integrações -->
+<section aria-labelledby="sec-integracoes">
+<div class="border-b border-outline-variant/70 pb-2 mb-1">
+<h2 class="text-xs font-semibold tracking-wider text-secondary uppercase" id="sec-integracoes">Integrações</h2>
+</div>
+<ul class="divide-y divide-outline-variant/50">
+<li>
+<button class="w-full py-3.5 flex items-center justify-between text-left hover:bg-surface-container-low transition-colors duration-150 active:opacity-80" type="button">
+<div class="flex items-center gap-2">
+<span class="text-[15px] font-normal text-on-surface">Minhas Finanças</span>
+<span class="text-xs text-secondary font-normal">(Conectado)</span>
+</div>
+<span class="material-symbols-outlined text-outline" data-icon="chevron_right">chevron_right</span>
+</button>
+</li>
+</ul>
+</section>
+<!-- 6. Seção Ajuda e Guia -->
+<section aria-labelledby="sec-ajuda">
+<div class="border-b border-outline-variant/70 pb-2 mb-1">
+<h2 class="text-xs font-semibold tracking-wider text-secondary uppercase" id="sec-ajuda">Ajuda e Guia</h2>
+</div>
+<ul class="divide-y divide-outline-variant/50">
+<li>
+<button class="w-full py-3.5 flex items-center justify-between text-left hover:bg-surface-container-low transition-colors duration-150 active:opacity-80" type="button">
+<span class="text-[15px] font-normal text-on-surface">Rever Onboarding</span>
+<span class="material-symbols-outlined text-outline" data-icon="replay">replay</span>
+</button>
+</li>
+</ul>
+</section>
+</div>
+</main>
+<script>
+    function selectTheme(mode) {
+      const lightBtn = document.getElementById('theme-light-btn');
+      const darkBtn = document.getElementById('theme-dark-btn');
+      
+      if (mode === 'light') {
+        lightBtn.className = 'flex-1 py-2 text-xs font-medium rounded transition-all duration-150 bg-surface text-primary shadow-sm flex items-center justify-center gap-1.5';
+        darkBtn.className = 'flex-1 py-2 text-xs font-medium rounded transition-all duration-150 text-secondary hover:text-on-surface flex items-center justify-center gap-1.5';
+      } else {
+        darkBtn.className = 'flex-1 py-2 text-xs font-medium rounded transition-all duration-150 bg-surface text-primary shadow-sm flex items-center justify-center gap-1.5';
+        lightBtn.className = 'flex-1 py-2 text-xs font-medium rounded transition-all duration-150 text-secondary hover:text-on-surface flex items-center justify-center gap-1.5';
+      }
+    }
+  </script>
+</body></html>

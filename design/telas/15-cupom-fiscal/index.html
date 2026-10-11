@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Importar cupom fiscal — Minhas Compras</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-tint": "#43664f",
+            "on-tertiary-container": "#f2b6ba",
+            "surface-variant": "#e4e2dd",
+            "secondary-fixed": "#e0e5cf",
+            "background": "#fbf9f3",
+            "on-error-container": "#93000a",
+            "error": "#ba1a1a",
+            "inverse-primary": "#a9d0b4",
+            "on-secondary-fixed-variant": "#444939",
+            "on-secondary-fixed": "#191d10",
+            "outline": "#727972",
+            "secondary": "#5b604f",
+            "primary-fixed": "#c4eccf",
+            "surface-container-highest": "#e4e2dd",
+            "secondary-fixed-dim": "#c4c9b4",
+            "on-tertiary": "#ffffff",
+            "secondary-container": "#e0e5cf",
+            "surface-container": "#f0eee8",
+            "outline-variant": "#c1c8c1",
+            "surface-container-low": "#f5f3ed",
+            "on-surface-variant": "#424843",
+            "primary-fixed-dim": "#a9d0b4",
+            "on-surface": "#1b1c18",
+            "on-secondary": "#ffffff",
+            "tertiary-fixed": "#ffdadb",
+            "surface-dim": "#dcdad4",
+            "on-error": "#ffffff",
+            "surface": "#fbf9f3",
+            "tertiary-container": "#724549",
+            "surface-container-lowest": "#ffffff",
+            "surface-bright": "#fbf9f3",
+            "primary": "#1f412d",
+            "error-container": "#ffdad6",
+            "on-background": "#1b1c18",
+            "on-primary-container": "#a7ceb2",
+            "on-tertiary-fixed": "#321015",
+            "on-primary-fixed": "#002110",
+            "on-secondary-container": "#616655",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "inverse-on-surface": "#f3f1eb",
+            "surface-container-high": "#eae8e2",
+            "inverse-surface": "#30312d",
+            "tertiary": "#582f33",
+            "on-primary-fixed-variant": "#2b4e39",
+            "primary-container": "#365943",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "on-primary": "#ffffff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"],
+            "mono": ["JetBrains Mono", "monospace"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      line-height: 1;
+      text-transform: none;
+      letter-spacing: normal;
+      word-wrap: normal;
+      white-space: nowrap;
+      direction: ltr;
+    }
+    .tnum {
+      font-variant-numeric: tabular-nums;
+    }
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-body antialiased min-h-screen flex justify-center selection:bg-primary-container selection:text-surface-container-lowest">
+<!-- Mobile Frame (390px strict canvas) -->
+<main class="w-full max-w-[390px] min-h-screen bg-surface flex flex-col justify-between border-x border-outline-variant/30 shadow-sm relative pb-safe">
+<!-- Top Area: App Bar -->
+<header class="flex justify-between items-center w-full px-4 h-14 bg-surface sticky top-0 z-20 border-b border-outline-variant/40">
+<div class="flex items-center gap-2">
+<button aria-label="Voltar ou fechar" class="w-9 h-9 rounded-full flex items-center justify-center text-on-surface hover:bg-surface-container active:opacity-80 transition-colors" type="button">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+<h1 class="font-headline text-xl font-normal tracking-tight text-on-surface">Importar cupom fiscal</h1>
+</div>
+<button aria-label="Ajuda" class="w-9 h-9 rounded-full flex items-center justify-center text-secondary hover:bg-surface-container active:opacity-80 transition-colors" type="button">
+<span class="material-symbols-outlined text-[20px]">help_outline</span>
+</button>
+</header>
+<!-- Main Scrollable Content -->
+<div class="flex-1 px-4 pt-4 pb-6 space-y-6">
+<!-- ETAPA 1: CAPTURA DO CUPOM -->
+<section aria-labelledby="etapa-captura" class="space-y-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-5 h-5 rounded-full bg-primary-container text-on-primary text-[11px] font-mono font-medium flex items-center justify-center">1</span>
+<h2 class="font-headline text-base font-medium text-on-surface" id="etapa-captura">Captura do texto</h2>
+</div>
+<button class="text-xs text-secondary hover:text-error flex items-center gap-1 font-medium transition-colors" type="button">
+<span class="material-symbols-outlined text-[15px]">delete_sweep</span>
+<span>Limpar texto</span>
+</button>
+</div>
+<!-- Botões de Ação de Captura -->
+<div class="grid grid-cols-3 gap-2">
+<!-- Colar texto -->
+<button class="flex flex-col items-center justify-center p-3 rounded-lg border border-outline-variant/70 bg-surface-container-lowest hover:bg-surface-container-low transition-colors text-center group active:scale-[0.98]" type="button">
+<span class="material-symbols-outlined text-primary mb-1 text-[22px]">content_paste</span>
+<span class="font-label text-xs font-medium text-on-surface tracking-tight">Colar texto</span>
+</button>
+<!-- Escolher foto -->
+<button class="flex flex-col items-center justify-center p-3 rounded-lg border border-outline-variant/70 bg-surface-container-lowest hover:bg-surface-container-low transition-colors text-center group active:scale-[0.98]" type="button">
+<span class="material-symbols-outlined text-primary mb-1 text-[22px]">photo_library</span>
+<span class="font-label text-xs font-medium text-on-surface tracking-tight">Escolher foto</span>
+</button>
+<!-- Fotografar cupom -->
+<button class="flex flex-col items-center justify-center p-3 rounded-lg border border-outline-variant/70 bg-surface-container-lowest hover:bg-surface-container-low transition-colors text-center group active:scale-[0.98]" type="button">
+<span class="material-symbols-outlined text-primary mb-1 text-[22px]">photo_camera</span>
+<span class="font-label text-xs font-medium text-on-surface tracking-tight">Fotografar</span>
+</button>
+</div>
+<!-- Área Editável do Cupom -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center text-xs text-secondary px-0.5">
+<label class="font-medium text-on-surface-variant" for="texto-cupom">Texto do cupom (OCR editável)</label>
+<span class="font-mono text-[11px] text-secondary">5 linhas detectadas</span>
+</div>
+<div class="relative">
+<textarea class="w-full bg-surface-container-lowest border border-outline-variant/70 rounded-lg p-2.5 font-mono text-[12px] leading-relaxed text-on-surface resize-y focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary min-h-[110px]" id="texto-cupom" placeholder="Cole ou edite as linhas do cupom..." rows="4">001 CAFE ESP MOIDO 250G     2UN x 18,90 = 37,80
+002 AZEITE DE OLIVA 500ML   1UN x 38,90 = 38,90
+003 BANANA PRATA KG         1,2KG x 8,50 = 10,20
+004 PAO FERM NATURAL        1UN x 16,50 = 16,50
+005 TOMATE ITALIANO KG      0,8KG x 8,50 = 6,80
+TOTAL BRUTO: 110,20</textarea>
+</div>
+</div>
+<!-- Botão Processar / Revisar Itens -->
+<button class="w-full py-2 px-3 border border-outline-variant bg-surface-container-low hover:bg-surface-container rounded-lg font-label text-xs font-medium text-on-surface flex items-center justify-center gap-1.5 transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px] text-primary">sync</span>
+<span>Revisar itens e atualizar linhas</span>
+</button>
+</section>
+<!-- Divisória Limpa -->
+<hr class="border-t border-outline-variant/50"/>
+<!-- ETAPA 2: REVISÃO DE ITENS DETECTADOS -->
+<section aria-labelledby="etapa-revisao" class="space-y-3">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="w-5 h-5 rounded-full bg-primary-container text-on-primary text-[11px] font-mono font-medium flex items-center justify-center">2</span>
+<h2 class="font-headline text-base font-medium text-on-surface" id="etapa-revisao">Revisão de itens</h2>
+</div>
+<span class="text-xs text-secondary font-mono">5 itens ativos</span>
+</div>
+<!-- Lista de itens com Checkbox, Seleção a 1 item da lista ativa, Quantidade e Preço -->
+<div class="divide-y divide-outline-variant/40 border border-outline-variant/50 bg-surface-container-lowest rounded-lg overflow-hidden">
+<!-- Item 1 -->
+<article class="p-3 space-y-2">
+<div class="flex items-start gap-2.5">
+<input checked="" class="mt-0.5 rounded text-primary focus:ring-0 focus:ring-offset-0 border-outline-variant cursor-pointer h-4 w-4" type="checkbox"/>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start gap-1">
+<span class="font-medium text-sm text-on-surface leading-tight">Café Especial Moído 250g</span>
+<span class="font-mono text-sm font-semibold text-on-surface tnum whitespace-nowrap">R$ 37,80</span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-secondary mt-0.5 font-mono tnum">
+<span>2 un × R$ 18,90</span>
+<button class="text-[11px] font-body text-primary hover:underline flex items-center gap-0.5" type="button">
+<span class="material-symbols-outlined text-[13px]">edit</span>
+                    Editar texto
+                  </button>
+</div>
+</div>
+</div>
+<!-- Relacionar a um item correspondente da lista ativa -->
+<div class="pt-1.5 border-t border-outline-variant/20 flex items-center gap-2 text-xs">
+<span class="text-[11px] text-secondary flex-shrink-0">Item da lista:</span>
+<select aria-label="Relacionar a item da lista" class="text-xs font-normal text-on-surface bg-surface-container-low border border-outline-variant/70 rounded py-1 px-2 flex-1 min-w-0 truncate focus:border-primary focus:ring-0">
+<option selected="">Café Especial 250g (Despensa)</option>
+<option>Azeite Extravirgem 500ml</option>
+<option>Banana Prata (kg)</option>
+<option>Pão Artesanal</option>
+<option>Tomate Italiano (kg)</option>
+<option>+ Adicionar como novo item</option>
+</select>
+</div>
+</article>
+<!-- Item 2 -->
+<article class="p-3 space-y-2">
+<div class="flex items-start gap-2.5">
+<input checked="" class="mt-0.5 rounded text-primary focus:ring-0 focus:ring-offset-0 border-outline-variant cursor-pointer h-4 w-4" type="checkbox"/>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start gap-1">
+<span class="font-medium text-sm text-on-surface leading-tight">Azeite de Oliva 500ml</span>
+<span class="font-mono text-sm font-semibold text-on-surface tnum whitespace-nowrap">R$ 38,90</span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-secondary mt-0.5 font-mono tnum">
+<span>1 un × R$ 38,90</span>
+<button class="text-[11px] font-body text-primary hover:underline flex items-center gap-0.5" type="button">
+<span class="material-symbols-outlined text-[13px]">edit</span>
+                    Editar texto
+                  </button>
+</div>
+</div>
+</div>
+<div class="pt-1.5 border-t border-outline-variant/20 flex items-center gap-2 text-xs">
+<span class="text-[11px] text-secondary flex-shrink-0">Item da lista:</span>
+<select aria-label="Relacionar a item da lista" class="text-xs font-normal text-on-surface bg-surface-container-low border border-outline-variant/70 rounded py-1 px-2 flex-1 min-w-0 truncate focus:border-primary focus:ring-0">
+<option>Café Especial 250g (Despensa)</option>
+<option selected="">Azeite Extravirgem 500ml (Despensa)</option>
+<option>Banana Prata (kg)</option>
+<option>Pão Artesanal</option>
+<option>Tomate Italiano (kg)</option>
+<option>+ Adicionar como novo item</option>
+</select>
+</div>
+</article>
+<!-- Item 3 -->
+<article class="p-3 space-y-2">
+<div class="flex items-start gap-2.5">
+<input checked="" class="mt-0.5 rounded text-primary focus:ring-0 focus:ring-offset-0 border-outline-variant cursor-pointer h-4 w-4" type="checkbox"/>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start gap-1">
+<span class="font-medium text-sm text-on-surface leading-tight">Banana Prata Madura</span>
+<span class="font-mono text-sm font-semibold text-on-surface tnum whitespace-nowrap">R$ 10,20</span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-secondary mt-0.5 font-mono tnum">
+<span>1,2 kg × R$ 8,50/kg</span>
+<button class="text-[11px] font-body text-primary hover:underline flex items-center gap-0.5" type="button">
+<span class="material-symbols-outlined text-[13px]">edit</span>
+                    Editar texto
+                  </button>
+</div>
+</div>
+</div>
+<div class="pt-1.5 border-t border-outline-variant/20 flex items-center gap-2 text-xs">
+<span class="text-[11px] text-secondary flex-shrink-0">Item da lista:</span>
+<select aria-label="Relacionar a item da lista" class="text-xs font-normal text-on-surface bg-surface-container-low border border-outline-variant/70 rounded py-1 px-2 flex-1 min-w-0 truncate focus:border-primary focus:ring-0">
+<option>Café Especial 250g</option>
+<option>Azeite Extravirgem 500ml</option>
+<option selected="">Banana Prata (Hortifrúti)</option>
+<option>Pão Artesanal</option>
+<option>Tomate Italiano (kg)</option>
+<option>+ Adicionar como novo item</option>
+</select>
+</div>
+</article>
+<!-- Item 4 -->
+<article class="p-3 space-y-2">
+<div class="flex items-start gap-2.5">
+<input checked="" class="mt-0.5 rounded text-primary focus:ring-0 focus:ring-offset-0 border-outline-variant cursor-pointer h-4 w-4" type="checkbox"/>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start gap-1">
+<span class="font-medium text-sm text-on-surface leading-tight">Pão de Fermentação Natural</span>
+<span class="font-mono text-sm font-semibold text-on-surface tnum whitespace-nowrap">R$ 16,50</span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-secondary mt-0.5 font-mono tnum">
+<span>1 un × R$ 16,50</span>
+<button class="text-[11px] font-body text-primary hover:underline flex items-center gap-0.5" type="button">
+<span class="material-symbols-outlined text-[13px]">edit</span>
+                    Editar texto
+                  </button>
+</div>
+</div>
+</div>
+<div class="pt-1.5 border-t border-outline-variant/20 flex items-center gap-2 text-xs">
+<span class="text-[11px] text-secondary flex-shrink-0">Item da lista:</span>
+<select aria-label="Relacionar a item da lista" class="text-xs font-normal text-on-surface bg-surface-container-low border border-outline-variant/70 rounded py-1 px-2 flex-1 min-w-0 truncate focus:border-primary focus:ring-0">
+<option>Café Especial 250g</option>
+<option>Azeite Extravirgem 500ml</option>
+<option>Banana Prata (Hortifrúti)</option>
+<option selected="">Pão Artesanal / Padaria</option>
+<option>Tomate Italiano (kg)</option>
+<option>+ Adicionar como novo item</option>
+</select>
+</div>
+</article>
+<!-- Item 5 -->
+<article class="p-3 space-y-2">
+<div class="flex items-start gap-2.5">
+<input checked="" class="mt-0.5 rounded text-primary focus:ring-0 focus:ring-offset-0 border-outline-variant cursor-pointer h-4 w-4" type="checkbox"/>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start gap-1">
+<span class="font-medium text-sm text-on-surface leading-tight">Tomate Italiano</span>
+<span class="font-mono text-sm font-semibold text-on-surface tnum whitespace-nowrap">R$ 6,80</span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-secondary mt-0.5 font-mono tnum">
+<span>0,8 kg × R$ 8,50/kg</span>
+<button class="text-[11px] font-body text-primary hover:underline flex items-center gap-0.5" type="button">
+<span class="material-symbols-outlined text-[13px]">edit</span>
+                    Editar texto
+                  </button>
+</div>
+</div>
+</div>
+<div class="pt-1.5 border-t border-outline-variant/20 flex items-center gap-2 text-xs">
+<span class="text-[11px] text-secondary flex-shrink-0">Item da lista:</span>
+<select aria-label="Relacionar a item da lista" class="text-xs font-normal text-on-surface bg-surface-container-low border border-outline-variant/70 rounded py-1 px-2 flex-1 min-w-0 truncate focus:border-primary focus:ring-0">
+<option>Café Especial 250g</option>
+<option>Azeite Extravirgem 500ml</option>
+<option>Banana Prata (Hortifrúti)</option>
+<option>Pão Artesanal / Padaria</option>
+<option selected="">Tomate Italiano (Hortifrúti)</option>
+<option>+ Adicionar como novo item</option>
+</select>
+</div>
+</article>
+</div>
+</section>
+<!-- TOTALIZADOR CONTÁBIL -->
+<section aria-labelledby="totalizador-contabil" class="bg-surface-container-low border border-outline-variant/50 rounded-lg p-3.5 space-y-2.5">
+<h3 class="font-label text-xs uppercase tracking-wider text-secondary font-semibold" id="totalizador-contabil">Totalizador contábil</h3>
+<div class="space-y-1.5 font-mono text-xs">
+<div class="flex justify-between items-center text-on-surface-variant">
+<span>Soma reconhecida (itens selecionados)</span>
+<span class="font-medium text-on-surface tnum">R$ 110,20</span>
+</div>
+<div class="flex justify-between items-center text-on-surface-variant">
+<span>Total declarado no cupom</span>
+<span class="font-medium text-on-surface tnum">R$ 110,20</span>
+</div>
+</div>
+<div class="pt-2 border-t border-outline-variant/40 flex items-center justify-between text-xs font-mono">
+<span class="text-secondary">Diferença</span>
+<span class="font-semibold text-primary">R$ 0,00</span>
+</div>
+</section>
+<!-- OPÇÃO / SWITCH: Fechar lista e salvar no histórico -->
+<section class="bg-surface-container-lowest border border-outline-variant/60 rounded-lg p-3 flex items-center justify-between gap-3">
+<div class="space-y-0.5">
+<label class="font-medium text-xs text-on-surface block cursor-pointer" for="switch-fechar">Fechar lista e salvar no histórico</label>
+<p class="text-[11px] text-secondary">Finaliza a compra atual e arquiva a contabilidade.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer flex-shrink-0" for="switch-fechar">
+<input checked="" class="sr-only peer" id="switch-fechar" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</section>
+</div>
+<!-- RODAPÉ FIXO: AÇÕES PRIMÁRIAS -->
+<footer class="p-4 bg-surface border-t border-outline-variant/40 sticky bottom-0 z-20">
+<div class="flex gap-2">
+<button class="flex-1 h-12 bg-primary-container hover:bg-primary text-on-primary font-label text-sm font-medium rounded-lg flex items-center justify-center gap-2 transition-colors active:opacity-90 shadow-none" type="button">
+<span class="material-symbols-outlined text-[18px]">check</span>
+<span>Confirmar e aplicar à lista</span>
+</button>
+</div>
+</footer>
+</main>
+</body></html>

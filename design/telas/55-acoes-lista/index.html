@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Minhas Compras — Ações da lista</title>
+<!-- Google Fonts: Newsreader & Public Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&amp;family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration conforme Design System -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-variant": "#e4e2dd",
+            "tertiary-fixed": "#ffdadb",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "secondary-container": "#e0e5cf",
+            "on-primary-fixed-variant": "#2b4e39",
+            "surface-container-low": "#f5f3ed",
+            "on-tertiary": "#ffffff",
+            "error": "#ba1a1a",
+            "primary-fixed": "#c4eccf",
+            "on-secondary-container": "#616655",
+            "on-error": "#ffffff",
+            "outline-variant": "#c1c8c1",
+            "on-error-container": "#93000a",
+            "outline": "#727972",
+            "on-secondary-fixed": "#191d10",
+            "inverse-surface": "#30312d",
+            "primary-fixed-dim": "#a9d0b4",
+            "error-container": "#ffdad6",
+            "surface": "#fbf9f3",
+            "on-secondary": "#ffffff",
+            "on-tertiary-container": "#f2b6ba",
+            "on-primary-fixed": "#002110",
+            "tertiary": "#582f33",
+            "secondary-fixed": "#e0e5cf",
+            "on-primary": "#ffffff",
+            "secondary-fixed-dim": "#c4c9b4",
+            "surface-container-high": "#eae8e2",
+            "surface-dim": "#dcdad4",
+            "secondary": "#5b604f",
+            "surface-tint": "#43664f",
+            "surface-bright": "#fbf9f3",
+            "tertiary-container": "#724549",
+            "on-surface-variant": "#424843",
+            "surface-container-highest": "#e4e2dd",
+            "primary": "#1f412d",
+            "inverse-on-surface": "#f3f1eb",
+            "surface-container-lowest": "#ffffff",
+            "surface-container": "#f0eee8",
+            "inverse-primary": "#a9d0b4",
+            "primary-container": "#365943",
+            "on-background": "#1b1c18",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "on-secondary-fixed-variant": "#444939",
+            "on-primary-container": "#a7ceb2",
+            "on-tertiary-fixed": "#321015",
+            "on-surface": "#1b1c18",
+            "background": "#fbf9f3"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "2xl": "1rem",
+            "3xl": "1.5rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    /* Suporte a números tabulares para valores e precisão editorial */
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    
+    /* Ocultar barra de rolagem mantendo funcionalidade */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-dim flex justify-center items-center min-h-screen p-0 sm:p-4 font-body antialiased selection:bg-primary-fixed selection:text-primary">
+<!-- Mobile Viewport Container: 390px (iPhone/Android padrão operacional) -->
+<main class="w-[390px] h-[844px] max-h-[884px] bg-background relative overflow-hidden flex flex-col shadow-2xl rounded-none sm:rounded-[36px] border border-outline-variant/30">
+<!-- 1. TELA DE FUNDO (LISTA ATIVA EM SEGUNDO PLANO COM SCRIM TRANSLÚCIDO) -->
+<div aria-hidden="true" class="absolute inset-0 flex flex-col bg-background select-none pointer-events-none">
+<!-- TopAppBar simulada em segundo plano -->
+<header class="flex justify-between items-center w-full px-4 h-14 border-b border-outline-variant/30 bg-surface">
+<span class="material-symbols-outlined text-on-surface" data-icon="menu">menu</span>
+<h1 class="font-headline text-2xl font-normal text-on-surface tracking-tight">Semanal Feira &amp; Grãos</h1>
+<span class="material-symbols-outlined text-on-surface" data-icon="more_vert">more_vert</span>
+</header>
+<!-- Resumo monetário de fita tipo caderno -->
+<section class="px-5 py-3 bg-surface-container-low border-b border-outline-variant/20 flex justify-between items-baseline">
+<div>
+<span class="text-xs uppercase font-semibold text-secondary tracking-wider">Total previsto</span>
+<p class="font-headline text-2xl text-on-surface tabular-nums">R$ 184,40</p>
+</div>
+<div class="text-right">
+<span class="text-xs uppercase font-semibold text-secondary tracking-wider">Itens</span>
+<p class="text-sm font-medium text-primary tabular-nums">9 de 14 concluídos</p>
+</div>
+</section>
+<!-- Itens de lista em segundo plano -->
+<div class="p-4 space-y-3 opacity-40">
+<div class="flex items-center justify-between pb-2 border-b border-outline-variant/20">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container" data-icon="check_box">check_box</span>
+<span class="text-sm text-on-surface line-through">Arroz integral Cateto 1kg</span>
+</div>
+<span class="text-sm tabular-nums text-secondary">R$ 11,90</span>
+</div>
+<div class="flex items-center justify-between pb-2 border-b border-outline-variant/20">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container" data-icon="check_box">check_box</span>
+<span class="text-sm text-on-surface line-through">Café moído arábica 500g</span>
+</div>
+<span class="text-sm tabular-nums text-secondary">R$ 24,50</span>
+</div>
+<div class="flex items-center justify-between pb-2 border-b border-outline-variant/20">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline" data-icon="check_box_outline_blank">check_box_outline_blank</span>
+<span class="text-sm text-on-surface font-medium">Azeite extravirgem 500ml</span>
+</div>
+<span class="text-sm tabular-nums text-on-surface font-medium">R$ 42,00</span>
+</div>
+<div class="flex items-center justify-between pb-2 border-b border-outline-variant/20">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline" data-icon="check_box_outline_blank">check_box_outline_blank</span>
+<span class="text-sm text-on-surface">Ovos caipiras 20 un</span>
+</div>
+<span class="text-sm tabular-nums text-on-surface">R$ 23,80</span>
+</div>
+</div>
+</div>
+<!-- Scrim Backdrop Modal com leve desfoque -->
+<div class="absolute inset-0 bg-black/50 backdrop-blur-[2px] z-10 transition-opacity"></div>
+<!-- 2. BOTTOM SHEET MODAL '_ListEditorActionsSheet' -->
+<section class="absolute bottom-0 inset-x-0 z-20 bg-surface-container-lowest rounded-t-3xl border-t border-outline-variant/40 shadow-2xl max-h-[88%] flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-200">
+<!-- Drag handle & Top Header -->
+<div class="pt-3 px-6 pb-4 border-b border-outline-variant/20 flex-shrink-0 bg-surface-container-lowest">
+<!-- Drag Handle -->
+<div aria-hidden="true" class="w-10 h-1 rounded-full bg-outline-variant/70 mx-auto mb-3"></div>
+<!-- Cabeçalho com título serifado Newsreader e botão fechar -->
+<div class="flex items-center justify-between">
+<h2 class="font-headline text-2xl font-normal text-on-surface tracking-tight">Ações da lista</h2>
+<button aria-label="Fechar menu de ações" class="w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container active:scale-95 transition-all -mr-1" type="button">
+<span class="material-symbols-outlined text-[20px]" data-icon="close">close</span>
+</button>
+</div>
+<!-- Descrição editorial -->
+<p class="font-body text-xs text-on-surface-variant mt-1 leading-relaxed">
+          Tudo em um único menu, com atalhos para as ações principais.
+        </p>
+<!-- 4. BLOCO DE AÇÕES RÁPIDAS -->
+<div class="grid grid-cols-3 gap-2.5 mt-4 pt-1">
+<!-- Ação Rápida 1: Fechar compra (Fundo verde destaque #365943) -->
+<button class="flex flex-col items-center justify-center p-3 rounded-lg bg-primary-container text-on-primary hover:opacity-95 active:scale-[0.98] transition-all min-h-[76px] text-center shadow-sm" type="button">
+<span class="material-symbols-outlined text-[22px] mb-1.5" data-icon="receipt_long">receipt_long</span>
+<span class="text-xs font-medium leading-tight">Fechar compra</span>
+</button>
+<!-- Ação Rápida 2: Importar cupom -->
+<button class="flex flex-col items-center justify-center p-3 rounded-lg bg-surface-container-low border border-outline-variant/40 text-on-surface hover:bg-surface-container active:scale-[0.98] transition-all min-h-[76px] text-center" type="button">
+<span class="material-symbols-outlined text-primary-container text-[22px] mb-1.5" data-icon="document_scanner">document_scanner</span>
+<span class="text-xs font-medium leading-tight text-on-surface">Importar cupom</span>
+</button>
+<!-- Ação Rápida 3: Modo compra -->
+<button class="flex flex-col items-center justify-center p-3 rounded-lg bg-surface-container-low border border-outline-variant/40 text-on-surface hover:bg-surface-container active:scale-[0.98] transition-all min-h-[76px] text-center" type="button">
+<span class="material-symbols-outlined text-primary-container text-[22px] mb-1.5" data-icon="shopping_basket">shopping_basket</span>
+<span class="text-xs font-medium leading-tight text-on-surface">Modo compra</span>
+</button>
+</div>
+</div>
+<!-- 5. CONTEÚDO ROLÁVEL COM SEÇÕES E DIVISORES SUTIS -->
+<div class="overflow-y-auto no-scrollbar flex-1 pb-6 divide-y divide-outline-variant/25">
+<!-- SEÇÃO: COMPRA -->
+<div class="pt-4 pb-2">
+<div class="px-6 pb-2">
+<h3 class="text-xs font-semibold tracking-wider text-secondary uppercase font-body">Compra</h3>
+</div>
+<nav aria-label="Ações de compra" class="divide-y divide-outline-variant/15">
+<!-- Linha 1 -->
+<button class="w-full flex items-center justify-between px-6 py-3.5 hover:bg-surface-container-low active:bg-surface-container transition-colors text-left min-h-[48px]" type="button">
+<div class="flex items-center gap-3.5">
+<span class="material-symbols-outlined text-primary-container text-[22px]" data-icon="qr_code_scanner">qr_code_scanner</span>
+<span class="text-sm font-normal text-on-surface">Importar cupom fiscal</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[18px]" data-icon="chevron_right">chevron_right</span>
+</button>
+<!-- Linha 2 -->
+<button class="w-full flex items-center justify-between px-6 py-3.5 hover:bg-surface-container-low active:bg-surface-container transition-colors text-left min-h-[48px]" type="button">
+<div class="flex items-center gap-3.5">
+<span class="material-symbols-outlined text-primary-container text-[22px]" data-icon="check_circle_outline">check_circle_outline</span>
+<span class="text-sm font-normal text-on-surface">Fechar compra</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[18px]" data-icon="chevron_right">chevron_right</span>
+</button>
+<!-- Linha 3 -->
+<button class="w-full flex items-center justify-between px-6 py-3.5 hover:bg-surface-container-low active:bg-surface-container transition-colors text-left min-h-[48px]" type="button">
+<div class="flex items-center gap-3.5">
+<span class="material-symbols-outlined text-primary-container text-[22px]" data-icon="shopping_cart_checkout">shopping_cart_checkout</span>
+<span class="text-sm font-normal text-on-surface">Abrir modo compra</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[18px]" data-icon="chevron_right">chevron_right</span>
+</button>
+<!-- Linha 4 -->
+<button class="w-full flex items-center justify-between px-6 py-3.5 hover:bg-surface-container-low active:bg-surface-container transition-colors text-left min-h-[48px]" type="button">
+<div class="flex items-center gap-3.5">
+<span class="material-symbols-outlined text-primary-container text-[22px]" data-icon="inventory_2">inventory_2</span>
+<span class="text-sm font-normal text-on-surface">Abrir catálogo de produtos</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[18px]" data-icon="chevron_right">chevron_right</span>
+</button>
+<!-- Linha 5 -->
+<button class="w-full flex items-center justify-between px-6 py-3.5 hover:bg-surface-container-low active:bg-surface-container transition-colors text-left min-h-[48px]" type="button">
+<div class="flex items-center gap-3.5">
+<span class="material-symbols-outlined text-primary-container text-[22px]" data-icon="remove_done">remove_done</span>
+<span class="text-sm font-normal text-on-surface">Limpar comprados</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[18px]" data-icon="chevron_right">chevron_right</span>
+</button>
+<!-- Linha 6 -->
+<button class="w-full flex items-center justify-between px-6 py-3.5 hover:bg-surface-container-low active:bg-surface-container transition-colors text-left min-h-[48px]" type="button">
+<div class="flex items-center gap-3.5">
+<span class="material-symbols-outlined text-primary-container text-[22px]" data-icon="person_add_alt">person_add_alt</span>
+<span class="text-sm font-normal text-on-surface">Gerar código de compartilhamento</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[18px]" data-icon="chevron_right">chevron_right</span>
+</button>
+<!-- Linha 7 -->
+<button class="w-full flex items-center justify-between px-6 py-3.5 hover:bg-surface-container-low active:bg-surface-container transition-colors text-left min-h-[48px]" type="button">
+<div class="flex items-center gap-3.5">
+<span class="material-symbols-outlined text-primary-container text-[22px]" data-icon="calendar_month">calendar_month</span>
+<span class="text-sm font-normal text-on-surface">Histórico mensal</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[18px]" data-icon="chevron_right">chevron_right</span>
+</button>
+</nav>
+</div>
+<!-- SEÇÃO: CONFIGURAÇÕES -->
+<div class="pt-4 pb-2">
+<div class="px-6 pb-2">
+<h3 class="text-xs font-semibold tracking-wider text-secondary uppercase font-body">Configurações</h3>
+</div>
+<nav aria-label="Configurações da lista" class="divide-y divide-outline-variant/15">
+<!-- Linha 1 -->
+<button class="w-full flex items-center justify-between px-6 py-3.5 hover:bg-surface-container-low active:bg-surface-container transition-colors text-left min-h-[48px]" type="button">
+<div class="flex items-center gap-3.5">
+<span class="material-symbols-outlined text-secondary text-[22px]" data-icon="notifications_none">notifications_none</span>
+<span class="text-sm font-normal text-on-surface">Configurar lembrete</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[18px]" data-icon="chevron_right">chevron_right</span>
+</button>
+<!-- Linha 2 -->
+<button class="w-full flex items-center justify-between px-6 py-3.5 hover:bg-surface-container-low active:bg-surface-container transition-colors text-left min-h-[48px]" type="button">
+<div class="flex items-center gap-3.5">
+<span class="material-symbols-outlined text-secondary text-[22px]" data-icon="attach_money">attach_money</span>
+<span class="text-sm font-normal text-on-surface">Definir orçamento</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[18px]" data-icon="chevron_right">chevron_right</span>
+</button>
+<!-- Linha 3 -->
+<button class="w-full flex items-center justify-between px-6 py-3.5 hover:bg-surface-container-low active:bg-surface-container transition-colors text-left min-h-[48px]" type="button">
+<div class="flex items-center gap-3.5">
+<span class="material-symbols-outlined text-secondary text-[22px]" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="text-sm font-normal text-on-surface">Configurar saldos</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[18px]" data-icon="chevron_right">chevron_right</span>
+</button>
+<!-- Linha 4 -->
+<button class="w-full flex items-center justify-between px-6 py-3.5 hover:bg-surface-container-low active:bg-surface-container transition-colors text-left min-h-[48px]" type="button">
+<div class="flex items-center gap-3.5">
+<span class="material-symbols-outlined text-secondary text-[22px]" data-icon="sort">sort</span>
+<span class="text-sm font-normal text-on-surface">Ativar ordem de mercado</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[18px]" data-icon="chevron_right">chevron_right</span>
+</button>
+<!-- Linha 5 -->
+<button class="w-full flex items-center justify-between px-6 py-3.5 hover:bg-surface-container-low active:bg-surface-container transition-colors text-left min-h-[48px]" type="button">
+<div class="flex items-center gap-3.5">
+<span class="material-symbols-outlined text-secondary text-[22px]" data-icon="edit_note">edit_note</span>
+<span class="text-sm font-normal text-on-surface">Renomear lista</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[18px]" data-icon="chevron_right">chevron_right</span>
+</button>
+</nav>
+</div>
+</div>
+<!-- Barra de segurança inferior do dispositivo móvel -->
+<div class="h-6 w-full flex-shrink-0 bg-surface-container-lowest"></div>
+</section>
+</main>
+</body></html>

@@ -9,6 +9,11 @@ SharedListMirrorAction resolveOwnedSharedListMirrorAction({
   if (!hasSourceLocalListId) {
     return SharedListMirrorAction.skip;
   }
+  if (hasLocalCopy &&
+      localUpdatedAt != null &&
+      !sharedUpdatedAt.isAfter(localUpdatedAt)) {
+    return SharedListMirrorAction.skip;
+  }
   return SharedListMirrorAction.pullSharedToLocal;
 }
 

@@ -1,0 +1,220 @@
+
+    #boot-splash {
+      --bg: #FBF9F3;
+      --surface: #FFFFFF;
+      --green: #1F412D;
+      --text: #1B1C18;
+      --muted: #6B7268;
+      --divider: #C1C8C1;
+      --progress-bg: #E1E6DF;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      #boot-splash {
+        --bg: #20231E;
+        --surface: #30312D;
+        --green: #A9D0B4;
+        --text: #F3F1EB;
+        --muted: #A3A8A0;
+        --divider: #424840;
+        --progress-bg: #2C302A;
+      }
+    }
+
+    #boot-splash {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Public Sans', sans-serif;
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Pauta sutil de caderno de fundo - sem distrações */
+    .ruled-background {
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(to bottom, transparent 39px, var(--divider) 40px);
+      background-size: 100% 40px;
+      opacity: 0.25;
+      pointer-events: none;
+    }
+
+    /* Sequential Animation Choreography (1800ms sequence) */
+    /* Intervalos calibrados para fácil mapeamento em CurvedAnimation / CustomPainter Flutter:
+       0 - 300ms: Aparição suave da folha de papel / prancheta base
+       200 - 650ms: Entrada sequencial das 3 linhas da lista
+       650 - 1200ms: Checkboxes marcados sucessivamente (checkmarks verdes desenhados)
+       1100 - 1650ms: Traçado da sacola de feira à direita
+       1650 - 1800ms: Assentamento final e estabilização estática
+    */
+
+    .anim-paper {
+      opacity: 0;
+      transform: translateY(6px);
+      animation: paperEnter 400ms cubic-bezier(0.16, 1, 0.3, 1) 50ms forwards;
+    }
+
+    @keyframes paperEnter {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Linhas da lista entrando escalonadas */
+    .anim-row-1 {
+      opacity: 0;
+      transform: translateX(-4px);
+      animation: rowSlide 350ms cubic-bezier(0.16, 1, 0.3, 1) 250ms forwards;
+    }
+    .anim-row-2 {
+      opacity: 0;
+      transform: translateX(-4px);
+      animation: rowSlide 350ms cubic-bezier(0.16, 1, 0.3, 1) 380ms forwards;
+    }
+    .anim-row-3 {
+      opacity: 0;
+      transform: translateX(-4px);
+      animation: rowSlide 350ms cubic-bezier(0.16, 1, 0.3, 1) 500ms forwards;
+    }
+
+    @keyframes rowSlide {
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    /* Checkmarks verdes desenhados sequencialmente (stroke-dashoffset) */
+    .anim-check-1 {
+      stroke-dasharray: 14;
+      stroke-dashoffset: 14;
+      animation: drawCheck 260ms cubic-bezier(0.2, 0.8, 0.4, 1) 680ms forwards;
+    }
+    .anim-check-2 {
+      stroke-dasharray: 14;
+      stroke-dashoffset: 14;
+      animation: drawCheck 260ms cubic-bezier(0.2, 0.8, 0.4, 1) 880ms forwards;
+    }
+    .anim-check-3 {
+      stroke-dasharray: 14;
+      stroke-dashoffset: 14;
+      animation: drawCheck 260ms cubic-bezier(0.2, 0.8, 0.4, 1) 1080ms forwards;
+    }
+
+    @keyframes drawCheck {
+      to {
+        stroke-dashoffset: 0;
+      }
+    }
+
+    /* Sacola de compras que nasce à direita completando o emblema */
+    .anim-bag {
+      opacity: 0;
+      transform: translateX(6px) scale(0.97);
+      animation: bagReveal 480ms cubic-bezier(0.16, 1, 0.3, 1) 1200ms forwards;
+    }
+
+    @keyframes bagReveal {
+      to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+      }
+    }
+
+    /* Textos principais com fade-in suave */
+    .anim-title {
+      opacity: 0;
+      transform: translateY(4px);
+      animation: textFade 450ms cubic-bezier(0.16, 1, 0.3, 1) 700ms forwards;
+    }
+    .anim-subtitle {
+      opacity: 0;
+      transform: translateY(3px);
+      animation: textFade 450ms cubic-bezier(0.16, 1, 0.3, 1) 950ms forwards;
+    }
+
+    @keyframes textFade {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Linha indeterminada de atividade que continua suavemente no rodapé */
+    .indeterminate-bar {
+      position: relative;
+      width: 136px;
+      height: 2px;
+      background-color: var(--progress-bg);
+      overflow: hidden;
+      border-radius: 9999px;
+    }
+
+    .indeterminate-bar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 44px;
+      background-color: var(--green);
+      border-radius: 9999px;
+      animation: loadingSlide 1400ms infinite ease-in-out 1800ms;
+      transform: translateX(-100%);
+    }
+
+    @keyframes loadingSlide {
+      0% {
+        transform: translateX(-100%);
+      }
+      50% {
+        transform: translateX(110px);
+      }
+      100% {
+        transform: translateX(150px);
+      }
+    }
+
+    /* Suporte a prefers-reduced-motion: todos os elementos no estado final estático imediatamente */
+    @media (prefers-reduced-motion: reduce) {
+      .anim-paper,
+      .anim-row-1,
+      .anim-row-2,
+      .anim-row-3,
+      .anim-bag,
+      .anim-title,
+      .anim-subtitle {
+        opacity: 1 !important;
+        transform: none !important;
+        animation: none !important;
+      }
+      .anim-check-1,
+      .anim-check-2,
+      .anim-check-3 {
+        stroke-dashoffset: 0 !important;
+        animation: none !important;
+      }
+      .indeterminate-bar::after {
+        animation: none !important;
+        transform: translateX(45px) !important;
+        width: 46px !important;
+      }
+    }
+  @font-face {font-family: 'Newsreader'; src: url('assets/assets/fonts/Newsreader.ttf'); font-display: swap;}
+@font-face {font-family: 'Public Sans'; src: url('assets/assets/fonts/PublicSans.ttf'); font-display: swap;}
+#boot-splash {position:fixed;inset:0;z-index:1;box-sizing:border-box;padding:48px 32px;}
+#boot-splash main {flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+#boot-splash svg {width:180px;height:156px;overflow:visible;margin-bottom:24px;}
+#boot-splash h1 {font-family:Newsreader,Georgia,serif;font-size:38px;font-weight:400;letter-spacing:-.85px;margin:0;line-height:1.25;}
+#boot-splash p {font-size:14px;margin:8px 0 0;color:var(--muted);}
+#boot-splash footer {display:flex;align-items:center;flex-direction:column;font-size:12px;gap:12px;color:var(--muted);text-align:center;}
+@media (max-height:620px) {#boot-splash {padding:24px 32px;}}

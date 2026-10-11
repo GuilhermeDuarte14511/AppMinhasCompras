@@ -24,6 +24,9 @@ void main() {
       250,
       scrollable: find.byType(Scrollable),
     );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Sincronização e diagnóstico'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Sincronização e diagnóstico'));
     await tester.pumpAndSettle();
 

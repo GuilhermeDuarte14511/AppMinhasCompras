@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Novo Item — Minhas Compras</title>
+<!-- Google Fonts: Newsreader (Editorial Serif) & Public Sans (Utilitarian Sans) -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "outline": "#727972",
+            "tertiary-fixed": "#ffdadb",
+            "inverse-surface": "#30312d",
+            "primary-fixed-dim": "#a9d0b4",
+            "inverse-primary": "#a9d0b4",
+            "surface-variant": "#e4e2dd",
+            "on-tertiary": "#ffffff",
+            "surface-dim": "#dcdad4",
+            "tertiary-fixed-dim": "#f4b7bb",
+            "on-surface": "#1b1c18",
+            "on-primary-fixed": "#002110",
+            "secondary-fixed": "#e0e5cf",
+            "secondary-fixed-dim": "#c4c9b4",
+            "surface-tint": "#43664f",
+            "surface-bright": "#fbf9f3",
+            "on-secondary-fixed": "#191d10",
+            "outline-variant": "#c1c8c1",
+            "inverse-on-surface": "#f3f1eb",
+            "primary-container": "#365943",
+            "background": "#fbf9f3",
+            "primary": "#1f412d",
+            "tertiary-container": "#724549",
+            "surface": "#fbf9f3",
+            "primary-fixed": "#c4eccf",
+            "secondary": "#5b604f",
+            "on-secondary-fixed-variant": "#444939",
+            "surface-container-highest": "#e4e2dd",
+            "on-surface-variant": "#424843",
+            "tertiary": "#582f33",
+            "on-primary-fixed-variant": "#2b4e39",
+            "secondary-container": "#e0e5cf",
+            "on-secondary-container": "#616655",
+            "surface-container": "#f0eee8",
+            "surface-container-lowest": "#ffffff",
+            "on-secondary": "#ffffff",
+            "on-error": "#ffffff",
+            "surface-container-low": "#f5f3ed",
+            "on-tertiary-container": "#f2b6ba",
+            "on-tertiary-fixed-variant": "#663b3f",
+            "on-primary-container": "#a7ceb2",
+            "on-tertiary-fixed": "#321015",
+            "on-error-container": "#93000a",
+            "error-container": "#ffdad6",
+            "on-background": "#1b1c18",
+            "error": "#ba1a1a",
+            "on-primary": "#ffffff",
+            "surface-container-high": "#eae8e2"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Newsreader", "serif"],
+            "display": ["Newsreader", "serif"],
+            "body": ["Public Sans", "sans-serif"],
+            "label": ["Public Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    /* Estilização sutil de rolagem horizontal para chips */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-[#1b1c18]/40 font-body text-on-surface antialiased min-h-screen flex justify-center items-end sm:items-center">
+<!-- Mobile Device Simulation Frame (390px max-width) -->
+<main class="w-full max-w-[390px] h-screen max-h-[844px] flex flex-col justify-end relative overflow-hidden bg-transparent">
+<!-- Background Simulated List Context (Faux peek underneath sheet) -->
+<div class="absolute inset-0 bg-surface-container-low flex flex-col opacity-40 pointer-events-none select-none">
+<div class="px-5 py-4 border-b border-outline-variant/60 flex items-center justify-between">
+<span class="font-headline text-xl text-on-surface">Minhas Compras</span>
+<span class="material-symbols-outlined text-secondary">tune</span>
+</div>
+<div class="p-4 space-y-3">
+<div class="h-6 w-3/4 bg-outline-variant/40 rounded"></div>
+<div class="h-10 w-full bg-surface-container rounded border border-outline-variant/50"></div>
+<div class="h-12 w-full bg-surface-container rounded border border-outline-variant/50"></div>
+<div class="h-12 w-full bg-surface-container rounded border border-outline-variant/50"></div>
+</div>
+</div>
+<!-- Active Bottom Sheet Container: Modal de Edição Rápida 'Novo Item' -->
+<section class="relative w-full h-[94%] bg-surface flex flex-col rounded-t-[1.25rem] border-t border-l border-r border-outline-variant shadow-none z-20 overflow-hidden">
+<!-- Top Handle Bar & Sheet Header -->
+<header class="pt-2 px-4 pb-3 flex-shrink-0 border-b border-outline-variant/40">
+<!-- Drag Handle Indicator -->
+<div class="w-10 h-1 bg-outline-variant rounded-full mx-auto mb-2"></div>
+<div class="flex items-start justify-between">
+<div class="space-y-0.5">
+<h1 class="font-headline text-2xl font-normal text-on-surface tracking-tight leading-tight">Novo item</h1>
+<p class="font-body text-xs font-medium text-secondary">Adicionar à lista: <span class="text-on-surface font-semibold">Compras da semana</span></p>
+</div>
+<!-- Close Action button (48dp target standard) -->
+<button aria-label="Fechar" class="w-11 h-11 -mr-2 -mt-1 flex items-center justify-center text-on-surface-variant hover:text-primary active:opacity-70 transition-colors" type="button">
+<span class="material-symbols-outlined text-[24px]">close</span>
+</button>
+</div>
+<!-- Leitor de Código de Barras (Atalho em Destaque) -->
+<div class="mt-3">
+<button class="w-full min-h-[48px] px-3.5 py-2.5 rounded-lg border border-outline-variant bg-surface-container-low hover:bg-surface-container text-on-surface font-body text-xs font-medium flex items-center justify-between transition-colors" type="button"><div class="flex items-center gap-2.5 text-primary"><span class="material-symbols-outlined text-[22px]">barcode_scanner</span><span class="font-semibold text-on-surface text-sm">Escanear código de barras</span></div><span class="material-symbols-outlined text-secondary text-[20px]">photo_camera</span></button>
+</div>
+</header>
+<!-- Scrollable Form Body -->
+<div class="flex-1 overflow-y-auto px-4 py-3.5 space-y-4 text-on-surface"><!-- 1. Nome do produto -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-baseline">
+<label class="font-body text-xs font-semibold text-on-surface-variant uppercase tracking-wide" for="item-name">Nome do produto *</label>
+<span class="text-[11px] text-secondary">Obrigatório</span>
+</div>
+<div class="relative flex items-center">
+<input class="w-full min-h-[48px] pl-3 pr-12 rounded-lg border border-outline-variant bg-surface-container-lowest font-body text-sm text-on-surface placeholder:text-outline focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-all" id="item-name" placeholder="Ex: Arroz branco tipo 1" type="text" value="Café especial torrado moído 250g"/>
+<button aria-label="Gravar por voz" class="absolute right-1 w-10 h-10 flex items-center justify-center text-secondary hover:text-primary active:opacity-75 transition-colors" type="button">
+<span class="material-symbols-outlined text-[20px]">mic</span>
+</button>
+</div>
+</div>
+<div class="h-[1px] bg-outline-variant/30 -mx-1"></div>
+<!-- 2. Categoria (simplificada conforme modelo Flutter) -->
+<div class="space-y-1.5">
+<label class="font-body text-xs font-semibold text-on-surface-variant uppercase tracking-wide block">Categoria</label>
+<div class="grid grid-cols-4 gap-1.5">
+<button class="min-h-[40px] px-2 py-1.5 rounded-lg border-2 border-primary-container bg-primary-fixed/20 text-primary font-body text-xs font-semibold flex items-center justify-center gap-1" type="button">
+<span class="material-symbols-outlined text-[16px]">storefront</span>
+<span class="truncate">Mercearia</span>
+</button>
+<button class="min-h-[40px] px-2 py-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest text-secondary font-body text-xs hover:border-outline transition-colors flex items-center justify-center gap-1" type="button">
+<span class="material-symbols-outlined text-[16px]">nutrition</span>
+<span class="truncate">Hortifrúti</span>
+</button>
+<button class="min-h-[40px] px-2 py-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest text-secondary font-body text-xs hover:border-outline transition-colors flex items-center justify-center gap-1" type="button">
+<span class="material-symbols-outlined text-[16px]">egg_alt</span>
+<span class="truncate">Laticínios</span>
+</button>
+<button class="min-h-[40px] px-2 py-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest text-secondary font-body text-xs hover:border-outline transition-colors flex items-center justify-center gap-1" type="button">
+<span class="material-symbols-outlined text-[16px]">bakery_dining</span>
+<span class="truncate">Padaria</span>
+</button>
+<button class="min-h-[40px] px-2 py-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest text-secondary font-body text-xs hover:border-outline transition-colors flex items-center justify-center gap-1" type="button">
+<span class="material-symbols-outlined text-[16px]">set_meal</span>
+<span class="truncate">Açougue</span>
+</button>
+<button class="min-h-[40px] px-2 py-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest text-secondary font-body text-xs hover:border-outline transition-colors flex items-center justify-center gap-1" type="button">
+<span class="material-symbols-outlined text-[16px]">cleaning_services</span>
+<span class="truncate">Limpeza</span>
+</button>
+<button class="min-h-[40px] px-2 py-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest text-secondary font-body text-xs hover:border-outline transition-colors flex items-center justify-center gap-1" type="button">
+<span class="material-symbols-outlined text-[16px]">local_bar</span>
+<span class="truncate">Bebidas</span>
+</button>
+<button class="min-h-[40px] px-2 py-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest text-secondary font-body text-xs hover:border-outline transition-colors flex items-center justify-center gap-1" type="button">
+<span class="material-symbols-outlined text-[16px]">soap</span>
+<span class="truncate">Higiene</span>
+</button>
+</div>
+</div>
+<div class="h-[1px] bg-outline-variant/30 -mx-1"></div>
+<!-- 3. Quantidade e Valores (Unitário e Estimado Total) -->
+<div class="grid grid-cols-12 gap-3 items-start">
+<!-- Quantidade (seletor numérico simples) -->
+<div class="col-span-4 space-y-1.5">
+<label class="font-body text-xs font-semibold text-on-surface-variant uppercase tracking-wide block">Quantidade</label>
+<div class="flex items-center rounded-lg border border-outline-variant bg-surface-container-lowest overflow-hidden h-[48px]">
+<button aria-label="Diminuir quantidade" class="w-10 h-full flex items-center justify-center text-on-surface hover:bg-surface-container-low active:bg-surface-container transition-colors" id="btn-minus" type="button">
+<span class="material-symbols-outlined text-[18px]">remove</span>
+</button>
+<input aria-label="Quantidade do item" class="w-full text-center font-headline text-lg font-semibold text-on-surface border-none bg-transparent focus:ring-0 p-0 tabular-nums" id="item-qty" type="text" value="2"/>
+<button aria-label="Aumentar quantidade" class="w-10 h-full flex items-center justify-center text-on-surface hover:bg-surface-container-low active:bg-surface-container transition-colors" id="btn-plus" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+</div>
+</div>
+<!-- Valor Unitário -->
+<div class="col-span-4 space-y-1.5">
+<label class="font-body text-xs font-semibold text-on-surface-variant uppercase tracking-wide block" for="item-price">Unitário</label>
+<div class="relative flex items-center">
+<span class="absolute left-2.5 font-body text-xs font-medium text-secondary pointer-events-none">R$</span>
+<input class="w-full min-h-[48px] pl-8 pr-2 rounded-lg border border-outline-variant bg-surface-container-lowest font-headline text-base font-semibold text-on-surface focus:border-primary-container focus:ring-1 focus:ring-primary-container tabular-nums" id="item-price" type="text" value="18,90"/>
+</div>
+</div>
+<!-- Subtotal / Total Estimado -->
+<div class="col-span-4 space-y-1.5">
+<label class="font-body text-xs font-semibold text-on-surface-variant uppercase tracking-wide block">Total Est.</label>
+<div class="min-h-[48px] px-2.5 py-1.5 rounded-lg bg-surface-container-low border border-outline-variant/60 flex flex-col justify-center">
+<div class="flex items-baseline gap-0.5">
+<span class="text-[11px] font-medium text-primary">R$</span>
+<span class="font-headline text-lg font-semibold text-primary tabular-nums tracking-tight">37,80</span>
+</div>
+<span class="text-[10px] text-secondary tabular-nums leading-none">2 × R$ 18,90</span>
+</div>
+</div>
+</div>
+<div class="h-[1px] bg-outline-variant/30 -mx-1"></div>
+<!-- 4. Código de barras opcional (com acionamento de leitor) -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center">
+<label class="font-body text-xs font-semibold text-on-surface-variant uppercase tracking-wide" for="barcode-val">Código de barras (EAN)</label>
+<span class="text-[11px] text-secondary">Opcional</span>
+</div>
+<div class="relative flex items-center">
+<span class="absolute left-3 text-secondary material-symbols-outlined text-[18px]">barcode</span>
+<input class="w-full min-h-[44px] pl-9 pr-20 rounded-lg border border-outline-variant bg-surface-container-lowest font-mono text-xs text-on-surface focus:border-primary-container focus:ring-1 focus:ring-primary-container tracking-wider tabular-nums" id="barcode-val" placeholder="Digite ou escaneie" type="text" value="7891000123456"/>
+<button class="absolute right-1.5 px-2.5 py-1.5 rounded text-[11px] font-semibold text-primary hover:bg-surface-container active:opacity-75 flex items-center gap-1 transition-colors" type="button">
+<span class="material-symbols-outlined text-[14px]">qr_code_scanner</span>
+<span>Escanear</span>
+</button>
+</div>
+</div>
+<!-- 5. Checkbox 'Já peguei este item' (adicionado diretamente no carrinho durante a compra) -->
+<div class="pt-1 pb-1">
+<label class="flex items-center gap-3 p-3 rounded-lg border border-outline-variant/80 bg-surface-container-low hover:bg-surface-container cursor-pointer transition-colors">
+<input class="w-5 h-5 rounded border-outline text-primary-container focus:ring-primary-container focus:ring-offset-0 transition" type="checkbox"/>
+<div class="flex-1">
+<span class="font-body text-sm font-semibold text-on-surface block leading-tight">Já peguei este item</span>
+<span class="font-body text-xs text-secondary block mt-0.5">Marcar como conferido no carrinho</span>
+</div>
+<span class="material-symbols-outlined text-secondary text-[22px]">shopping_basket</span>
+</label>
+</div></div>
+<!-- Sticky Bottom Action Footer (Material 3 Target: 48dp+ buttons) -->
+<footer class="p-4 bg-surface border-t border-outline-variant flex flex-col gap-2.5 flex-shrink-0 z-30">
+<div class="flex items-center gap-2.5">
+<!-- Ação Secundária: Adicionar e continuar -->
+<button class="flex-1 min-h-[48px] px-3 py-2.5 rounded-lg border border-primary-container text-primary font-body text-xs font-semibold hover:bg-primary-fixed/20 active:opacity-80 transition-colors flex items-center justify-center text-center" type="button">
+            Adicionar e continuar
+          </button>
+<!-- Ação Primária: Adicionar item -->
+<button class="flex-1 min-h-[48px] px-3 py-2.5 rounded-lg bg-primary-container text-on-primary font-body text-xs font-semibold hover:bg-primary active:opacity-90 shadow-none transition-colors flex items-center justify-center gap-1.5" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span>Adicionar item</span>
+</button>
+</div>
+<!-- Microcópia técnica de sincronização local -->
+</footer>
+</section>
+</main>
+<!-- Interactive Stepper & Simple Calculator Logic -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const minusBtn = document.getElementById('btn-minus');
+      const plusBtn = document.getElementById('btn-plus');
+      const qtyInput = document.getElementById('item-qty');
+      
+      minusBtn.addEventListener('click', () => {
+        let current = parseInt(qtyInput.value, 10);
+        if (isNaN(current) || current <= 1) {
+          qtyInput.value = 1;
+        } else {
+          qtyInput.value = current - 1;
+        }
+      });
+
+      plusBtn.addEventListener('click', () => {
+        let current = parseInt(qtyInput.value, 10);
+        if (isNaN(current)) {
+          qtyInput.value = 1;
+        } else {
+          qtyInput.value = current + 1;
+        }
+      });
+    });
+  </script>
+</body></html>
