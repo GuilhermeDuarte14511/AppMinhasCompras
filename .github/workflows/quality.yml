@@ -42,8 +42,12 @@ jobs:
 
   flutter:
     name: Flutter analyze and test
-    runs-on: ubuntu-latest
+    # Golden references are generated on Windows; keep the rasterizer consistent.
+    runs-on: windows-latest
     timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Checkout repository
